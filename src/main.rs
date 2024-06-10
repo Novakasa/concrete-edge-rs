@@ -15,10 +15,11 @@ fn load_level(mut commands: Commands, asset_server: Res<AssetServer>) {
     });
 }
 
-fn print_platforms(query: Query<&Platform>) {
+fn print_platforms(query: Query<(&Platform, &Transform)>) {
     println!("Platforms:");
-    for platform in query.iter() {
+    for (platform, transform) in query.iter() {
         println!("{:?}", platform);
+        println!("{:?}", transform);
     }
 }
 
@@ -29,6 +30,6 @@ fn main() {
         .add_plugins(ExportRegistryPlugin::default())
         .add_plugins(ComponentsFromGltfPlugin::default())
         .add_systems(Startup, load_level)
-        .add_systems(Update, print_platforms)
+        //.add_systems(Update, print_platforms)
         .run();
 }
