@@ -11318,7 +11318,7 @@
       "type": "object",
       "typeInfo": "Struct"
     },
-    "conrete_edge_rs::Player": {
+    "conrete_edge_rs::TestPlayer": {
       "additionalProperties": false,
       "isComponent": true,
       "isResource": false,
@@ -11332,8 +11332,8 @@
       "required": [
         "test"
       ],
-      "short_name": "Player",
-      "title": "conrete_edge_rs::Player",
+      "short_name": "TestPlayer",
+      "title": "conrete_edge_rs::TestPlayer",
       "type": "object",
       "typeInfo": "Struct"
     },

@@ -12,12 +12,9 @@ struct Platform {
 
 #[derive(Component, Reflect, Debug)]
 #[reflect(Component)]
-struct Player {
+struct TestPlayer {
     test: i32,
 }
-
-#[derive(Component)]
-struct Processed;
 
 fn load_level(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands
@@ -38,7 +35,7 @@ fn print_platforms(query: Query<(&Platform, &Transform)>) {
 
 fn setup_player(
     mut commands: Commands,
-    query: Query<Entity, (With<Player>, Without<ColliderDensity>)>,
+    query: Query<Entity, (With<TestPlayer>, Without<ColliderDensity>)>,
 ) {
     for entity in query.iter() {
         println!("Setting up player: {:?}", entity);
@@ -51,14 +48,13 @@ fn setup_player(
 
 fn setup_platforms(
     mut commands: Commands,
-    query: Query<(Entity, &Platform, &Children), Without<Processed>>,
+    query: Query<(Entity, &Platform, &Children), Without<RigidBody>>,
 ) {
     for (entity, platform, children) in query.iter() {
         println!("Generating collider for platform: {:?}", entity);
         commands
             .entity(entity)
             .insert(Name::new(format!("Platform{}", entity.index())))
-            .insert(Processed)
             .insert(RigidBody::Static);
         for child in children.iter() {
             commands.entity(*child).insert(AsyncCollider::default());
@@ -69,7 +65,7 @@ fn setup_platforms(
 fn main() {
     App::new()
         .register_type::<Platform>()
-        .register_type::<Player>()
+        .register_type::<TestPlayer>()
         .add_plugins(DefaultPlugins)
         .add_plugins(ExportRegistryPlugin::default())
         .add_plugins(PhysicsPlugins::default())
