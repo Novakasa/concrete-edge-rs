@@ -4,6 +4,8 @@ use bevy_inspector_egui::{quick::WorldInspectorPlugin, DefaultInspectorConfigPlu
 use bevy_registry_export::ExportRegistryPlugin;
 use bevy_xpbd_3d::prelude::*;
 
+mod player;
+
 #[derive(Component, Reflect, Debug)]
 #[reflect(Component)]
 struct Platform {
@@ -42,7 +44,7 @@ fn setup_player(
         commands
             .entity(entity)
             .insert((Collider::cuboid(3.0, 1.0, 2.0), RigidBody::default()))
-            .insert(Name::new("Player"));
+            .insert(Name::new("TestPlayer"));
     }
 }
 
@@ -66,13 +68,16 @@ fn main() {
     App::new()
         .register_type::<Platform>()
         .register_type::<TestPlayer>()
+        .insert_resource(Gravity::default())
         .add_plugins(DefaultPlugins)
-        .add_plugins(ExportRegistryPlugin::default())
         .add_plugins(PhysicsPlugins::default())
+        .add_plugins(PhysicsDebugPlugin::default())
         .add_plugins(ComponentsFromGltfPlugin { legacy_mode: false })
+        .add_plugins(player::PlayerPlugin)
         .add_plugins(WorldInspectorPlugin::new())
         .add_systems(Startup, load_level)
         .add_systems(Update, (setup_platforms, setup_player))
         //.add_systems(Update, print_platforms)
+        .add_plugins(ExportRegistryPlugin::default())
         .run();
 }

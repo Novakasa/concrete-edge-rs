@@ -11019,6 +11019,84 @@
       "type": "array",
       "typeInfo": "TupleStruct"
     },
+    "bevy_xpbd_3d::constraints::joints::distance::DistanceJoint": {
+      "additionalProperties": false,
+      "isComponent": false,
+      "isResource": false,
+      "properties": {
+        "compliance": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        },
+        "damping_angular": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        },
+        "damping_linear": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        },
+        "entity1": {
+          "type": {
+            "$ref": "#/$defs/bevy_ecs::entity::Entity"
+          }
+        },
+        "entity2": {
+          "type": {
+            "$ref": "#/$defs/bevy_ecs::entity::Entity"
+          }
+        },
+        "force": {
+          "type": {
+            "$ref": "#/$defs/glam::Vec3"
+          }
+        },
+        "lagrange": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        },
+        "length_limits": {
+          "type": {
+            "$ref": "#/$defs/core::option::Option<bevy_xpbd_3d::constraints::joints::DistanceLimit>"
+          }
+        },
+        "local_anchor1": {
+          "type": {
+            "$ref": "#/$defs/glam::Vec3"
+          }
+        },
+        "local_anchor2": {
+          "type": {
+            "$ref": "#/$defs/glam::Vec3"
+          }
+        },
+        "rest_length": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        }
+      },
+      "required": [
+        "entity1",
+        "entity2",
+        "local_anchor1",
+        "local_anchor2",
+        "rest_length",
+        "damping_linear",
+        "damping_angular",
+        "lagrange",
+        "compliance",
+        "force"
+      ],
+      "short_name": "DistanceJoint",
+      "title": "bevy_xpbd_3d::constraints::joints::distance::DistanceJoint",
+      "type": "object",
+      "typeInfo": "Struct"
+    },
     "bevy_xpbd_3d::plugins::collision::broad_phase::BroadCollisionPairs": {
       "isComponent": false,
       "isResource": true,
@@ -11141,6 +11219,145 @@
       ],
       "short_name": "NarrowPhaseConfig",
       "title": "bevy_xpbd_3d::plugins::collision::narrow_phase::NarrowPhaseConfig",
+      "type": "object",
+      "typeInfo": "Struct"
+    },
+    "bevy_xpbd_3d::plugins::debug::configuration::DebugRender": {
+      "additionalProperties": false,
+      "isComponent": true,
+      "isResource": false,
+      "properties": {
+        "aabb_color": {
+          "type": {
+            "$ref": "#/$defs/core::option::Option<bevy_render::color::Color>"
+          }
+        },
+        "axis_lengths": {
+          "type": {
+            "$ref": "#/$defs/core::option::Option<glam::Vec3>"
+          }
+        },
+        "collider_color": {
+          "type": {
+            "$ref": "#/$defs/core::option::Option<bevy_render::color::Color>"
+          }
+        },
+        "hide_mesh": {
+          "type": {
+            "$ref": "#/$defs/bool"
+          }
+        },
+        "sleeping_color_multiplier": {
+          "type": {
+            "$ref": "#/$defs/core::option::Option<[f32; 4]>"
+          }
+        }
+      },
+      "required": [
+        "hide_mesh"
+      ],
+      "short_name": "DebugRender",
+      "title": "bevy_xpbd_3d::plugins::debug::configuration::DebugRender",
+      "type": "object",
+      "typeInfo": "Struct"
+    },
+    "bevy_xpbd_3d::plugins::debug::configuration::PhysicsGizmos": {
+      "additionalProperties": false,
+      "isComponent": false,
+      "isResource": false,
+      "properties": {
+        "aabb_color": {
+          "type": {
+            "$ref": "#/$defs/core::option::Option<bevy_render::color::Color>"
+          }
+        },
+        "axis_lengths": {
+          "type": {
+            "$ref": "#/$defs/core::option::Option<glam::Vec3>"
+          }
+        },
+        "collider_color": {
+          "type": {
+            "$ref": "#/$defs/core::option::Option<bevy_render::color::Color>"
+          }
+        },
+        "contact_normal_color": {
+          "type": {
+            "$ref": "#/$defs/core::option::Option<bevy_render::color::Color>"
+          }
+        },
+        "contact_normal_scale": {
+          "type": {
+            "$ref": "#/$defs/bevy_xpbd_3d::plugins::debug::configuration::ContactGizmoScale"
+          }
+        },
+        "contact_point_color": {
+          "type": {
+            "$ref": "#/$defs/core::option::Option<bevy_render::color::Color>"
+          }
+        },
+        "hide_meshes": {
+          "type": {
+            "$ref": "#/$defs/bool"
+          }
+        },
+        "joint_anchor_color": {
+          "type": {
+            "$ref": "#/$defs/core::option::Option<bevy_render::color::Color>"
+          }
+        },
+        "joint_separation_color": {
+          "type": {
+            "$ref": "#/$defs/core::option::Option<bevy_render::color::Color>"
+          }
+        },
+        "raycast_color": {
+          "type": {
+            "$ref": "#/$defs/core::option::Option<bevy_render::color::Color>"
+          }
+        },
+        "raycast_normal_color": {
+          "type": {
+            "$ref": "#/$defs/core::option::Option<bevy_render::color::Color>"
+          }
+        },
+        "raycast_point_color": {
+          "type": {
+            "$ref": "#/$defs/core::option::Option<bevy_render::color::Color>"
+          }
+        },
+        "shapecast_color": {
+          "type": {
+            "$ref": "#/$defs/core::option::Option<bevy_render::color::Color>"
+          }
+        },
+        "shapecast_normal_color": {
+          "type": {
+            "$ref": "#/$defs/core::option::Option<bevy_render::color::Color>"
+          }
+        },
+        "shapecast_point_color": {
+          "type": {
+            "$ref": "#/$defs/core::option::Option<bevy_render::color::Color>"
+          }
+        },
+        "shapecast_shape_color": {
+          "type": {
+            "$ref": "#/$defs/core::option::Option<bevy_render::color::Color>"
+          }
+        },
+        "sleeping_color_multiplier": {
+          "type": {
+            "$ref": "#/$defs/core::option::Option<[f32; 4]>"
+          }
+        }
+      },
+      "required": [
+        "contact_normal_scale",
+        "hide_meshes"
+      ],
+      "short_name": "PhysicsGizmos",
+      "title": "bevy_xpbd_3d::plugins::debug::configuration::PhysicsGizmos",
       "type": "object",
       "typeInfo": "Struct"
     },
@@ -11334,6 +11551,25 @@
       ],
       "short_name": "TestPlayer",
       "title": "conrete_edge_rs::TestPlayer",
+      "type": "object",
+      "typeInfo": "Struct"
+    },
+    "conrete_edge_rs::player::Player": {
+      "additionalProperties": false,
+      "isComponent": true,
+      "isResource": false,
+      "properties": {
+        "test": {
+          "type": {
+            "$ref": "#/$defs/i32"
+          }
+        }
+      },
+      "required": [
+        "test"
+      ],
+      "short_name": "Player",
+      "title": "conrete_edge_rs::player::Player",
       "type": "object",
       "typeInfo": "Struct"
     },
