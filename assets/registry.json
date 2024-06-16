@@ -11554,7 +11554,7 @@
       "type": "object",
       "typeInfo": "Struct"
     },
-    "conrete_edge_rs::player::Player": {
+    "conrete_edge_rs::player::PlayerSpawn": {
       "additionalProperties": false,
       "isComponent": true,
       "isResource": false,
@@ -11568,8 +11568,8 @@
       "required": [
         "test"
       ],
-      "short_name": "Player",
-      "title": "conrete_edge_rs::player::Player",
+      "short_name": "PlayerSpawn",
+      "title": "conrete_edge_rs::player::PlayerSpawn",
       "type": "object",
       "typeInfo": "Struct"
     },
