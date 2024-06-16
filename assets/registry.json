@@ -12799,6 +12799,647 @@
       "type": "int",
       "typeInfo": "Value"
     },
+    "leafwing_input_manager::action_state::ActionData": {
+      "additionalProperties": false,
+      "isComponent": false,
+      "isResource": false,
+      "properties": {
+        "axis_pair": {
+          "type": {
+            "$ref": "#/$defs/core::option::Option<leafwing_input_manager::axislike::DualAxisData>"
+          }
+        },
+        "consumed": {
+          "type": {
+            "$ref": "#/$defs/bool"
+          }
+        },
+        "state": {
+          "type": {
+            "$ref": "#/$defs/leafwing_input_manager::buttonlike::ButtonState"
+          }
+        },
+        "timing": {
+          "type": {
+            "$ref": "#/$defs/leafwing_input_manager::timing::Timing"
+          }
+        },
+        "value": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        }
+      },
+      "required": [
+        "state",
+        "value",
+        "timing",
+        "consumed"
+      ],
+      "short_name": "ActionData",
+      "title": "leafwing_input_manager::action_state::ActionData",
+      "type": "object",
+      "typeInfo": "Struct"
+    },
+    "leafwing_input_manager::action_state::ActionState<conrete_edge_rs::player::Action>": {
+      "additionalProperties": false,
+      "isComponent": false,
+      "isResource": false,
+      "properties": {
+        "action_data": {
+          "type": {
+            "$ref": "#/$defs/bevy_utils::hashbrown::HashMap<conrete_edge_rs::player::Action, leafwing_input_manager::action_state::ActionData, bevy_utils::hashbrown::hash_map::DefaultHashBuilder>"
+          }
+        }
+      },
+      "required": [
+        "action_data"
+      ],
+      "short_name": "ActionState<Action>",
+      "title": "leafwing_input_manager::action_state::ActionState<conrete_edge_rs::player::Action>",
+      "type": "object",
+      "typeInfo": "Struct"
+    },
+    "leafwing_input_manager::axislike::AxisType": {
+      "isComponent": false,
+      "isResource": false,
+      "oneOf": [
+        {
+          "items": false,
+          "prefixItems": [
+            {
+              "type": {
+                "$ref": "#/$defs/bevy_input::gamepad::GamepadAxisType"
+              }
+            }
+          ],
+          "short_name": "Gamepad",
+          "title": "Gamepad",
+          "type": "array",
+          "typeInfo": "Tuple"
+        },
+        {
+          "items": false,
+          "prefixItems": [
+            {
+              "type": {
+                "$ref": "#/$defs/leafwing_input_manager::axislike::MouseWheelAxisType"
+              }
+            }
+          ],
+          "short_name": "MouseWheel",
+          "title": "MouseWheel",
+          "type": "array",
+          "typeInfo": "Tuple"
+        },
+        {
+          "items": false,
+          "prefixItems": [
+            {
+              "type": {
+                "$ref": "#/$defs/leafwing_input_manager::axislike::MouseMotionAxisType"
+              }
+            }
+          ],
+          "short_name": "MouseMotion",
+          "title": "MouseMotion",
+          "type": "array",
+          "typeInfo": "Tuple"
+        }
+      ],
+      "short_name": "AxisType",
+      "title": "leafwing_input_manager::axislike::AxisType",
+      "type": "object",
+      "typeInfo": "Enum"
+    },
+    "leafwing_input_manager::axislike::DeadZoneShape": {
+      "isComponent": false,
+      "isResource": false,
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "horizontal_width": {
+              "title": "horizontal_width",
+              "type": {
+                "$ref": "#/$defs/f32"
+              }
+            },
+            "vertical_width": {
+              "title": "vertical_width",
+              "type": {
+                "$ref": "#/$defs/f32"
+              }
+            }
+          },
+          "required": [
+            "horizontal_width",
+            "vertical_width"
+          ],
+          "short_name": "Cross",
+          "title": "Cross",
+          "type": "object",
+          "typeInfo": "Struct"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "radius_x": {
+              "title": "radius_x",
+              "type": {
+                "$ref": "#/$defs/f32"
+              }
+            },
+            "radius_y": {
+              "title": "radius_y",
+              "type": {
+                "$ref": "#/$defs/f32"
+              }
+            }
+          },
+          "required": [
+            "radius_x",
+            "radius_y"
+          ],
+          "short_name": "Ellipse",
+          "title": "Ellipse",
+          "type": "object",
+          "typeInfo": "Struct"
+        }
+      ],
+      "short_name": "DeadZoneShape",
+      "title": "leafwing_input_manager::axislike::DeadZoneShape",
+      "type": "object",
+      "typeInfo": "Enum"
+    },
+    "leafwing_input_manager::axislike::DualAxis": {
+      "additionalProperties": false,
+      "isComponent": false,
+      "isResource": false,
+      "properties": {
+        "deadzone": {
+          "type": {
+            "$ref": "#/$defs/leafwing_input_manager::axislike::DeadZoneShape"
+          }
+        },
+        "x": {
+          "type": {
+            "$ref": "#/$defs/leafwing_input_manager::axislike::SingleAxis"
+          }
+        },
+        "y": {
+          "type": {
+            "$ref": "#/$defs/leafwing_input_manager::axislike::SingleAxis"
+          }
+        }
+      },
+      "required": [
+        "x",
+        "y",
+        "deadzone"
+      ],
+      "short_name": "DualAxis",
+      "title": "leafwing_input_manager::axislike::DualAxis",
+      "type": "object",
+      "typeInfo": "Struct"
+    },
+    "leafwing_input_manager::axislike::DualAxisData": {
+      "additionalProperties": false,
+      "isComponent": false,
+      "isResource": false,
+      "properties": {
+        "xy": {
+          "type": {
+            "$ref": "#/$defs/glam::Vec2"
+          }
+        }
+      },
+      "required": [
+        "xy"
+      ],
+      "short_name": "DualAxisData",
+      "title": "leafwing_input_manager::axislike::DualAxisData",
+      "type": "object",
+      "typeInfo": "Struct"
+    },
+    "leafwing_input_manager::axislike::MouseMotionAxisType": {
+      "isComponent": false,
+      "isResource": false,
+      "oneOf": [
+        "X",
+        "Y"
+      ],
+      "short_name": "MouseMotionAxisType",
+      "title": "leafwing_input_manager::axislike::MouseMotionAxisType",
+      "type": "string",
+      "typeInfo": "Enum"
+    },
+    "leafwing_input_manager::axislike::MouseWheelAxisType": {
+      "isComponent": false,
+      "isResource": false,
+      "oneOf": [
+        "X",
+        "Y"
+      ],
+      "short_name": "MouseWheelAxisType",
+      "title": "leafwing_input_manager::axislike::MouseWheelAxisType",
+      "type": "string",
+      "typeInfo": "Enum"
+    },
+    "leafwing_input_manager::axislike::SingleAxis": {
+      "additionalProperties": false,
+      "isComponent": false,
+      "isResource": false,
+      "properties": {
+        "axis_type": {
+          "type": {
+            "$ref": "#/$defs/leafwing_input_manager::axislike::AxisType"
+          }
+        },
+        "inverted": {
+          "type": {
+            "$ref": "#/$defs/bool"
+          }
+        },
+        "negative_low": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        },
+        "positive_low": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        },
+        "sensitivity": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        },
+        "value": {
+          "type": {
+            "$ref": "#/$defs/core::option::Option<f32>"
+          }
+        }
+      },
+      "required": [
+        "axis_type",
+        "positive_low",
+        "negative_low",
+        "inverted",
+        "sensitivity"
+      ],
+      "short_name": "SingleAxis",
+      "title": "leafwing_input_manager::axislike::SingleAxis",
+      "type": "object",
+      "typeInfo": "Struct"
+    },
+    "leafwing_input_manager::axislike::VirtualAxis": {
+      "additionalProperties": false,
+      "isComponent": false,
+      "isResource": false,
+      "properties": {
+        "negative": {
+          "type": {
+            "$ref": "#/$defs/leafwing_input_manager::user_input::InputKind"
+          }
+        },
+        "positive": {
+          "type": {
+            "$ref": "#/$defs/leafwing_input_manager::user_input::InputKind"
+          }
+        }
+      },
+      "required": [
+        "negative",
+        "positive"
+      ],
+      "short_name": "VirtualAxis",
+      "title": "leafwing_input_manager::axislike::VirtualAxis",
+      "type": "object",
+      "typeInfo": "Struct"
+    },
+    "leafwing_input_manager::axislike::VirtualDPad": {
+      "additionalProperties": false,
+      "isComponent": false,
+      "isResource": false,
+      "properties": {
+        "down": {
+          "type": {
+            "$ref": "#/$defs/leafwing_input_manager::user_input::InputKind"
+          }
+        },
+        "left": {
+          "type": {
+            "$ref": "#/$defs/leafwing_input_manager::user_input::InputKind"
+          }
+        },
+        "right": {
+          "type": {
+            "$ref": "#/$defs/leafwing_input_manager::user_input::InputKind"
+          }
+        },
+        "up": {
+          "type": {
+            "$ref": "#/$defs/leafwing_input_manager::user_input::InputKind"
+          }
+        }
+      },
+      "required": [
+        "up",
+        "down",
+        "left",
+        "right"
+      ],
+      "short_name": "VirtualDPad",
+      "title": "leafwing_input_manager::axislike::VirtualDPad",
+      "type": "object",
+      "typeInfo": "Struct"
+    },
+    "leafwing_input_manager::buttonlike::MouseMotionDirection": {
+      "isComponent": false,
+      "isResource": false,
+      "oneOf": [
+        "Up",
+        "Down",
+        "Right",
+        "Left"
+      ],
+      "short_name": "MouseMotionDirection",
+      "title": "leafwing_input_manager::buttonlike::MouseMotionDirection",
+      "type": "string",
+      "typeInfo": "Enum"
+    },
+    "leafwing_input_manager::buttonlike::MouseWheelDirection": {
+      "isComponent": false,
+      "isResource": false,
+      "oneOf": [
+        "Up",
+        "Down",
+        "Right",
+        "Left"
+      ],
+      "short_name": "MouseWheelDirection",
+      "title": "leafwing_input_manager::buttonlike::MouseWheelDirection",
+      "type": "string",
+      "typeInfo": "Enum"
+    },
+    "leafwing_input_manager::input_map::InputMap<conrete_edge_rs::player::Action>": {
+      "additionalProperties": false,
+      "isComponent": false,
+      "isResource": false,
+      "properties": {
+        "associated_gamepad": {
+          "type": {
+            "$ref": "#/$defs/core::option::Option<bevy_input::gamepad::Gamepad>"
+          }
+        },
+        "map": {
+          "type": {
+            "$ref": "#/$defs/bevy_utils::hashbrown::HashMap<conrete_edge_rs::player::Action, alloc::vec::Vec<leafwing_input_manager::user_input::UserInput>, bevy_utils::hashbrown::hash_map::DefaultHashBuilder>"
+          }
+        }
+      },
+      "required": [
+        "map"
+      ],
+      "short_name": "InputMap<Action>",
+      "title": "leafwing_input_manager::input_map::InputMap<conrete_edge_rs::player::Action>",
+      "type": "object",
+      "typeInfo": "Struct"
+    },
+    "leafwing_input_manager::timing::Timing": {
+      "additionalProperties": false,
+      "isComponent": false,
+      "isResource": false,
+      "properties": {
+        "current_duration": {
+          "type": {
+            "$ref": "#/$defs/bevy_utils::Duration"
+          }
+        },
+        "instant_started": {
+          "type": {
+            "$ref": "#/$defs/core::option::Option<bevy_utils::Instant>"
+          }
+        },
+        "previous_duration": {
+          "type": {
+            "$ref": "#/$defs/bevy_utils::Duration"
+          }
+        }
+      },
+      "required": [
+        "current_duration",
+        "previous_duration"
+      ],
+      "short_name": "Timing",
+      "title": "leafwing_input_manager::timing::Timing",
+      "type": "object",
+      "typeInfo": "Struct"
+    },
+    "leafwing_input_manager::user_input::InputKind": {
+      "isComponent": false,
+      "isResource": false,
+      "oneOf": [
+        {
+          "items": false,
+          "prefixItems": [
+            {
+              "type": {
+                "$ref": "#/$defs/bevy_input::gamepad::GamepadButtonType"
+              }
+            }
+          ],
+          "short_name": "GamepadButton",
+          "title": "GamepadButton",
+          "type": "array",
+          "typeInfo": "Tuple"
+        },
+        {
+          "items": false,
+          "prefixItems": [
+            {
+              "type": {
+                "$ref": "#/$defs/leafwing_input_manager::axislike::SingleAxis"
+              }
+            }
+          ],
+          "short_name": "SingleAxis",
+          "title": "SingleAxis",
+          "type": "array",
+          "typeInfo": "Tuple"
+        },
+        {
+          "items": false,
+          "prefixItems": [
+            {
+              "type": {
+                "$ref": "#/$defs/leafwing_input_manager::axislike::DualAxis"
+              }
+            }
+          ],
+          "short_name": "DualAxis",
+          "title": "DualAxis",
+          "type": "array",
+          "typeInfo": "Tuple"
+        },
+        {
+          "items": false,
+          "prefixItems": [
+            {
+              "type": {
+                "$ref": "#/$defs/bevy_input::keyboard::KeyCode"
+              }
+            }
+          ],
+          "short_name": "PhysicalKey",
+          "title": "PhysicalKey",
+          "type": "array",
+          "typeInfo": "Tuple"
+        },
+        {
+          "items": false,
+          "prefixItems": [
+            {
+              "type": {
+                "$ref": "#/$defs/leafwing_input_manager::user_input::Modifier"
+              }
+            }
+          ],
+          "short_name": "Modifier",
+          "title": "Modifier",
+          "type": "array",
+          "typeInfo": "Tuple"
+        },
+        {
+          "items": false,
+          "prefixItems": [
+            {
+              "type": {
+                "$ref": "#/$defs/bevy_input::mouse::MouseButton"
+              }
+            }
+          ],
+          "short_name": "Mouse",
+          "title": "Mouse",
+          "type": "array",
+          "typeInfo": "Tuple"
+        },
+        {
+          "items": false,
+          "prefixItems": [
+            {
+              "type": {
+                "$ref": "#/$defs/leafwing_input_manager::buttonlike::MouseWheelDirection"
+              }
+            }
+          ],
+          "short_name": "MouseWheel",
+          "title": "MouseWheel",
+          "type": "array",
+          "typeInfo": "Tuple"
+        },
+        {
+          "items": false,
+          "prefixItems": [
+            {
+              "type": {
+                "$ref": "#/$defs/leafwing_input_manager::buttonlike::MouseMotionDirection"
+              }
+            }
+          ],
+          "short_name": "MouseMotion",
+          "title": "MouseMotion",
+          "type": "array",
+          "typeInfo": "Tuple"
+        }
+      ],
+      "short_name": "InputKind",
+      "title": "leafwing_input_manager::user_input::InputKind",
+      "type": "object",
+      "typeInfo": "Enum"
+    },
+    "leafwing_input_manager::user_input::Modifier": {
+      "isComponent": false,
+      "isResource": false,
+      "oneOf": [
+        "Alt",
+        "Control",
+        "Shift",
+        "Super"
+      ],
+      "short_name": "Modifier",
+      "title": "leafwing_input_manager::user_input::Modifier",
+      "type": "string",
+      "typeInfo": "Enum"
+    },
+    "leafwing_input_manager::user_input::UserInput": {
+      "isComponent": false,
+      "isResource": false,
+      "oneOf": [
+        {
+          "items": false,
+          "prefixItems": [
+            {
+              "type": {
+                "$ref": "#/$defs/leafwing_input_manager::user_input::InputKind"
+              }
+            }
+          ],
+          "short_name": "Single",
+          "title": "Single",
+          "type": "array",
+          "typeInfo": "Tuple"
+        },
+        {
+          "items": false,
+          "prefixItems": [
+            {
+              "type": {
+                "$ref": "#/$defs/alloc::vec::Vec<leafwing_input_manager::user_input::InputKind>"
+              }
+            }
+          ],
+          "short_name": "Chord",
+          "title": "Chord",
+          "type": "array",
+          "typeInfo": "Tuple"
+        },
+        {
+          "items": false,
+          "prefixItems": [
+            {
+              "type": {
+                "$ref": "#/$defs/leafwing_input_manager::axislike::VirtualDPad"
+              }
+            }
+          ],
+          "short_name": "VirtualDPad",
+          "title": "VirtualDPad",
+          "type": "array",
+          "typeInfo": "Tuple"
+        },
+        {
+          "items": false,
+          "prefixItems": [
+            {
+              "type": {
+                "$ref": "#/$defs/leafwing_input_manager::axislike::VirtualAxis"
+              }
+            }
+          ],
+          "short_name": "VirtualAxis",
+          "title": "VirtualAxis",
+          "type": "array",
+          "typeInfo": "Tuple"
+        }
+      ],
+      "short_name": "UserInput",
+      "title": "leafwing_input_manager::user_input::UserInput",
+      "type": "object",
+      "typeInfo": "Enum"
+    },
     "std::ffi::OsString": {
       "isComponent": false,
       "isResource": false,
