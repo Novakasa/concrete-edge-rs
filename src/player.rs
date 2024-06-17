@@ -149,19 +149,20 @@ fn update_ground_force(
                     * Vec3::Y,
             );
             // println!("Force {:?}", force.force());
+            let yaw = move_state.acc_dir.z.atan2(move_state.acc_dir.x);
+            let pitch = move_state.acc_dir.length();
+            let target_quat = Quat::from_euler(EulerRot::YZX, yaw, -0.2 * pitch, 0.0);
+            let from_up = *quat * Vec3::Y;
+            let target_up = target_quat * Vec3::Y;
+            // let delta_angle = from_up.angle_between(target_up);
+            // let delta_axis = from_up.cross(target_up).normalize_or_zero();
+            //println!("From up dir: {:?}, Target up dir: {:?}", from_up, target_up);
+            // println!("Delta angle: {:?}", delta_angle);
+            let spring_torque = angular_spring.stiffness * from_up.cross(target_up)
+                - (angular_spring.damping * angular_vel.clone());
+            torque.set_torque(spring_torque);
+            force.apply_force(spring_torque.cross((1.0 + coll.time_of_impact) * Vec3::Y));
         }
-        let yaw = move_state.acc_dir.z.atan2(move_state.acc_dir.x);
-        let pitch = move_state.acc_dir.length();
-        let target_quat = Quat::from_euler(EulerRot::YZX, yaw, -0.2 * pitch, 0.0);
-        let from_up = *quat * Vec3::Y;
-        let target_up = target_quat * Vec3::Y;
-        // let delta_angle = from_up.angle_between(target_up);
-        // let delta_axis = from_up.cross(target_up).normalize_or_zero();
-        //println!("From up dir: {:?}, Target up dir: {:?}", from_up, target_up);
-        // println!("Delta angle: {:?}", delta_angle);
-        let spring_torque = angular_spring.stiffness * from_up.cross(target_up)
-            - (angular_spring.damping * angular_vel.clone());
-        torque.set_torque(spring_torque);
     }
 }
 
