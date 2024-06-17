@@ -80,8 +80,8 @@ fn spawn_player(
                     damping: 100.0,
                 },
                 PlayerAngularSpring {
-                    stiffness: 100.0,
-                    damping: 10.0,
+                    stiffness: 1000.0,
+                    damping: 800.0,
                 },
                 InputManagerBundle::<Action>::with_map(Action::default_input_map()),
                 PlayerMoveState::default(),
@@ -98,7 +98,7 @@ fn player_controls(mut query: Query<(&ActionState<Action>, &mut PlayerMoveState)
             .xy()
             .normalize_or_zero();
         println!("Move: {:?}", dir);
-        move_state.acc_dir = dir.extend(0.0);
+        move_state.acc_dir = Vec3::new(dir.x, 0.0, dir.y);
     }
 }
 
@@ -150,12 +150,15 @@ fn update_ground_force(
             );
             // println!("Force {:?}", force.force());
         }
-        let yaw = move_state.acc_dir.y.atan2(move_state.acc_dir.x);
+        let yaw = move_state.acc_dir.z.atan2(move_state.acc_dir.x);
         let pitch = move_state.acc_dir.length();
-        let target_quat = Quat::from_euler(EulerRot::YXZ, yaw, pitch, 0.0);
-        let delta_quat = target_quat * quat.inverse();
-        let spring_torque =
-            -angular_spring.stiffness * delta_quat.to_axis_angle().1 * delta_quat.to_axis_angle().0;
+        let target_quat = Quat::from_euler(EulerRot::YZX, yaw, -0.2 * pitch, 0.0);
+        let delta_angle =
+            Quat::from_rotation_arc(*quat * Vec3::Y, target_quat * Vec3::Y).to_axis_angle();
+        println!("Up dir: {:?}", *quat * Vec3::Y);
+        println!("Target up dir: {:?}", target_quat * Vec3::Y);
+        let spring_torque = -angular_spring.stiffness * delta_angle.1 * delta_angle.0
+            - (angular_spring.damping * angular_vel.clone());
         torque.set_torque(spring_torque);
     }
 }
