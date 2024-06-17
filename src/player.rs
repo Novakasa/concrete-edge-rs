@@ -81,7 +81,7 @@ fn spawn_player(
                 },
                 PlayerAngularSpring {
                     stiffness: 1000.0,
-                    damping: 800.0,
+                    damping: 100.0,
                 },
                 InputManagerBundle::<Action>::with_map(Action::default_input_map()),
                 PlayerMoveState::default(),
@@ -153,11 +153,13 @@ fn update_ground_force(
         let yaw = move_state.acc_dir.z.atan2(move_state.acc_dir.x);
         let pitch = move_state.acc_dir.length();
         let target_quat = Quat::from_euler(EulerRot::YZX, yaw, -0.2 * pitch, 0.0);
-        let delta_angle =
-            Quat::from_rotation_arc(*quat * Vec3::Y, target_quat * Vec3::Y).to_axis_angle();
-        println!("Up dir: {:?}", *quat * Vec3::Y);
-        println!("Target up dir: {:?}", target_quat * Vec3::Y);
-        let spring_torque = -angular_spring.stiffness * delta_angle.1 * delta_angle.0
+        let from_up = *quat * Vec3::Y;
+        let target_up = target_quat * Vec3::Y;
+        // let delta_angle = from_up.angle_between(target_up);
+        // let delta_axis = from_up.cross(target_up).normalize_or_zero();
+        //println!("From up dir: {:?}, Target up dir: {:?}", from_up, target_up);
+        // println!("Delta angle: {:?}", delta_angle);
+        let spring_torque = angular_spring.stiffness * from_up.cross(target_up)
             - (angular_spring.damping * angular_vel.clone());
         torque.set_torque(spring_torque);
     }
