@@ -55,6 +55,7 @@ struct PlayerAngularSpring {
 #[derive(Component, Reflect, Debug, Default)]
 struct PlayerMoveState {
     acc_dir: Vec3,
+    spring_height: f32,
 }
 
 fn spawn_player(
@@ -76,7 +77,7 @@ fn spawn_player(
                 ExternalTorque::default().with_persistence(false),
                 PlayerGroundSpring {
                     rest_length: 2.0,
-                    stiffness: 1000.0,
+                    stiffness: 3000.0,
                     damping: 100.0,
                 },
                 PlayerAngularSpring {
@@ -99,6 +100,11 @@ fn player_controls(mut query: Query<(&ActionState<Action>, &mut PlayerMoveState)
             .normalize_or_zero();
         println!("Move: {:?}", dir);
         move_state.acc_dir = Vec3::new(dir.x, 0.0, dir.y);
+        if action_state.pressed(&Action::Jump) {
+            move_state.spring_height = 2.0;
+        } else {
+            move_state.spring_height = 3.0;
+        }
     }
 }
 
@@ -133,35 +139,37 @@ fn update_ground_force(
         move_state,
     ) in query.iter_mut()
     {
+        let from_up = *quat * Vec3::Y;
         if let Some(coll) = shape_cast.cast_shape(
             &Collider::sphere(1.0),
             position.clone(),
             Quat::default(),
-            Direction3d::NEG_Y,
+            Direction3d::new_unchecked(-from_up),
             4.0,
             false,
             SpatialQueryFilter::from_mask(Layer::Platform),
         ) {
+            let contact_point = coll.point2 + -from_up * coll.time_of_impact;
             // println!("Time {:?}", coll.time_of_impact);
-            force.set_force(
-                (-spring.stiffness * (coll.time_of_impact - spring.rest_length)
-                    - spring.damping * velocity.y)
-                    * Vec3::Y,
-            );
+            let spring_force = (-spring.stiffness
+                * (coll.time_of_impact - move_state.spring_height)
+                - spring.damping * velocity.y)
+                .max(0.0);
+            force.clear();
+            force.apply_force_at_point(spring_force * Vec3::Y, contact_point, Vec3::ZERO);
             // println!("Force {:?}", force.force());
             let yaw = move_state.acc_dir.z.atan2(move_state.acc_dir.x);
             let pitch = move_state.acc_dir.length();
             let target_quat = Quat::from_euler(EulerRot::YZX, yaw, -0.2 * pitch, 0.0);
-            let from_up = *quat * Vec3::Y;
             let target_up = target_quat * Vec3::Y;
-            // let delta_angle = from_up.angle_between(target_up);
-            // let delta_axis = from_up.cross(target_up).normalize_or_zero();
+            let delta_angle = from_up.angle_between(target_up);
+            let delta_axis = from_up.cross(target_up).normalize_or_zero();
             //println!("From up dir: {:?}, Target up dir: {:?}", from_up, target_up);
             // println!("Delta angle: {:?}", delta_angle);
-            let spring_torque = angular_spring.stiffness * from_up.cross(target_up)
+            let spring_torque = angular_spring.stiffness * delta_axis * delta_angle
                 - (angular_spring.damping * angular_vel.clone());
             torque.set_torque(spring_torque);
-            force.apply_force(spring_torque.cross((1.0 + coll.time_of_impact) * Vec3::Y));
+            force.apply_force(-spring_torque.cross(contact_point));
         }
     }
 }
@@ -173,7 +181,7 @@ impl Plugin for PlayerPlugin {
         app.add_plugins(InputManagerPlugin::<Action>::default());
         app.register_type::<PlayerSpawn>();
         app.register_type::<DistanceJoint>();
-        app.insert_resource(SubstepCount(12));
+        app.insert_resource(SubstepCount(4));
         app.add_systems(Update, (spawn_player, player_controls));
         app.add_systems(
             SubstepSchedule,

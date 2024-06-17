@@ -1,9 +1,8 @@
 use bevy::prelude::*;
 use bevy_gltf_components::ComponentsFromGltfPlugin;
-use bevy_inspector_egui::{quick::WorldInspectorPlugin, DefaultInspectorConfigPlugin};
+use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_registry_export::ExportRegistryPlugin;
 use bevy_xpbd_3d::prelude::*;
-use leafwing_input_manager::InputManagerBundle;
 
 mod player;
 
