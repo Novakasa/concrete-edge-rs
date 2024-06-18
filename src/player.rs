@@ -200,11 +200,11 @@ fn update_ground_force(
                 - spring.damping * velocity.y)
                 .max(0.0);
             force.clear();
-            force.apply_force_at_point(spring_force * Vec3::Y, contact_point, Vec3::ZERO);
+            force.apply_force_at_point(spring_force * coll.normal1, contact_point, Vec3::ZERO);
             // println!("Force {:?}", force.force());
             let yaw = move_state.acc_dir.z.atan2(move_state.acc_dir.x);
             let pitch = move_state.acc_dir.length();
-            let target_quat = Quat::from_euler(EulerRot::YZX, yaw, -0.2 * PI * pitch, 0.0);
+            let target_quat = Quat::from_euler(EulerRot::YZX, yaw, -0.3 * PI * pitch, 0.0);
             let target_up = target_quat * Vec3::Y;
             let delta_angle = from_up.angle_between(target_up);
             let delta_axis = from_up.cross(target_up).normalize_or_zero();
@@ -227,7 +227,7 @@ fn update_ground_force(
             let acc_dir = Vec3::Y.cross(spring_torque).normalize_or_zero();
             let dir_cross_contact = acc_dir.cross(contact_point);
             if dir_cross_contact.length() > 0.00001 {
-                let f_acc = acc_dir * (spring_force * Vec3::Y.cross(contact_point)).length()
+                let f_acc = acc_dir * (spring_force * coll.normal1.cross(contact_point)).length()
                     / (dir_cross_contact.length());
                 println!("Force {:?}", f_acc);
                 force.apply_force(f_acc);
