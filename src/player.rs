@@ -1,4 +1,6 @@
-use bevy::{prelude::*, transform::TransformSystem};
+use bevy::{
+    core_pipeline::core_2d::graph::input, ecs::query, prelude::*, transform::TransformSystem,
+};
 use bevy_xpbd_3d::{math::PI, prelude::*, SubstepSchedule, SubstepSet};
 use leafwing_input_manager::prelude::*;
 
@@ -10,6 +12,7 @@ pub enum Action {
     Jump,
     Move,
     View,
+    Respawn,
 }
 
 impl Action {
@@ -17,6 +20,7 @@ impl Action {
         let mut input_map = InputMap::default();
         input_map.insert(Self::Move, VirtualDPad::wasd());
         input_map.insert(Self::Jump, KeyCode::Space);
+        input_map.insert(Self::Respawn, KeyCode::KeyR);
         input_map
     }
 }
@@ -147,6 +151,24 @@ fn player_controls(mut query: Query<(&ActionState<Action>, &mut PlayerMoveState)
     }
 }
 
+fn respawn_player(
+    mut commands: Commands,
+    query: Query<Entity, (With<PlayerSpawn>, With<PlayerSpawned>)>,
+    player: Query<Entity, With<Player>>,
+    input_query: Query<&ActionState<Action>>,
+) {
+    for entity in query.iter() {
+        for action_state in input_query.iter() {
+            if action_state.just_pressed(&Action::Respawn) {
+                if let Ok(player) = player.get_single() {
+                    commands.entity(player).despawn_recursive();
+                }
+                commands.entity(entity).remove::<PlayerSpawned>();
+            }
+        }
+    }
+}
+
 fn update_ground_force(
     mut query: Query<
         (
@@ -197,14 +219,14 @@ fn update_ground_force(
             // println!("Time {:?}", coll.time_of_impact);
             let spring_force = (-spring.stiffness
                 * (coll.time_of_impact - move_state.spring_height)
-                - spring.damping * velocity.y)
-                .max(0.0);
+                - spring.damping * velocity.dot(from_up))
+            .max(0.0);
             force.clear();
-            force.apply_force_at_point(spring_force * coll.normal1, contact_point, Vec3::ZERO);
+            force.apply_force_at_point(spring_force * from_up, contact_point, Vec3::ZERO);
             // println!("Force {:?}", force.force());
             let yaw = move_state.acc_dir.z.atan2(move_state.acc_dir.x);
             let pitch = move_state.acc_dir.length();
-            let target_quat = Quat::from_euler(EulerRot::YZX, yaw, -0.3 * PI * pitch, 0.0);
+            let target_quat = Quat::from_euler(EulerRot::YZX, yaw, -0.2 * PI * pitch, 0.0);
             let target_up = target_quat * Vec3::Y;
             let delta_angle = from_up.angle_between(target_up);
             let delta_axis = from_up.cross(target_up).normalize_or_zero();
@@ -230,7 +252,7 @@ fn update_ground_force(
                 let f_acc = acc_dir * (spring_force * coll.normal1.cross(contact_point)).length()
                     / (dir_cross_contact.length());
                 println!("Force {:?}", f_acc);
-                force.apply_force(f_acc);
+                // force.apply_force(f_acc);
             }
         }
     }
@@ -250,6 +272,7 @@ impl Plugin for PlayerPlugin {
             (
                 spawn_player,
                 player_controls,
+                respawn_player,
                 track_camera
                     .after(PhysicsSet::Sync)
                     .before(TransformSystem::TransformPropagate),
