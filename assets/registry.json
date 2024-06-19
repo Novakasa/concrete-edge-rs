@@ -11554,6 +11554,62 @@
       "type": "object",
       "typeInfo": "Struct"
     },
+    "conrete_edge_rs::player::PlayerAngularSpring": {
+      "additionalProperties": false,
+      "isComponent": true,
+      "isResource": true,
+      "properties": {
+        "damping": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        },
+        "stiffness": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        }
+      },
+      "required": [
+        "stiffness",
+        "damping"
+      ],
+      "short_name": "PlayerAngularSpring",
+      "title": "conrete_edge_rs::player::PlayerAngularSpring",
+      "type": "object",
+      "typeInfo": "Struct"
+    },
+    "conrete_edge_rs::player::PlayerGroundSpring": {
+      "additionalProperties": false,
+      "isComponent": true,
+      "isResource": true,
+      "properties": {
+        "damping": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        },
+        "rest_length": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        },
+        "stiffness": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        }
+      },
+      "required": [
+        "rest_length",
+        "stiffness",
+        "damping"
+      ],
+      "short_name": "PlayerGroundSpring",
+      "title": "conrete_edge_rs::player::PlayerGroundSpring",
+      "type": "object",
+      "typeInfo": "Struct"
+    },
     "conrete_edge_rs::player::PlayerSpawn": {
       "additionalProperties": false,
       "isComponent": true,

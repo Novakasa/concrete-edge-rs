@@ -1,5 +1,6 @@
 use bevy::{
-    core_pipeline::core_2d::graph::input, ecs::query, prelude::*, transform::TransformSystem,
+    prelude::*,
+    transform::{commands, TransformSystem},
 };
 use bevy_xpbd_3d::{math::PI, prelude::*, SubstepSchedule, SubstepSet};
 use leafwing_input_manager::prelude::*;
@@ -46,14 +47,16 @@ struct PlayerFeet;
 #[derive(Component, Reflect, Debug)]
 struct Player;
 
-#[derive(Component, Reflect, Debug)]
+#[derive(Component, Reflect, Debug, Resource, Clone, Default)]
+#[reflect(Component, Resource)]
 struct PlayerGroundSpring {
     rest_length: f32,
     stiffness: f32,
     damping: f32,
 }
 
-#[derive(Component, Reflect, Debug)]
+#[derive(Component, Reflect, Debug, Resource, Clone, Default)]
+#[reflect(Component, Resource)]
 struct PlayerAngularSpring {
     stiffness: f32,
     damping: f32,
@@ -68,6 +71,8 @@ struct PlayerMoveState {
 fn spawn_player(
     mut commands: Commands,
     query: Query<(Entity, &GlobalTransform), (With<PlayerSpawn>, Without<PlayerSpawned>)>,
+    ground_spring: Res<PlayerGroundSpring>,
+    angular_spring: Res<PlayerAngularSpring>,
 ) {
     for (entity, transform) in query.iter() {
         commands.entity(entity).insert(PlayerSpawned);
@@ -84,15 +89,8 @@ fn spawn_player(
                 Player,
                 ExternalForce::default().with_persistence(false),
                 ExternalTorque::default().with_persistence(false),
-                PlayerGroundSpring {
-                    rest_length: 0.0,
-                    stiffness: 300.0,
-                    damping: 20.0,
-                },
-                PlayerAngularSpring {
-                    stiffness: 10.0,
-                    damping: 2.0,
-                },
+                ground_spring.clone(),
+                angular_spring.clone(),
                 InputManagerBundle::<Action>::with_map(Action::default_input_map()),
                 PlayerMoveState::default(),
             ))
@@ -186,6 +184,7 @@ fn update_ground_force(
     >,
     shape_cast: SpatialQuery,
     mut gizmos: Gizmos,
+    dt: Res<Time<Substeps>>,
 ) {
     for (
         mut force,
@@ -251,7 +250,6 @@ fn update_ground_force(
             if dir_cross_contact.length() > 0.00001 {
                 let f_acc = acc_dir * (spring_force * coll.normal1.cross(contact_point)).length()
                     / (dir_cross_contact.length());
-                println!("Force {:?}", f_acc);
                 // force.apply_force(f_acc);
             }
         }
@@ -265,7 +263,18 @@ impl Plugin for PlayerPlugin {
         app.add_plugins(InputManagerPlugin::<Action>::default());
         app.register_type::<PlayerSpawn>();
         app.register_type::<DistanceJoint>();
+        app.register_type::<PlayerGroundSpring>();
+        app.register_type::<PlayerAngularSpring>();
         app.insert_resource(SubstepCount(12));
+        app.insert_resource(PlayerGroundSpring {
+            rest_length: 0.0,
+            stiffness: 11.0,
+            damping: 1.0,
+        });
+        app.insert_resource(PlayerAngularSpring {
+            stiffness: 10.0,
+            damping: 2.0,
+        });
         app.add_systems(Startup, spawn_camera);
         app.add_systems(
             Update,
