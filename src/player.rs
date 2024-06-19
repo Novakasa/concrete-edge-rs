@@ -181,29 +181,28 @@ fn respawn_player(
 }
 
 fn draw_debug_gizmos(
-    mut commands: Commands,
     query: Query<(&PhysicsDebugInfo, &Position, &Rotation), With<Player>>,
     mut gizmos: Gizmos,
 ) {
     for (debug, Position(position), Rotation(quat)) in query.iter() {
         if debug.grounded {
             gizmos.sphere(debug.contact_point, Quat::IDENTITY, 0.1, Color::RED);
-            gizmos.line(
+            gizmos.arrow(
                 position.clone() + debug.contact_point,
                 position.clone() + debug.contact_point + debug.spring_force,
                 Color::GREEN,
             );
-            gizmos.line(
+            gizmos.arrow(
                 position.clone() + debug.contact_point,
                 position.clone() + debug.contact_point + debug.normal_force,
                 Color::BLUE,
             );
-            gizmos.line(
+            gizmos.arrow(
                 position.clone(),
                 position.clone() + debug.torque_cm_force,
                 Color::YELLOW,
             );
-            gizmos.line(
+            gizmos.arrow(
                 position.clone(),
                 position.clone() + debug.spring_torque,
                 Color::CYAN,
@@ -215,6 +214,12 @@ fn draw_debug_gizmos(
                 Color::RED,
             );
         }
+        gizmos.primitive_3d(
+            Capsule3d::new(CAPSULE_RADIUS, CAPSULE_HEIGHT - CAPSULE_RADIUS * 2.0),
+            position.clone(),
+            quat.clone(),
+            Color::WHITE,
+        );
     }
 }
 
