@@ -1,3 +1,5 @@
+use std::env;
+
 use bevy::prelude::*;
 use bevy_gltf_components::ComponentsFromGltfPlugin;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
@@ -65,6 +67,8 @@ fn setup_platforms(
 }
 
 fn main() {
+    env::set_var("RUST_BACKTRACE", "1");
+    env::set_var("RUST_LOG", "pybricks_ble=info,brickrail=info");
     App::new()
         .register_type::<Platform>()
         .register_type::<TestPlayer>()

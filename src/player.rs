@@ -139,7 +139,6 @@ fn player_controls(mut query: Query<(&ActionState<Action>, &mut PlayerMoveState)
             .unwrap()
             .xy()
             .normalize_or_zero();
-        println!("Move: {:?}", dir);
         move_state.acc_dir = Vec3::new(dir.x, 0.0, dir.y);
         if action_state.pressed(&Action::Jump) {
             move_state.spring_height = CAPSULE_HEIGHT * 0.7;
@@ -203,7 +202,7 @@ fn update_ground_force(
             &Collider::sphere(CAPSULE_RADIUS),
             position.clone(),
             Quat::default(),
-            Direction3d::new_unchecked(-from_up),
+            Direction3d::new_unchecked(-from_up.normalize_or_zero()),
             CAPSULE_HEIGHT * 2.0,
             false,
             SpatialQueryFilter::from_mask(Layer::Platform),
@@ -215,42 +214,40 @@ fn update_ground_force(
                 Color::RED,
             );
             let contact_point = coll.point2 + -from_up * coll.time_of_impact;
+            let spring_vel = velocity.dot(coll.normal1) / (from_up.dot(coll.normal1));
             // println!("Time {:?}", coll.time_of_impact);
             let spring_force = (-spring.stiffness
                 * (coll.time_of_impact - move_state.spring_height)
-                - spring.damping * velocity.dot(from_up))
-            .max(0.0);
+                - spring.damping * spring_vel)
+                .max(0.0)
+                * from_up;
+            let normal_force = spring_force * coll.normal1 * (coll.normal1.dot(from_up));
+            let tangential_force = spring_force - normal_force;
             force.clear();
-            force.apply_force_at_point(spring_force * from_up, contact_point, Vec3::ZERO);
+            force.apply_force_at_point(spring_force, contact_point, Vec3::ZERO);
             // println!("Force {:?}", force.force());
             let yaw = move_state.acc_dir.z.atan2(move_state.acc_dir.x);
-            let pitch = move_state.acc_dir.length();
-            let target_quat = Quat::from_euler(EulerRot::YZX, yaw, -0.2 * PI * pitch, 0.0);
+            let pitch = -0.2 * PI * move_state.acc_dir.length();
+            let target_quat = Quat::from_euler(EulerRot::YZX, yaw, pitch, 0.0);
             let target_up = target_quat * Vec3::Y;
             let delta_angle = from_up.angle_between(target_up);
             let delta_axis = from_up.cross(target_up).normalize_or_zero();
-            //println!("From up dir: {:?}, Target up dir: {:?}", from_up, target_up);
-            // println!("Delta angle: {:?}", delta_angle);
+            let normal_torque = 0.0 * contact_point.cross(normal_force);
             let spring_torque = angular_spring.stiffness * delta_axis * delta_angle
                 - (angular_spring.damping * angular_vel.clone())
-                - force.torque();
-            let cm_force = -(spring_torque + force.torque()).cross(contact_point);
+                - normal_torque;
+            let cm_force = -(spring_torque + normal_torque).cross(contact_point);
             if false {
-                if cm_force.dot(target_up.cross(from_up)) > 0.0 && false {
-                    println!("accelerating");
-                    force.apply_force(cm_force);
-                } else {
-                    println!("decelerating");
-                    force.apply_force(cm_force);
-                }
+                force.apply_force(-cm_force);
             }
-            torque.set_torque(spring_torque);
+            torque.set_torque(spring_torque + normal_torque);
             let acc_dir = Vec3::Y.cross(spring_torque).normalize_or_zero();
             let dir_cross_contact = acc_dir.cross(contact_point);
             if dir_cross_contact.length() > 0.00001 {
-                let f_acc = acc_dir * (spring_force * coll.normal1.cross(contact_point)).length()
+                // this is redundant because this force is already applied by the spring
+                let f_acc = acc_dir * (normal_force.cross(contact_point)).length()
                     / (dir_cross_contact.length());
-                // force.apply_force(f_acc);
+                // force.apply_force(-f_acc);
             }
         }
     }
