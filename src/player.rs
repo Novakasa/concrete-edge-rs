@@ -68,6 +68,19 @@ struct PlayerMoveState {
     spring_height: f32,
 }
 
+#[derive(Component, Reflect, Debug, Default)]
+struct PhysicsDebugInfo {
+    grounded: bool,
+    spring_force: Vec3,
+    spring_torque: Vec3,
+    normal_force: Vec3,
+    shape_toi: f32,
+    spring_dir: Vec3,
+    contact_point: Vec3,
+    position: Vec3,
+    torque_cm_force: Vec3,
+}
+
 fn spawn_player(
     mut commands: Commands,
     query: Query<(Entity, &GlobalTransform), (With<PlayerSpawn>, Without<PlayerSpawned>)>,
@@ -93,6 +106,7 @@ fn spawn_player(
                 angular_spring.clone(),
                 InputManagerBundle::<Action>::with_map(Action::default_input_map()),
                 PlayerMoveState::default(),
+                PhysicsDebugInfo::default(),
             ))
             .id();
     }
@@ -166,6 +180,44 @@ fn respawn_player(
     }
 }
 
+fn draw_debug_gizmos(
+    mut commands: Commands,
+    query: Query<(&PhysicsDebugInfo, &Position, &Rotation), With<Player>>,
+    mut gizmos: Gizmos,
+) {
+    for (debug, Position(position), Rotation(quat)) in query.iter() {
+        if debug.grounded {
+            gizmos.sphere(debug.contact_point, Quat::IDENTITY, 0.1, Color::RED);
+            gizmos.line(
+                position.clone() + debug.contact_point,
+                position.clone() + debug.contact_point + debug.spring_force,
+                Color::GREEN,
+            );
+            gizmos.line(
+                position.clone() + debug.contact_point,
+                position.clone() + debug.contact_point + debug.normal_force,
+                Color::BLUE,
+            );
+            gizmos.line(
+                position.clone(),
+                position.clone() + debug.torque_cm_force,
+                Color::YELLOW,
+            );
+            gizmos.line(
+                position.clone(),
+                position.clone() + debug.spring_torque,
+                Color::CYAN,
+            );
+            gizmos.sphere(
+                position.clone() + -debug.spring_force.normalize_or_zero() * debug.shape_toi,
+                Quat::IDENTITY,
+                CAPSULE_RADIUS,
+                Color::RED,
+            );
+        }
+    }
+}
+
 fn update_ground_force(
     mut query: Query<
         (
@@ -178,6 +230,7 @@ fn update_ground_force(
             &PlayerGroundSpring,
             &PlayerAngularSpring,
             &PlayerMoveState,
+            &mut PhysicsDebugInfo,
         ),
         With<Player>,
     >,
@@ -195,6 +248,7 @@ fn update_ground_force(
         spring,
         angular_spring,
         move_state,
+        mut debug,
     ) in query.iter_mut()
     {
         let from_up = *quat * Vec3::Y;
@@ -207,13 +261,11 @@ fn update_ground_force(
             false,
             SpatialQueryFilter::from_mask(Layer::Platform),
         ) {
-            gizmos.sphere(
-                position.clone() + -from_up * coll.time_of_impact,
-                Quat::IDENTITY,
-                CAPSULE_RADIUS,
-                Color::RED,
-            );
+            debug.grounded = true;
+
             let contact_point = coll.point2 + -from_up * coll.time_of_impact;
+            debug.contact_point = contact_point;
+            debug.shape_toi = coll.time_of_impact;
             let spring_vel = velocity.dot(coll.normal1) / (from_up.dot(coll.normal1));
             // println!("Time {:?}", coll.time_of_impact);
             let spring_force = (-spring.stiffness
@@ -221,7 +273,9 @@ fn update_ground_force(
                 - spring.damping * spring_vel)
                 .max(0.0)
                 * from_up;
+            debug.spring_force = spring_force;
             let normal_force = spring_force * coll.normal1 * (coll.normal1.dot(from_up));
+            debug.normal_force = normal_force;
             let tangential_force = spring_force - normal_force;
             force.clear();
             force.apply_force_at_point(spring_force, contact_point, Vec3::ZERO);
@@ -236,19 +290,11 @@ fn update_ground_force(
             let spring_torque = angular_spring.stiffness * delta_axis * delta_angle
                 - (angular_spring.damping * angular_vel.clone())
                 - normal_torque;
-            let cm_force = -(spring_torque + normal_torque).cross(contact_point);
-            if false {
-                force.apply_force(-cm_force);
-            }
+            debug.spring_torque = spring_torque;
+            let cm_force = -0.0 * (spring_torque + normal_torque).cross(contact_point);
+            debug.torque_cm_force = cm_force;
+            force.apply_force(-cm_force);
             torque.set_torque(spring_torque + normal_torque);
-            let acc_dir = Vec3::Y.cross(spring_torque).normalize_or_zero();
-            let dir_cross_contact = acc_dir.cross(contact_point);
-            if dir_cross_contact.length() > 0.00001 {
-                // this is redundant because this force is already applied by the spring
-                let f_acc = acc_dir * (normal_force.cross(contact_point)).length()
-                    / (dir_cross_contact.length());
-                // force.apply_force(-f_acc);
-            }
         }
     }
 }
@@ -279,6 +325,7 @@ impl Plugin for PlayerPlugin {
                 spawn_player,
                 player_controls,
                 respawn_player,
+                draw_debug_gizmos.after(PhysicsSet::Sync),
                 track_camera
                     .after(PhysicsSet::Sync)
                     .before(TransformSystem::TransformPropagate),
