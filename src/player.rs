@@ -1,7 +1,4 @@
-use bevy::{
-    prelude::*,
-    transform::{commands, TransformSystem},
-};
+use bevy::{prelude::*, transform::TransformSystem};
 use bevy_xpbd_3d::{math::PI, prelude::*, SubstepSchedule, SubstepSet};
 use leafwing_input_manager::prelude::*;
 
@@ -214,12 +211,14 @@ fn draw_debug_gizmos(
                 Color::RED,
             );
         }
-        gizmos.primitive_3d(
-            Capsule3d::new(CAPSULE_RADIUS, CAPSULE_HEIGHT - CAPSULE_RADIUS * 2.0),
-            position.clone(),
-            quat.clone(),
-            Color::WHITE,
-        );
+        gizmos
+            .primitive_3d(
+                Capsule3d::new(CAPSULE_RADIUS, CAPSULE_HEIGHT - CAPSULE_RADIUS * 2.0),
+                position.clone(),
+                quat.clone(),
+                Color::WHITE,
+            )
+            .segments(6);
     }
 }
 
