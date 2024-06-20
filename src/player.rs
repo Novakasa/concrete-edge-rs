@@ -204,10 +204,21 @@ fn draw_debug_gizmos(
                 position.clone() + debug.spring_torque,
                 Color::CYAN,
             );
-            gizmos.sphere(
-                position.clone() + -debug.spring_force.normalize_or_zero() * debug.shape_toi,
-                Quat::IDENTITY,
-                CAPSULE_RADIUS,
+            // gizmos.sphere(
+            //     position.clone() + -debug.spring_force.normalize_or_zero() * debug.shape_toi,
+            //     Quat::IDENTITY,
+            //     CAPSULE_RADIUS,
+            //     Color::RED,
+            // );
+            gizmos.cuboid(
+                Transform::from_translation(
+                    position.clone() + -debug.spring_force.normalize_or_zero() * debug.shape_toi,
+                )
+                .with_scale(Vec3::new(
+                    CAPSULE_RADIUS,
+                    CAPSULE_RADIUS,
+                    CAPSULE_RADIUS,
+                )),
                 Color::RED,
             );
         }
@@ -257,7 +268,7 @@ fn update_ground_force(
     {
         let from_up = *quat * Vec3::Y;
         if let Some(coll) = shape_cast.cast_shape(
-            &Collider::sphere(CAPSULE_RADIUS),
+            &Collider::cuboid(CAPSULE_RADIUS, CAPSULE_RADIUS, CAPSULE_RADIUS),
             position.clone(),
             Quat::default(),
             Direction3d::new_unchecked(-from_up.normalize_or_zero()),

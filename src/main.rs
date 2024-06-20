@@ -45,7 +45,7 @@ fn setup_player(
         println!("Setting up player: {:?}", entity);
         commands
             .entity(entity)
-            .insert((Collider::cuboid(3.0, 1.0, 2.0), RigidBody::default()))
+            .insert((Collider::cuboid(3.0, 1.0, 2.0), RigidBody::Static))
             .insert(Name::new("TestPlayer"));
     }
 }
@@ -75,7 +75,7 @@ fn main() {
         .insert_resource(Gravity::default())
         .add_plugins(DefaultPlugins)
         .add_plugins(PhysicsPlugins::default())
-        // .add_plugins(PhysicsDebugPlugin::default())
+        .add_plugins(PhysicsDebugPlugin::default())
         .add_plugins(ComponentsFromGltfPlugin { legacy_mode: false })
         .add_plugins(player::PlayerPlugin)
         .add_plugins(WorldInspectorPlugin::new())
