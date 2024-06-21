@@ -255,6 +255,7 @@ fn update_ground_force(
         mut debug,
     ) in query.iter_mut()
     {
+        let filter = SpatialQueryFilter::from_mask(Layer::Platform);
         let from_up = *quat * Vec3::Y;
         if let Some(coll) = shape_cast.cast_shape(
             &Collider::sphere(CAPSULE_RADIUS),
@@ -263,9 +264,19 @@ fn update_ground_force(
             Direction3d::new_unchecked(-from_up.normalize_or_zero()),
             CAPSULE_HEIGHT * 2.0,
             false,
-            SpatialQueryFilter::from_mask(Layer::Platform),
+            filter.clone(),
         ) {
             debug.grounded = true;
+            let mut normal = Vec3::ZERO;
+            if let Some(cast) = shape_cast.cast_ray(
+                position.clone() - from_up * coll.time_of_impact,
+                Direction3d::new_unchecked(coll.point2.normalize()),
+                CAPSULE_RADIUS * 12.0,
+                false,
+                filter,
+            ) {
+                normal = cast.normal;
+            }
 
             let contact_point = coll.point2 + -from_up * coll.time_of_impact;
             debug.contact_point = contact_point;
@@ -278,7 +289,7 @@ fn update_ground_force(
                 .max(0.0)
                 * from_up;
             debug.spring_force = spring_force;
-            let normal_force = spring_force * coll.normal1 * (coll.normal1.dot(from_up));
+            let normal_force = spring_force * normal * (normal.dot(from_up));
             debug.normal_force = normal_force;
             let tangential_force = spring_force - normal_force;
             force.clear();
