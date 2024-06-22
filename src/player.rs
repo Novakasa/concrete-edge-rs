@@ -76,6 +76,7 @@ struct PhysicsDebugInfo {
     contact_point: Vec3,
     position: Vec3,
     torque_cm_force: Vec3,
+    ground_normal: Vec3,
 }
 
 fn spawn_player(
@@ -195,6 +196,11 @@ fn draw_debug_gizmos(
                 Color::BLUE,
             );
             gizmos.arrow(
+                position.clone() + debug.contact_point,
+                position.clone() + debug.contact_point + debug.ground_normal,
+                Color::ORANGE,
+            );
+            gizmos.arrow(
                 position.clone(),
                 position.clone() + debug.torque_cm_force,
                 Color::YELLOW,
@@ -255,17 +261,19 @@ fn update_ground_force(
         mut debug,
     ) in query.iter_mut()
     {
+        let filter = SpatialQueryFilter::from_mask(Layer::Platform);
         let from_up = *quat * Vec3::Y;
         if let Some(coll) = shape_cast.cast_shape(
             &Collider::sphere(CAPSULE_RADIUS),
             position.clone(),
-            Quat::default(),
+            Quat::IDENTITY,
             Direction3d::new_unchecked(-from_up.normalize_or_zero()),
             CAPSULE_HEIGHT * 2.0,
             false,
-            SpatialQueryFilter::from_mask(Layer::Platform),
+            filter.clone(),
         ) {
             debug.grounded = true;
+            debug.ground_normal = coll.normal1;
 
             let contact_point = coll.point2 + -from_up * coll.time_of_impact;
             debug.contact_point = contact_point;
@@ -278,7 +286,7 @@ fn update_ground_force(
                 .max(0.0)
                 * from_up;
             debug.spring_force = spring_force;
-            let normal_force = spring_force * coll.normal1 * (coll.normal1.dot(from_up));
+            let normal_force = spring_force.dot(coll.normal1) * coll.normal1;
             debug.normal_force = normal_force;
             let tangential_force = spring_force - normal_force;
             force.clear();
