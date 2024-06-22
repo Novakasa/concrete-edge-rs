@@ -76,6 +76,7 @@ struct PhysicsDebugInfo {
     contact_point: Vec3,
     position: Vec3,
     torque_cm_force: Vec3,
+    ground_normal: Vec3,
 }
 
 fn spawn_player(
@@ -85,6 +86,16 @@ fn spawn_player(
     angular_spring: Res<PlayerAngularSpring>,
 ) {
     for (entity, transform) in query.iter() {
+        let filter = SpatialQueryFilter::from_mask(Layer::Platform);
+        commands.spawn(
+            ShapeCaster::new(
+                Collider::sphere(CAPSULE_RADIUS),
+                transform.translation(),
+                Quat::IDENTITY,
+                Direction3d::new_unchecked(-Vec3::Y),
+            )
+            .with_query_filter(filter),
+        );
         commands.entity(entity).insert(PlayerSpawned);
         println!("Spawning player: {:?}", entity);
         let body = commands
@@ -92,7 +103,6 @@ fn spawn_player(
                 Collider::capsule(CAPSULE_RADIUS * 2.0, CAPSULE_RADIUS),
                 CollisionLayers::new(Layer::Player, Layer::Platform),
                 RigidBody::default(),
-                Name::new("PlayerBody"),
                 Position::from(transform.translation()),
                 Transform::from_translation(transform.translation()),
                 GlobalTransform::default(),
@@ -106,6 +116,17 @@ fn spawn_player(
                 PhysicsDebugInfo::default(),
             ))
             .id();
+    }
+}
+
+fn update_shapecaster(
+    mut query: Query<(&mut ShapeCaster), Without<Player>>,
+    player: Query<&Position, With<Player>>,
+) {
+    if let Ok(Position(pos)) = player.get_single() {
+        for (mut shape_caster) in query.iter_mut() {
+            shape_caster.origin = *pos;
+        }
     }
 }
 
@@ -195,6 +216,11 @@ fn draw_debug_gizmos(
                 Color::BLUE,
             );
             gizmos.arrow(
+                position.clone() + debug.contact_point,
+                position.clone() + debug.contact_point + debug.ground_normal,
+                Color::ORANGE,
+            );
+            gizmos.arrow(
                 position.clone(),
                 position.clone() + debug.torque_cm_force,
                 Color::YELLOW,
@@ -260,13 +286,14 @@ fn update_ground_force(
         if let Some(coll) = shape_cast.cast_shape(
             &Collider::sphere(CAPSULE_RADIUS),
             position.clone(),
-            Quat::default(),
+            Quat::IDENTITY,
             Direction3d::new_unchecked(-from_up.normalize_or_zero()),
             CAPSULE_HEIGHT * 2.0,
             false,
             filter.clone(),
         ) {
             debug.grounded = true;
+            debug.ground_normal = coll.normal1;
             let mut normal = Vec3::ZERO;
             if let Some(cast) = shape_cast.cast_ray(
                 position.clone() - from_up * coll.time_of_impact,
@@ -289,7 +316,7 @@ fn update_ground_force(
                 .max(0.0)
                 * from_up;
             debug.spring_force = spring_force;
-            let normal_force = spring_force * normal * (normal.dot(from_up));
+            let normal_force = spring_force.dot(coll.normal1) * coll.normal1;
             debug.normal_force = normal_force;
             let tangential_force = spring_force - normal_force;
             force.clear();
@@ -340,6 +367,7 @@ impl Plugin for PlayerPlugin {
                 spawn_player,
                 player_controls,
                 respawn_player,
+                update_shapecaster,
                 draw_debug_gizmos.after(PhysicsSet::Sync),
                 track_camera
                     .after(PhysicsSet::Sync)
