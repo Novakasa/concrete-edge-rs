@@ -155,13 +155,15 @@ fn player_controls(
             .unwrap()
             .xy()
             .normalize_or_zero();
-        let cam_input = action_state.clamped_axis_pair(&Action::View).unwrap().xy();
+        let cam_input = action_state.axis_pair(&Action::View).unwrap().xy();
         if let Ok((_, mut cam_transform)) = q_cam.get_single_mut() {
-            cam_transform.rotate_axis(Vec3::Y, cam_input.x * -0.05);
+            let mut euler_angles = cam_transform.rotation.to_euler(EulerRot::YXZ);
+            euler_angles.0 += cam_input.x * -0.005;
+            euler_angles.1 += cam_input.y * -0.005;
+            cam_transform.rotation =
+                Quat::from_euler(EulerRot::YXZ, euler_angles.0, euler_angles.1, 0.0);
 
-            let cam_rotation = cam_transform.rotation.to_euler(EulerRot::YXZ).0;
-
-            move_state.acc_dir = Quat::from_euler(EulerRot::YXZ, -cam_rotation, 0.0, 0.0)
+            move_state.acc_dir = Quat::from_euler(EulerRot::YXZ, -euler_angles.0, 0.0, 0.0)
                 * Vec3::new(move_input.x, 0.0, move_input.y);
             if action_state.pressed(&Action::Jump) {
                 move_state.spring_height = CAPSULE_HEIGHT * 0.7;
