@@ -19,6 +19,7 @@ impl Action {
         input_map.insert(Self::Move, VirtualDPad::wasd());
         input_map.insert(Self::Jump, KeyCode::Space);
         input_map.insert(Self::Respawn, KeyCode::KeyR);
+        input_map.insert(Self::View, DualAxis::mouse_motion());
         input_map
     }
 }
@@ -144,18 +145,29 @@ fn track_camera(
     }
 }
 
-fn player_controls(mut query: Query<(&ActionState<Action>, &mut PlayerMoveState), With<Player>>) {
+fn player_controls(
+    mut query: Query<(&ActionState<Action>, &mut PlayerMoveState), With<Player>>,
+    mut q_cam: Query<(&CameraAnchor, &mut Transform)>,
+) {
     for (action_state, mut move_state) in query.iter_mut() {
-        let dir = action_state
+        let move_input = action_state
             .clamped_axis_pair(&Action::Move)
             .unwrap()
             .xy()
             .normalize_or_zero();
-        move_state.acc_dir = Vec3::new(dir.x, 0.0, dir.y);
-        if action_state.pressed(&Action::Jump) {
-            move_state.spring_height = CAPSULE_HEIGHT * 0.7;
-        } else {
-            move_state.spring_height = CAPSULE_HEIGHT * 1.3;
+        let cam_input = action_state.clamped_axis_pair(&Action::View).unwrap().xy();
+        if let Ok((_, mut cam_transform)) = q_cam.get_single_mut() {
+            cam_transform.rotate_axis(Vec3::Y, cam_input.x * -0.05);
+
+            let cam_rotation = cam_transform.rotation.to_euler(EulerRot::YXZ).0;
+
+            move_state.acc_dir = Quat::from_euler(EulerRot::YXZ, -cam_rotation, 0.0, 0.0)
+                * Vec3::new(move_input.x, 0.0, move_input.y);
+            if action_state.pressed(&Action::Jump) {
+                move_state.spring_height = CAPSULE_HEIGHT * 0.7;
+            } else {
+                move_state.spring_height = CAPSULE_HEIGHT * 1.3;
+            }
         }
     }
 }
@@ -195,11 +207,12 @@ fn draw_debug_gizmos(
                 position.clone() + debug.contact_point + debug.normal_force,
                 Color::BLUE,
             );
+            /*
             gizmos.arrow(
                 position.clone() + debug.contact_point,
                 position.clone() + debug.contact_point + debug.ground_normal,
                 Color::ORANGE,
-            );
+            );*/
             gizmos.arrow(
                 position.clone(),
                 position.clone() + debug.torque_cm_force,
