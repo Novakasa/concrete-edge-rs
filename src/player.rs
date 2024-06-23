@@ -313,15 +313,21 @@ fn update_ground_force(
             let target_up = target_quat * Vec3::Y;
             let delta_angle = from_up.angle_between(target_up);
             let delta_axis = from_up.cross(target_up).normalize_or_zero();
-            let normal_torque = 0.0 * contact_point.cross(normal_force);
             let spring_torque = angular_spring.stiffness * delta_axis * delta_angle
-                - (angular_spring.damping * angular_vel.clone())
-                - normal_torque;
+                - (angular_spring.damping * angular_vel.clone());
+            gizmos.arrow(
+                position.clone(),
+                position.clone() + angular_vel.clone(),
+                Color::CYAN,
+            );
             debug.spring_torque = spring_torque;
-            let cm_force = -0.0 * (spring_torque + normal_torque).cross(contact_point);
+            let normal = coll.normal1;
+
+            let cm_force = normal.cross(spring_torque) / (normal.dot(contact_point));
+
             debug.torque_cm_force = cm_force;
-            force.apply_force(-cm_force);
-            torque.set_torque(spring_torque + normal_torque);
+            force.apply_force(cm_force);
+            torque.set_torque(spring_torque);
         }
     }
 }
