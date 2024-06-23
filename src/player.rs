@@ -155,6 +155,7 @@ fn player_controls(
             .unwrap()
             .xy()
             .normalize_or_zero();
+        // println!("{:?}", move_input);
         let cam_input = action_state.axis_pair(&Action::View).unwrap().xy();
         if let Ok((_, mut cam_transform)) = q_cam.get_single_mut() {
             let mut euler_angles = cam_transform.rotation.to_euler(EulerRot::YXZ);
@@ -165,8 +166,9 @@ fn player_controls(
 
             move_state.acc_dir = Quat::from_euler(EulerRot::YXZ, -euler_angles.0, 0.0, 0.0)
                 * Vec3::new(move_input.x, 0.0, move_input.y);
+            // println!("{:?}", move_state.acc_dir);
             if action_state.pressed(&Action::Jump) {
-                move_state.spring_height = CAPSULE_HEIGHT * 0.7;
+                move_state.spring_height = CAPSULE_HEIGHT * 0.8;
             } else {
                 move_state.spring_height = CAPSULE_HEIGHT * 1.3;
             }
@@ -287,13 +289,14 @@ fn update_ground_force(
             false,
             filter.clone(),
         ) {
+            let normal = coll.normal1;
             debug.grounded = true;
-            debug.ground_normal = coll.normal1;
+            debug.ground_normal = normal;
 
             let contact_point = coll.point2 + -from_up * coll.time_of_impact;
             debug.contact_point = contact_point;
             debug.shape_toi = coll.time_of_impact;
-            let spring_vel = velocity.dot(coll.normal1) / (from_up.dot(coll.normal1));
+            let spring_vel = velocity.dot(normal) / (from_up.dot(normal));
             // println!("Time {:?}", coll.time_of_impact);
             let spring_force = (-spring.stiffness
                 * (coll.time_of_impact - move_state.spring_height)
@@ -301,27 +304,23 @@ fn update_ground_force(
                 .max(0.0)
                 * from_up;
             debug.spring_force = spring_force;
-            let normal_force = spring_force.dot(coll.normal1) * coll.normal1;
+            let normal_force = spring_force.dot(normal) * normal;
             debug.normal_force = normal_force;
             let tangential_force = spring_force - normal_force;
             force.clear();
             force.apply_force_at_point(spring_force, 0.0 * contact_point, Vec3::ZERO);
             // println!("Force {:?}", force.force());
-            let yaw = move_state.acc_dir.z.atan2(move_state.acc_dir.x);
+            let yaw = -move_state.acc_dir.x.atan2(move_state.acc_dir.z);
+            println!("{:?}", yaw);
             let pitch = -0.2 * PI * move_state.acc_dir.length();
-            let target_quat = Quat::from_euler(EulerRot::YZX, yaw, pitch, 0.0);
-            let target_up = target_quat * Vec3::Y;
+            let target_quat = Quat::from_rotation_arc(Vec3::Y, Vec3::Y.lerp(normal, 0.5))
+                * Quat::from_euler(EulerRot::YXZ, yaw, pitch, 0.0);
+            let target_up = target_quat * ((Vec3::Y).normalize_or_zero());
             let delta_angle = from_up.angle_between(target_up);
             let delta_axis = from_up.cross(target_up).normalize_or_zero();
             let spring_torque = angular_spring.stiffness * delta_axis * delta_angle
                 - (angular_spring.damping * angular_vel.clone());
-            gizmos.arrow(
-                position.clone(),
-                position.clone() + angular_vel.clone(),
-                Color::CYAN,
-            );
             debug.spring_torque = spring_torque;
-            let normal = coll.normal1;
 
             let cm_force = normal.cross(spring_torque) / (normal.dot(contact_point));
 
