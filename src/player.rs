@@ -305,7 +305,7 @@ fn update_ground_force(
             debug.normal_force = normal_force;
             let tangential_force = spring_force - normal_force;
             force.clear();
-            force.apply_force_at_point(spring_force, contact_point, Vec3::ZERO);
+            force.apply_force_at_point(spring_force, 0.0 * contact_point, Vec3::ZERO);
             // println!("Force {:?}", force.force());
             let yaw = move_state.acc_dir.z.atan2(move_state.acc_dir.x);
             let pitch = -0.2 * PI * move_state.acc_dir.length();
