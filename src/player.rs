@@ -311,7 +311,7 @@ fn update_ground_force(
             force.apply_force_at_point(spring_force, 0.0 * contact_point, Vec3::ZERO);
             // println!("Force {:?}", force.force());
             let yaw = -move_state.acc_dir.x.atan2(move_state.acc_dir.z);
-            println!("{:?}", yaw);
+            // println!("{:?}", yaw);
             let pitch = -0.2 * PI * move_state.acc_dir.length();
             let tangent_plane = normal.cross(Vec3::Y).normalize_or_zero();
             let tangent_slope = normal.cross(tangent_plane).normalize_or_zero();
