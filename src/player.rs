@@ -313,8 +313,15 @@ fn update_ground_force(
             let yaw = -move_state.acc_dir.x.atan2(move_state.acc_dir.z);
             println!("{:?}", yaw);
             let pitch = -0.2 * PI * move_state.acc_dir.length();
-            let target_quat = Quat::from_rotation_arc(Vec3::Y, Vec3::Y.lerp(normal, 0.5))
-                * Quat::from_euler(EulerRot::YXZ, yaw, pitch, 0.0);
+            let tangent_plane = normal.cross(Vec3::Y).normalize_or_zero();
+            let tangent_slope = normal.cross(tangent_plane).normalize_or_zero();
+            let tangent_z = Vec3::X.cross(normal).normalize_or_zero();
+            let tangent_x = -tangent_z.cross(normal);
+            let acc_tangent = move_state.acc_dir.x * tangent_x + move_state.acc_dir.z * tangent_z;
+            let target_quat = Quat::from_rotation_arc(
+                Vec3::Y,
+                Vec3::Y.lerp(normal, 1.0 * acc_tangent.dot(tangent_slope).abs()),
+            ) * Quat::from_euler(EulerRot::YXZ, yaw, pitch, 0.0);
             let target_up = target_quat * ((Vec3::Y).normalize_or_zero());
             let delta_angle = from_up.angle_between(target_up);
             let delta_axis = from_up.cross(target_up).normalize_or_zero();
