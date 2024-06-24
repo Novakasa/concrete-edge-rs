@@ -1,6 +1,9 @@
 use std::env;
 
-use bevy::{prelude::*, window::PrimaryWindow};
+use bevy::{
+    prelude::*,
+    window::{CursorGrabMode, PrimaryWindow},
+};
 use bevy_gltf_components::ComponentsFromGltfPlugin;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_registry_export::ExportRegistryPlugin;
@@ -93,6 +96,12 @@ fn setup_platforms(
     }
 }
 
+fn lock_cursor(mut q_window: Query<&mut Window, With<PrimaryWindow>>) {
+    let mut primary_window = q_window.single_mut();
+    primary_window.cursor.grab_mode = CursorGrabMode::Locked;
+    primary_window.cursor.visible = false;
+}
+
 fn main() {
     env::set_var("RUST_BACKTRACE", "1");
     env::set_var("RUST_LOG", "pybricks_ble=info,brickrail=info");
@@ -115,5 +124,6 @@ fn main() {
         //.add_systems(Update, print_platforms)
         .add_plugins(ExportRegistryPlugin::default())
         .add_systems(Update, quit_on_menu)
+        .add_systems(Startup, lock_cursor)
         .run();
 }
