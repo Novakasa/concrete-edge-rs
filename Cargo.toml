@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 bevy = { version = "0.13.2", features = ["dynamic_linking"] }
 bevy-inspector-egui = "0.24.0"
+bevy_framepace = "0.16.0"
 bevy_gltf_components = "0.5.1"
 bevy_registry_export = "0.3.1"
 bevy_xpbd_3d = "0.4.2"

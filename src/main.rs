@@ -1,12 +1,26 @@
 use std::env;
 
-use bevy::prelude::*;
+use bevy::{prelude::*, window::PrimaryWindow};
 use bevy_gltf_components::ComponentsFromGltfPlugin;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_registry_export::ExportRegistryPlugin;
 use bevy_xpbd_3d::prelude::*;
+use leafwing_input_manager::prelude::*;
 
 mod player;
+
+#[derive(Actionlike, PartialEq, Eq, Hash, Clone, Debug, Reflect)]
+pub enum GlobalAction {
+    Menu,
+}
+
+impl GlobalAction {
+    fn default_input_map() -> InputMap<Self> {
+        let mut input_map = InputMap::default();
+        input_map.insert(Self::Menu, KeyCode::Escape);
+        input_map
+    }
+}
 
 #[derive(Component, Reflect, Debug)]
 #[reflect(Component)]
@@ -18,6 +32,19 @@ struct Platform {
 #[reflect(Component)]
 struct TestPlayer {
     test: i32,
+}
+
+fn quit_on_menu(
+    mut commands: Commands,
+    input: Res<ActionState<GlobalAction>>,
+    q_window: Query<Entity, With<PrimaryWindow>>,
+) {
+    if input.just_pressed(&GlobalAction::Menu) {
+        println!("Quitting on menu");
+        for window in q_window.iter() {
+            commands.entity(window).despawn();
+        }
+    }
 }
 
 fn load_level(mut commands: Commands, asset_server: Res<AssetServer>) {
@@ -73,8 +100,12 @@ fn main() {
         .register_type::<Platform>()
         .register_type::<TestPlayer>()
         .insert_resource(Gravity::default())
+        .init_resource::<ActionState<GlobalAction>>()
+        .insert_resource(GlobalAction::default_input_map())
+        .add_plugins(InputManagerPlugin::<GlobalAction>::default())
         .add_plugins(DefaultPlugins)
         .add_plugins(PhysicsPlugins::default())
+        .add_plugins(bevy_framepace::FramepacePlugin)
         // .add_plugins(PhysicsDebugPlugin::default())
         .add_plugins(ComponentsFromGltfPlugin { legacy_mode: false })
         .add_plugins(player::PlayerPlugin)
@@ -83,5 +114,6 @@ fn main() {
         .add_systems(Update, (setup_platforms, setup_player))
         //.add_systems(Update, print_platforms)
         .add_plugins(ExportRegistryPlugin::default())
+        .add_systems(Update, quit_on_menu)
         .run();
 }

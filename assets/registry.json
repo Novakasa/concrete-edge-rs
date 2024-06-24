@@ -2622,6 +2622,25 @@
       "type": "object",
       "typeInfo": "Struct"
     },
+    "bevy_framepace::FramepaceSettings": {
+      "additionalProperties": false,
+      "isComponent": false,
+      "isResource": true,
+      "properties": {
+        "limiter": {
+          "type": {
+            "$ref": "#/$defs/bevy_framepace::Limiter"
+          }
+        }
+      },
+      "required": [
+        "limiter"
+      ],
+      "short_name": "FramepaceSettings",
+      "title": "bevy_framepace::FramepaceSettings",
+      "type": "object",
+      "typeInfo": "Struct"
+    },
     "bevy_gizmos::aabb::AabbGizmoConfigGroup": {
       "additionalProperties": false,
       "isComponent": false,
@@ -12758,22 +12777,41 @@
       "type": "object",
       "typeInfo": "Struct"
     },
-    "leafwing_input_manager::action_state::ActionState<conrete_edge_rs::player::Action>": {
+    "leafwing_input_manager::action_state::ActionState<conrete_edge_rs::GlobalAction>": {
       "additionalProperties": false,
       "isComponent": false,
       "isResource": false,
       "properties": {
         "action_data": {
           "type": {
-            "$ref": "#/$defs/bevy_utils::hashbrown::HashMap<conrete_edge_rs::player::Action, leafwing_input_manager::action_state::ActionData, bevy_utils::hashbrown::hash_map::DefaultHashBuilder>"
+            "$ref": "#/$defs/bevy_utils::hashbrown::HashMap<conrete_edge_rs::GlobalAction, leafwing_input_manager::action_state::ActionData, bevy_utils::hashbrown::hash_map::DefaultHashBuilder>"
           }
         }
       },
       "required": [
         "action_data"
       ],
-      "short_name": "ActionState<Action>",
-      "title": "leafwing_input_manager::action_state::ActionState<conrete_edge_rs::player::Action>",
+      "short_name": "ActionState<GlobalAction>",
+      "title": "leafwing_input_manager::action_state::ActionState<conrete_edge_rs::GlobalAction>",
+      "type": "object",
+      "typeInfo": "Struct"
+    },
+    "leafwing_input_manager::action_state::ActionState<conrete_edge_rs::player::PlayerAction>": {
+      "additionalProperties": false,
+      "isComponent": false,
+      "isResource": false,
+      "properties": {
+        "action_data": {
+          "type": {
+            "$ref": "#/$defs/bevy_utils::hashbrown::HashMap<conrete_edge_rs::player::PlayerAction, leafwing_input_manager::action_state::ActionData, bevy_utils::hashbrown::hash_map::DefaultHashBuilder>"
+          }
+        }
+      },
+      "required": [
+        "action_data"
+      ],
+      "short_name": "ActionState<PlayerAction>",
+      "title": "leafwing_input_manager::action_state::ActionState<conrete_edge_rs::player::PlayerAction>",
       "type": "object",
       "typeInfo": "Struct"
     },
@@ -13101,7 +13139,7 @@
       "type": "string",
       "typeInfo": "Enum"
     },
-    "leafwing_input_manager::input_map::InputMap<conrete_edge_rs::player::Action>": {
+    "leafwing_input_manager::input_map::InputMap<conrete_edge_rs::GlobalAction>": {
       "additionalProperties": false,
       "isComponent": false,
       "isResource": false,
@@ -13113,15 +13151,39 @@
         },
         "map": {
           "type": {
-            "$ref": "#/$defs/bevy_utils::hashbrown::HashMap<conrete_edge_rs::player::Action, alloc::vec::Vec<leafwing_input_manager::user_input::UserInput>, bevy_utils::hashbrown::hash_map::DefaultHashBuilder>"
+            "$ref": "#/$defs/bevy_utils::hashbrown::HashMap<conrete_edge_rs::GlobalAction, alloc::vec::Vec<leafwing_input_manager::user_input::UserInput>, bevy_utils::hashbrown::hash_map::DefaultHashBuilder>"
           }
         }
       },
       "required": [
         "map"
       ],
-      "short_name": "InputMap<Action>",
-      "title": "leafwing_input_manager::input_map::InputMap<conrete_edge_rs::player::Action>",
+      "short_name": "InputMap<GlobalAction>",
+      "title": "leafwing_input_manager::input_map::InputMap<conrete_edge_rs::GlobalAction>",
+      "type": "object",
+      "typeInfo": "Struct"
+    },
+    "leafwing_input_manager::input_map::InputMap<conrete_edge_rs::player::PlayerAction>": {
+      "additionalProperties": false,
+      "isComponent": false,
+      "isResource": false,
+      "properties": {
+        "associated_gamepad": {
+          "type": {
+            "$ref": "#/$defs/core::option::Option<bevy_input::gamepad::Gamepad>"
+          }
+        },
+        "map": {
+          "type": {
+            "$ref": "#/$defs/bevy_utils::hashbrown::HashMap<conrete_edge_rs::player::PlayerAction, alloc::vec::Vec<leafwing_input_manager::user_input::UserInput>, bevy_utils::hashbrown::hash_map::DefaultHashBuilder>"
+          }
+        }
+      },
+      "required": [
+        "map"
+      ],
+      "short_name": "InputMap<PlayerAction>",
+      "title": "leafwing_input_manager::input_map::InputMap<conrete_edge_rs::player::PlayerAction>",
       "type": "object",
       "typeInfo": "Struct"
     },

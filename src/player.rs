@@ -1,4 +1,4 @@
-use bevy::{prelude::*, transform::TransformSystem};
+use bevy::{core_pipeline::core_2d::graph::input, prelude::*, transform::TransformSystem};
 use bevy_xpbd_3d::{math::PI, prelude::*, SubstepSchedule, SubstepSet};
 use leafwing_input_manager::prelude::*;
 
@@ -6,20 +6,22 @@ const CAPSULE_RADIUS: f32 = 0.2;
 const CAPSULE_HEIGHT: f32 = 4.0 * CAPSULE_RADIUS;
 
 #[derive(Actionlike, PartialEq, Eq, Hash, Clone, Debug, Reflect)]
-pub enum Action {
+pub enum PlayerAction {
     Jump,
     Move,
     View,
     Respawn,
+    Menu,
 }
 
-impl Action {
+impl PlayerAction {
     fn default_input_map() -> InputMap<Self> {
         let mut input_map = InputMap::default();
         input_map.insert(Self::Move, VirtualDPad::wasd());
         input_map.insert(Self::Jump, KeyCode::Space);
         input_map.insert(Self::Respawn, KeyCode::KeyR);
         input_map.insert(Self::View, DualAxis::mouse_motion());
+        input_map.insert(Self::Menu, KeyCode::Escape);
         input_map
     }
 }
@@ -103,7 +105,7 @@ fn spawn_player(
                 ExternalTorque::default().with_persistence(false),
                 ground_spring.clone(),
                 angular_spring.clone(),
-                InputManagerBundle::<Action>::with_map(Action::default_input_map()),
+                InputManagerBundle::<PlayerAction>::with_map(PlayerAction::default_input_map()),
                 PlayerMoveState::default(),
                 PhysicsDebugInfo::default(),
             ))
@@ -146,17 +148,17 @@ fn track_camera(
 }
 
 fn player_controls(
-    mut query: Query<(&ActionState<Action>, &mut PlayerMoveState), With<Player>>,
+    mut query: Query<(&ActionState<PlayerAction>, &mut PlayerMoveState), With<Player>>,
     mut q_cam: Query<(&CameraAnchor, &mut Transform)>,
 ) {
     for (action_state, mut move_state) in query.iter_mut() {
         let move_input = action_state
-            .clamped_axis_pair(&Action::Move)
+            .clamped_axis_pair(&PlayerAction::Move)
             .unwrap()
             .xy()
             .normalize_or_zero();
         // println!("{:?}", move_input);
-        let cam_input = action_state.axis_pair(&Action::View).unwrap().xy();
+        let cam_input = action_state.axis_pair(&PlayerAction::View).unwrap().xy();
         if let Ok((_, mut cam_transform)) = q_cam.get_single_mut() {
             let mut euler_angles = cam_transform.rotation.to_euler(EulerRot::YXZ);
             euler_angles.0 += cam_input.x * -0.005;
@@ -167,7 +169,7 @@ fn player_controls(
             move_state.acc_dir = Quat::from_euler(EulerRot::YXZ, -euler_angles.0, 0.0, 0.0)
                 * Vec3::new(move_input.x, 0.0, move_input.y);
             // println!("{:?}", move_state.acc_dir);
-            if action_state.pressed(&Action::Jump) {
+            if action_state.pressed(&PlayerAction::Jump) {
                 move_state.spring_height = CAPSULE_HEIGHT * 0.8;
             } else {
                 move_state.spring_height = CAPSULE_HEIGHT * 1.3;
@@ -180,11 +182,11 @@ fn respawn_player(
     mut commands: Commands,
     query: Query<Entity, (With<PlayerSpawn>, With<PlayerSpawned>)>,
     player: Query<Entity, With<Player>>,
-    input_query: Query<&ActionState<Action>>,
+    input_query: Query<&ActionState<PlayerAction>>,
 ) {
     for entity in query.iter() {
         for action_state in input_query.iter() {
-            if action_state.just_pressed(&Action::Respawn) {
+            if action_state.just_pressed(&PlayerAction::Respawn) {
                 if let Ok(player) = player.get_single() {
                     commands.entity(player).despawn_recursive();
                 }
@@ -334,6 +336,10 @@ fn update_ground_force(
             debug.torque_cm_force = cm_force;
             force.apply_force(cm_force);
             torque.set_torque(spring_torque);
+        } else {
+            debug.grounded = false;
+            force.clear();
+            torque.clear();
         }
     }
 }
@@ -342,7 +348,7 @@ pub struct PlayerPlugin;
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins(InputManagerPlugin::<Action>::default());
+        app.add_plugins(InputManagerPlugin::<PlayerAction>::default());
         app.register_type::<PlayerSpawn>();
         app.register_type::<DistanceJoint>();
         app.register_type::<PlayerGroundSpring>();
