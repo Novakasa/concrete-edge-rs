@@ -129,7 +129,7 @@ fn spawn_player(
 struct CameraAnchor;
 
 fn spawn_camera(mut commands: Commands) {
-    let camera_arm = 0.25 * Vec3::new(0.0, 8.0, 25.0);
+    let camera_arm = 0.15 * Vec3::new(0.0, 8.0, 25.0);
     let transform =
         Transform::from_translation(camera_arm).looking_to(-camera_arm.normalize(), Vec3::Y);
     commands
@@ -141,6 +141,10 @@ fn spawn_camera(mut commands: Commands) {
         .with_children(|builder| {
             builder
                 .spawn(Camera3dBundle {
+                    projection: Projection::Perspective(PerspectiveProjection {
+                        fov: PI / 3.0,
+                        ..Default::default()
+                    }),
                     transform: transform,
                     ..Default::default()
                 })
@@ -260,7 +264,7 @@ fn update_ground_force(
             position.clone(),
             Quat::IDENTITY,
             Direction3d::new_unchecked(-from_up.normalize_or_zero()),
-            CAPSULE_HEIGHT * 2.0,
+            CAPSULE_HEIGHT * 1.5,
             false,
             filter.clone(),
         ) {
@@ -348,6 +352,7 @@ fn update_ground_force(
 
             debug.torque_cm_force = cm_force;
             // force.apply_force_at_point(contact_point, cm_force, Vec3::ZERO);
+            force.apply_force(cm_force);
             torque.set_torque(spring_torque);
         } else {
             debug.grounded = false;
