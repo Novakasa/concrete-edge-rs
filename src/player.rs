@@ -55,6 +55,12 @@ struct PlayerGroundSpring {
     damping: f32,
 }
 
+impl PlayerGroundSpring {
+    fn force(&self, length: f32, vel: f32) -> f32 {
+        (-self.stiffness * (length - self.rest_length) - self.damping * vel).max(0.0)
+    }
+}
+
 #[derive(Component, Reflect, Debug, Resource, Clone, Default)]
 #[reflect(Component, Resource)]
 struct PlayerAngularSpring {
@@ -172,10 +178,18 @@ fn respawn_player(
 }
 
 fn player_controls(
-    mut query: Query<(&ActionState<PlayerAction>, &mut PlayerMoveState), With<Player>>,
+    mut query: Query<
+        (
+            &ActionState<PlayerAction>,
+            &mut PlayerMoveState,
+            &mut PlayerGroundSpring,
+            &mut PlayerAngularSpring,
+        ),
+        With<Player>,
+    >,
     mut q_cam: Query<(&CameraAnchor, &mut Transform)>,
 ) {
-    for (action_state, mut move_state) in query.iter_mut() {
+    for (action_state, mut move_state, mut spring, mut angular_spring) in query.iter_mut() {
         let move_input = action_state
             .clamped_axis_pair(&PlayerAction::Move)
             .unwrap()
@@ -194,9 +208,13 @@ fn player_controls(
                 * Vec3::new(move_input.x, 0.0, -move_input.y);
             // println!("{:?}", move_state.acc_dir);
             if action_state.pressed(&PlayerAction::Jump) {
-                move_state.spring_height = CAPSULE_HEIGHT * 2.0;
+                spring.rest_length = CAPSULE_HEIGHT * 2.0;
+                spring.damping = 2.0;
+                angular_spring.stiffness = 0.0;
             } else {
-                move_state.spring_height = CAPSULE_HEIGHT * 1.0;
+                spring.rest_length = CAPSULE_HEIGHT * 1.0;
+                spring.damping = 2.0;
+                angular_spring.stiffness = 15.0;
             }
         }
     }
@@ -242,7 +260,7 @@ fn update_ground_force(
             position.clone(),
             Quat::IDENTITY,
             Direction3d::new_unchecked(-from_up.normalize_or_zero()),
-            CAPSULE_HEIGHT * 4.0,
+            CAPSULE_HEIGHT * 2.0,
             false,
             filter.clone(),
         ) {
@@ -255,11 +273,7 @@ fn update_ground_force(
             debug.shape_toi = coll.time_of_impact;
             let spring_vel = velocity.dot(normal) / (from_up.dot(normal));
             // println!("Time {:?}", coll.time_of_impact);
-            let spring_force = (-spring.stiffness
-                * (coll.time_of_impact - move_state.spring_height)
-                - spring.damping * spring_vel)
-                .max(0.0)
-                * from_up;
+            let spring_force = spring.force(coll.time_of_impact, spring_vel) * from_up;
             debug.spring_force = spring_force;
             let normal_force = spring_force.dot(normal) * normal;
             debug.normal_force = normal_force;
