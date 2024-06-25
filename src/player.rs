@@ -99,9 +99,10 @@ fn spawn_player(
         let body = commands
             .spawn((
                 Collider::capsule(CAPSULE_RADIUS * 2.0, CAPSULE_RADIUS),
+                ColliderDensity(1.5),
                 CollisionLayers::new(Layer::Player, Layer::Platform),
                 RigidBody::default(),
-                Name::new("PlayerBody"),
+                // Name::new("PlayerBody"),
                 Position::from(transform.translation()),
                 Transform::from_translation(transform.translation()),
                 GlobalTransform::default(),
@@ -352,7 +353,7 @@ fn update_ground_force(
 
             debug.tangent_vel = tangent_vel;
 
-            let target_vel = acc_tangent * 10.0;
+            let target_vel = acc_tangent * 7.0;
             debug.target_vel = target_vel;
             let denominator = 1.0 - tangent_slope.dot(Vec3::Y).powi(2);
             let slope_force = if denominator == 0.0 {
@@ -361,8 +362,8 @@ fn update_ground_force(
                 -tangent_slope.dot(Vec3::Y) * normal_force.dot(Vec3::Y) * tangent_slope
                     / denominator
             };
-            let mut target_force = 0.3 * (target_vel - tangent_vel)
-                - 0.0001 * (tangent_vel - prev_tangent_vel) / dt.delta_seconds();
+            let mut target_force = 0.2 * (target_vel - tangent_vel)
+                - 0.0000 * (tangent_vel - prev_tangent_vel) / dt.delta_seconds();
 
             let max_lean = 0.2 * PI;
             let max_force = max_lean.tan() * normal_force.length();
@@ -396,10 +397,13 @@ fn update_ground_force(
                 - (angular_spring.damping * angular_vel.clone());
             debug.spring_torque = spring_torque;
 
+            let y_damping = angular_vel.y * -0.1;
+            torque.apply_torque(y_damping * Vec3::Y);
+
             let cm_force = normal.cross(spring_torque) / (normal.dot(contact_point));
 
             debug.torque_cm_force = cm_force;
-            force.apply_force(cm_force);
+            // force.apply_force_at_point(contact_point, cm_force, Vec3::ZERO);
             torque.set_torque(spring_torque);
         } else {
             debug.grounded = false;
