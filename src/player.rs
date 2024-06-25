@@ -80,6 +80,9 @@ struct PhysicsDebugInfo {
     position: Vec3,
     torque_cm_force: Vec3,
     ground_normal: Vec3,
+    tangent_vel: Vec3,
+    target_vel: Vec3,
+    target_force: Vec3,
 }
 
 fn spawn_player(
@@ -166,8 +169,8 @@ fn player_controls(
             cam_transform.rotation =
                 Quat::from_euler(EulerRot::YXZ, euler_angles.0, euler_angles.1, 0.0);
 
-            move_state.acc_dir = Quat::from_euler(EulerRot::YXZ, -euler_angles.0, 0.0, 0.0)
-                * Vec3::new(move_input.x, 0.0, move_input.y);
+            move_state.acc_dir = Quat::from_euler(EulerRot::YXZ, euler_angles.0, 0.0, 0.0)
+                * Vec3::new(move_input.x, 0.0, -move_input.y);
             // println!("{:?}", move_state.acc_dir);
             if action_state.pressed(&PlayerAction::Jump) {
                 move_state.spring_height = CAPSULE_HEIGHT * 0.8;
@@ -213,12 +216,17 @@ fn draw_debug_gizmos(
                 position.clone() + debug.contact_point + debug.normal_force,
                 Color::BLUE,
             );
-            /*
+
             gizmos.arrow(
                 position.clone() + debug.contact_point,
-                position.clone() + debug.contact_point + debug.ground_normal,
+                position.clone() + debug.contact_point + debug.tangent_vel,
                 Color::ORANGE,
-            );*/
+            );
+            gizmos.arrow(
+                position.clone() + debug.contact_point,
+                position.clone() + debug.contact_point + debug.target_vel,
+                Color::GREEN,
+            );
             gizmos.arrow(
                 position.clone(),
                 position.clone() + debug.torque_cm_force,
@@ -309,21 +317,33 @@ fn update_ground_force(
             let normal_force = spring_force.dot(normal) * normal;
             debug.normal_force = normal_force;
             let tangential_force = spring_force - normal_force;
-            force.clear();
-            force.apply_force_at_point(spring_force, 0.0 * contact_point, Vec3::ZERO);
-            // println!("Force {:?}", force.force());
-            let yaw = -move_state.acc_dir.x.atan2(move_state.acc_dir.z);
-            // println!("{:?}", yaw);
-            let pitch = -0.2 * PI * move_state.acc_dir.length();
+
             let tangent_plane = normal.cross(Vec3::Y).normalize_or_zero();
             let tangent_slope = normal.cross(tangent_plane).normalize_or_zero();
             let tangent_z = Vec3::X.cross(normal).normalize_or_zero();
             let tangent_x = -tangent_z.cross(normal);
             let acc_tangent = move_state.acc_dir.x * tangent_x + move_state.acc_dir.z * tangent_z;
-            let target_quat = Quat::from_rotation_arc(
-                Vec3::Y,
-                Vec3::Y.lerp(normal, 1.0 * acc_tangent.dot(tangent_slope).abs()),
-            ) * Quat::from_euler(EulerRot::YXZ, yaw, pitch, 0.0);
+            let tangent_vel = *velocity - velocity.dot(normal) * normal;
+
+            debug.tangent_vel = tangent_vel;
+
+            let target_vel = acc_tangent * 15.0;
+            debug.target_vel = target_vel;
+            let target_force = 1000.0 * (target_vel - tangent_vel);
+            debug.target_force = target_force;
+
+            force.clear();
+            force.apply_force_at_point(spring_force, 0.0 * contact_point, Vec3::ZERO);
+
+            let pitch = (target_force.length() / normal_force.length())
+                .atan()
+                .clamp(-0.2 * PI, 0.2 * PI);
+            let yaw = target_force
+                .dot(tangent_x)
+                .atan2(target_force.dot(tangent_z));
+
+            let target_quat = Quat::from_rotation_arc(Vec3::Y, normal)
+                * Quat::from_euler(EulerRot::YXZ, yaw, pitch, 0.0);
             let target_up = target_quat * ((Vec3::Y).normalize_or_zero());
             let delta_angle = from_up.angle_between(target_up);
             let delta_axis = from_up.cross(target_up).normalize_or_zero();
@@ -334,7 +354,7 @@ fn update_ground_force(
             let cm_force = normal.cross(spring_torque) / (normal.dot(contact_point));
 
             debug.torque_cm_force = cm_force;
-            force.apply_force(cm_force);
+            // force.apply_force(cm_force);
             torque.set_torque(spring_torque);
         } else {
             debug.grounded = false;
