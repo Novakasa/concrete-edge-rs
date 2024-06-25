@@ -268,6 +268,16 @@ fn draw_debug_gizmos(
     }
 }
 
+fn add_results_in_length(dir: Vec3, rhs: Vec3, combined_length: f32) -> Option<Vec3> {
+    let dot = dir.dot(rhs);
+    let discriminant = dot.powi(2) - rhs.dot(rhs) + combined_length.powi(2);
+    if discriminant < 0.0 {
+        // godot_print!("Discriminant is negative");
+        return None;
+    }
+    Some((-dot + discriminant.sqrt()) * dir)
+}
+
 fn update_ground_force(
     mut query: Query<
         (
@@ -351,9 +361,17 @@ fn update_ground_force(
                 -tangent_slope.dot(Vec3::Y) * normal_force.dot(Vec3::Y) * tangent_slope
                     / denominator
             };
-            let target_force = 0.5 * (target_vel - tangent_vel)
-                - 1.0 * slope_force
+            let mut target_force = 0.3 * (target_vel - tangent_vel)
                 - 0.0001 * (tangent_vel - prev_tangent_vel) / dt.delta_seconds();
+
+            let max_lean = 0.2 * PI;
+            let max_force = max_lean.tan() * normal_force.length();
+            if target_force.length() > max_force {
+                target_force =
+                    add_results_in_length(target_force.normalize_or_zero(), -slope_force, max_force)
+                        .unwrap_or(target_force)
+            }
+            target_force -= slope_force;
             move_state.prev_vel = velocity.clone();
             debug.target_force = target_force;
             // println!("{:?}, {:?}", target_force, normal_force);
@@ -361,7 +379,6 @@ fn update_ground_force(
             force.clear();
             force.apply_force_at_point(spring_force, 0.0 * contact_point, Vec3::ZERO);
 
-            let max_lean = 0.2 * PI;
             let pitch = (target_force.length() / normal_force.length())
                 .atan()
                 .min(max_lean);
@@ -382,7 +399,7 @@ fn update_ground_force(
             let cm_force = normal.cross(spring_torque) / (normal.dot(contact_point));
 
             debug.torque_cm_force = cm_force;
-            // force.apply_force(cm_force);
+            force.apply_force(cm_force);
             torque.set_torque(spring_torque);
         } else {
             debug.grounded = false;
