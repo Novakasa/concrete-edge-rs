@@ -153,6 +153,24 @@ fn track_camera(
     }
 }
 
+fn respawn_player(
+    mut commands: Commands,
+    query: Query<Entity, (With<PlayerSpawn>, With<PlayerSpawned>)>,
+    player: Query<Entity, With<Player>>,
+    input_query: Query<&ActionState<PlayerAction>>,
+) {
+    for entity in query.iter() {
+        for action_state in input_query.iter() {
+            if action_state.just_pressed(&PlayerAction::Respawn) {
+                if let Ok(player) = player.get_single() {
+                    commands.entity(player).despawn_recursive();
+                }
+                commands.entity(entity).remove::<PlayerSpawned>();
+            }
+        }
+    }
+}
+
 fn player_controls(
     mut query: Query<(&ActionState<PlayerAction>, &mut PlayerMoveState), With<Player>>,
     mut q_cam: Query<(&CameraAnchor, &mut Transform)>,
@@ -176,7 +194,7 @@ fn player_controls(
                 * Vec3::new(move_input.x, 0.0, -move_input.y);
             // println!("{:?}", move_state.acc_dir);
             if action_state.pressed(&PlayerAction::Jump) {
-                move_state.spring_height = CAPSULE_HEIGHT * 0.5;
+                move_state.spring_height = CAPSULE_HEIGHT * 2.0;
             } else {
                 move_state.spring_height = CAPSULE_HEIGHT * 1.0;
             }
@@ -184,20 +202,143 @@ fn player_controls(
     }
 }
 
-fn respawn_player(
-    mut commands: Commands,
-    query: Query<Entity, (With<PlayerSpawn>, With<PlayerSpawned>)>,
-    player: Query<Entity, With<Player>>,
-    input_query: Query<&ActionState<PlayerAction>>,
+fn update_ground_force(
+    mut query: Query<
+        (
+            &mut ExternalForce,
+            &mut ExternalTorque,
+            &Position,
+            &Rotation,
+            &LinearVelocity,
+            &AngularVelocity,
+            &PlayerGroundSpring,
+            &PlayerAngularSpring,
+            &mut PlayerMoveState,
+            &mut PhysicsDebugInfo,
+        ),
+        With<Player>,
+    >,
+    shape_cast: SpatialQuery,
+    mut gizmos: Gizmos,
+    dt: Res<Time<Substeps>>,
 ) {
-    for entity in query.iter() {
-        for action_state in input_query.iter() {
-            if action_state.just_pressed(&PlayerAction::Respawn) {
-                if let Ok(player) = player.get_single() {
-                    commands.entity(player).despawn_recursive();
-                }
-                commands.entity(entity).remove::<PlayerSpawned>();
+    for (
+        mut force,
+        mut torque,
+        Position(position),
+        Rotation(quat),
+        LinearVelocity(velocity),
+        AngularVelocity(angular_vel),
+        spring,
+        angular_spring,
+        mut move_state,
+        mut debug,
+    ) in query.iter_mut()
+    {
+        let filter = SpatialQueryFilter::from_mask(Layer::Platform);
+        let from_up = *quat * Vec3::Y;
+        if let Some(coll) = shape_cast.cast_shape(
+            &Collider::sphere(CAPSULE_RADIUS),
+            position.clone(),
+            Quat::IDENTITY,
+            Direction3d::new_unchecked(-from_up.normalize_or_zero()),
+            CAPSULE_HEIGHT * 4.0,
+            false,
+            filter.clone(),
+        ) {
+            let normal = coll.normal1;
+            debug.grounded = true;
+            debug.ground_normal = normal;
+
+            let contact_point = coll.point2 + -from_up * coll.time_of_impact;
+            debug.contact_point = contact_point;
+            debug.shape_toi = coll.time_of_impact;
+            let spring_vel = velocity.dot(normal) / (from_up.dot(normal));
+            // println!("Time {:?}", coll.time_of_impact);
+            let spring_force = (-spring.stiffness
+                * (coll.time_of_impact - move_state.spring_height)
+                - spring.damping * spring_vel)
+                .max(0.0)
+                * from_up;
+            debug.spring_force = spring_force;
+            let normal_force = spring_force.dot(normal) * normal;
+            debug.normal_force = normal_force;
+            let tangential_force = spring_force - normal_force;
+            debug.tangential_force = tangential_force;
+
+            let tangent_plane = normal.cross(Vec3::Y).normalize_or_zero();
+            let tangent_slope = normal.cross(tangent_plane).normalize_or_zero();
+            let tangent_z = Vec3::X.cross(normal).normalize_or_zero();
+            let tangent_x = -tangent_z.cross(normal);
+            let acc_tangent = move_state.acc_dir.x * tangent_x + move_state.acc_dir.z * tangent_z;
+            let tangent_vel = *velocity - velocity.dot(normal) * normal;
+            let prev_tangent_vel = move_state.prev_vel - move_state.prev_vel.dot(normal) * normal;
+
+            debug.tangent_vel = tangent_vel;
+
+            let target_vel = acc_tangent * 7.0;
+            debug.target_vel = target_vel;
+            let denominator = 1.0 - tangent_slope.dot(Vec3::Y).powi(2);
+            let slope_force = if denominator == 0.0 {
+                Vec3::ZERO
+            } else {
+                -tangent_slope.dot(Vec3::Y) * normal_force.dot(Vec3::Y) * tangent_slope
+                    / denominator
+            };
+
+            let max_lean = 0.25 * PI;
+            let max_force = max_lean.tan() * normal_force.length();
+
+            let mut target_force = 0.2 * (target_vel - tangent_vel);
+            if max_force > 0.0 {
+                target_force = (target_force.length() / max_force).powi(1)
+                    * max_force
+                    * target_force.normalize_or_zero()
             }
+            target_force -= 0.0000 * (tangent_vel - prev_tangent_vel) / dt.delta_seconds();
+
+            if target_force.length() > max_force {
+                target_force =
+                    add_results_in_length(target_force.normalize_or_zero(), -slope_force, max_force)
+                        .unwrap_or(target_force)
+            }
+            target_force -= slope_force;
+            move_state.prev_vel = velocity.clone();
+            debug.target_force = target_force;
+            // println!("{:?}, {:?}", target_force, normal_force);
+
+            force.clear();
+            force.apply_force_at_point(spring_force, 0.0 * contact_point, Vec3::ZERO);
+
+            let pitch = (target_force.length() / normal_force.length())
+                .atan()
+                .min(max_lean);
+
+            let yaw = target_force
+                .dot(tangent_x)
+                .atan2(target_force.dot(tangent_z));
+
+            let target_quat = Quat::from_rotation_arc(Vec3::Y, normal)
+                * Quat::from_euler(EulerRot::YXZ, yaw, pitch, 0.0);
+            let target_up = target_quat * ((Vec3::Y).normalize_or_zero());
+            let delta_angle = from_up.angle_between(target_up);
+            let delta_axis = from_up.cross(target_up).normalize_or_zero();
+            let spring_torque = angular_spring.stiffness * delta_axis * delta_angle
+                - (angular_spring.damping * angular_vel.clone());
+            debug.spring_torque = spring_torque;
+
+            let y_damping = angular_vel.y * -0.1;
+            torque.apply_torque(y_damping * Vec3::Y);
+
+            let cm_force = normal.cross(spring_torque) / (normal.dot(contact_point));
+
+            debug.torque_cm_force = cm_force;
+            // force.apply_force_at_point(contact_point, cm_force, Vec3::ZERO);
+            torque.set_torque(spring_torque);
+        } else {
+            debug.grounded = false;
+            force.clear();
+            torque.clear();
         }
     }
 }
@@ -277,147 +418,6 @@ fn add_results_in_length(dir: Vec3, rhs: Vec3, combined_length: f32) -> Option<V
         return None;
     }
     Some((-dot + discriminant.sqrt()) * dir)
-}
-
-fn update_ground_force(
-    mut query: Query<
-        (
-            &mut ExternalForce,
-            &mut ExternalTorque,
-            &Position,
-            &Rotation,
-            &LinearVelocity,
-            &AngularVelocity,
-            &PlayerGroundSpring,
-            &PlayerAngularSpring,
-            &mut PlayerMoveState,
-            &mut PhysicsDebugInfo,
-        ),
-        With<Player>,
-    >,
-    shape_cast: SpatialQuery,
-    mut gizmos: Gizmos,
-    dt: Res<Time<Substeps>>,
-) {
-    for (
-        mut force,
-        mut torque,
-        Position(position),
-        Rotation(quat),
-        LinearVelocity(velocity),
-        AngularVelocity(angular_vel),
-        spring,
-        angular_spring,
-        mut move_state,
-        mut debug,
-    ) in query.iter_mut()
-    {
-        let filter = SpatialQueryFilter::from_mask(Layer::Platform);
-        let from_up = *quat * Vec3::Y;
-        if let Some(coll) = shape_cast.cast_shape(
-            &Collider::sphere(CAPSULE_RADIUS),
-            position.clone(),
-            Quat::IDENTITY,
-            Direction3d::new_unchecked(-from_up.normalize_or_zero()),
-            CAPSULE_HEIGHT * 2.0,
-            false,
-            filter.clone(),
-        ) {
-            let normal = coll.normal1;
-            debug.grounded = true;
-            debug.ground_normal = normal;
-
-            let contact_point = coll.point2 + -from_up * coll.time_of_impact;
-            debug.contact_point = contact_point;
-            debug.shape_toi = coll.time_of_impact;
-            let spring_vel = velocity.dot(normal) / (from_up.dot(normal));
-            // println!("Time {:?}", coll.time_of_impact);
-            let spring_force = (-spring.stiffness
-                * (coll.time_of_impact - move_state.spring_height)
-                - spring.damping * spring_vel)
-                .max(0.0)
-                * from_up;
-            debug.spring_force = spring_force;
-            let normal_force = spring_force.dot(normal) * normal;
-            debug.normal_force = normal_force;
-            let tangential_force = spring_force - normal_force;
-            debug.tangential_force = tangential_force;
-
-            let tangent_plane = normal.cross(Vec3::Y).normalize_or_zero();
-            let tangent_slope = normal.cross(tangent_plane).normalize_or_zero();
-            let tangent_z = Vec3::X.cross(normal).normalize_or_zero();
-            let tangent_x = -tangent_z.cross(normal);
-            let acc_tangent = move_state.acc_dir.x * tangent_x + move_state.acc_dir.z * tangent_z;
-            let tangent_vel = *velocity - velocity.dot(normal) * normal;
-            let prev_tangent_vel = move_state.prev_vel - move_state.prev_vel.dot(normal) * normal;
-
-            debug.tangent_vel = tangent_vel;
-
-            let target_vel = acc_tangent * 7.0;
-            debug.target_vel = target_vel;
-            let denominator = 1.0 - tangent_slope.dot(Vec3::Y).powi(2);
-            let slope_force = if denominator == 0.0 {
-                Vec3::ZERO
-            } else {
-                -tangent_slope.dot(Vec3::Y) * normal_force.dot(Vec3::Y) * tangent_slope
-                    / denominator
-            };
-
-            let max_lean = 0.25 * PI;
-            let max_force = max_lean.tan() * normal_force.length();
-
-            let mut target_force = 0.4 * (target_vel - tangent_vel);
-            if max_force > 0.0 {
-                target_force = (target_force.length() / max_force).powi(2)
-                    * max_force
-                    * target_force.normalize_or_zero()
-            }
-            target_force -= 0.0000 * (tangent_vel - prev_tangent_vel) / dt.delta_seconds();
-
-            if target_force.length() > max_force {
-                target_force =
-                    add_results_in_length(target_force.normalize_or_zero(), -slope_force, max_force)
-                        .unwrap_or(target_force)
-            }
-            target_force -= slope_force;
-            move_state.prev_vel = velocity.clone();
-            debug.target_force = target_force;
-            // println!("{:?}, {:?}", target_force, normal_force);
-
-            force.clear();
-            force.apply_force_at_point(spring_force, 0.0 * contact_point, Vec3::ZERO);
-
-            let pitch = (target_force.length() / normal_force.length())
-                .atan()
-                .min(max_lean);
-
-            let yaw = target_force
-                .dot(tangent_x)
-                .atan2(target_force.dot(tangent_z));
-
-            let target_quat = Quat::from_rotation_arc(Vec3::Y, normal)
-                * Quat::from_euler(EulerRot::YXZ, yaw, pitch, 0.0);
-            let target_up = target_quat * ((Vec3::Y).normalize_or_zero());
-            let delta_angle = from_up.angle_between(target_up);
-            let delta_axis = from_up.cross(target_up).normalize_or_zero();
-            let spring_torque = angular_spring.stiffness * delta_axis * delta_angle
-                - (angular_spring.damping * angular_vel.clone());
-            debug.spring_torque = spring_torque;
-
-            let y_damping = angular_vel.y * -0.1;
-            torque.apply_torque(y_damping * Vec3::Y);
-
-            let cm_force = normal.cross(spring_torque) / (normal.dot(contact_point));
-
-            debug.torque_cm_force = cm_force;
-            // force.apply_force_at_point(contact_point, cm_force, Vec3::ZERO);
-            torque.set_torque(spring_torque);
-        } else {
-            debug.grounded = false;
-            force.clear();
-            torque.clear();
-        }
-    }
 }
 
 pub struct PlayerPlugin;
