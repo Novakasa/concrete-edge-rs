@@ -75,6 +75,7 @@ struct PhysicsDebugInfo {
     spring_force: Vec3,
     spring_torque: Vec3,
     normal_force: Vec3,
+    tangential_force: Vec3,
     shape_toi: f32,
     spring_dir: Vec3,
     contact_point: Vec3,
@@ -220,6 +221,12 @@ fn draw_debug_gizmos(
 
             gizmos.arrow(
                 position.clone() + debug.contact_point,
+                position.clone() + debug.contact_point + debug.tangential_force,
+                Color::CYAN,
+            );
+
+            gizmos.arrow(
+                position.clone() + debug.contact_point,
                 position.clone() + debug.contact_point + debug.tangent_vel,
                 Color::ORANGE,
             );
@@ -323,6 +330,7 @@ fn update_ground_force(
             let normal_force = spring_force.dot(normal) * normal;
             debug.normal_force = normal_force;
             let tangential_force = spring_force - normal_force;
+            debug.tangential_force = tangential_force;
 
             let tangent_plane = normal.cross(Vec3::Y).normalize_or_zero();
             let tangent_slope = normal.cross(tangent_plane).normalize_or_zero();
@@ -336,13 +344,19 @@ fn update_ground_force(
 
             let target_vel = acc_tangent * 10.0;
             debug.target_vel = target_vel;
-            let slope_force = -tangent_slope.dot(Vec3::Y) * normal_force.dot(Vec3::Y)
-                / (1.0 - tangent_slope.dot(Vec3::Y).powi(2));
-            let target_force = 1500.0 * (target_vel - tangent_vel)
-                - slope_force
-                - 30.0 * (tangent_vel - prev_tangent_vel) / dt.delta_seconds();
+            let denominator = 1.0 - tangent_slope.dot(Vec3::Y).powi(2);
+            let slope_force = if denominator == 0.0 {
+                Vec3::ZERO
+            } else {
+                -tangent_slope.dot(Vec3::Y) * normal_force.dot(Vec3::Y) * tangent_slope
+                    / denominator
+            };
+            let target_force = 0.5 * (target_vel - tangent_vel)
+                - 1.0 * slope_force
+                - 0.0001 * (tangent_vel - prev_tangent_vel) / dt.delta_seconds();
             move_state.prev_vel = velocity.clone();
             debug.target_force = target_force;
+            // println!("{:?}, {:?}", target_force, normal_force);
 
             force.clear();
             force.apply_force_at_point(spring_force, 0.0 * contact_point, Vec3::ZERO);
@@ -368,7 +382,7 @@ fn update_ground_force(
             let cm_force = normal.cross(spring_torque) / (normal.dot(contact_point));
 
             debug.torque_cm_force = cm_force;
-            force.apply_force(cm_force);
+            // force.apply_force(cm_force);
             torque.set_torque(spring_torque);
         } else {
             debug.grounded = false;
