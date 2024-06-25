@@ -176,9 +176,9 @@ fn player_controls(
                 * Vec3::new(move_input.x, 0.0, -move_input.y);
             // println!("{:?}", move_state.acc_dir);
             if action_state.pressed(&PlayerAction::Jump) {
-                move_state.spring_height = CAPSULE_HEIGHT * 0.8;
+                move_state.spring_height = CAPSULE_HEIGHT * 0.5;
             } else {
-                move_state.spring_height = CAPSULE_HEIGHT * 1.3;
+                move_state.spring_height = CAPSULE_HEIGHT * 1.0;
             }
         }
     }
@@ -365,7 +365,7 @@ fn update_ground_force(
             let mut target_force = 0.2 * (target_vel - tangent_vel)
                 - 0.0000 * (tangent_vel - prev_tangent_vel) / dt.delta_seconds();
 
-            let max_lean = 0.2 * PI;
+            let max_lean = 0.25 * PI;
             let max_force = max_lean.tan() * normal_force.length();
             if target_force.length() > max_force {
                 target_force =
@@ -425,12 +425,12 @@ impl Plugin for PlayerPlugin {
         app.insert_resource(SubstepCount(12));
         app.insert_resource(PlayerGroundSpring {
             rest_length: 0.0,
-            stiffness: 11.0,
-            damping: 1.0,
+            stiffness: 15.0,
+            damping: 2.0,
         });
         app.insert_resource(PlayerAngularSpring {
-            stiffness: 10.0,
-            damping: 2.0,
+            stiffness: 15.0,
+            damping: 3.0,
         });
         app.add_systems(Startup, spawn_camera);
         app.add_systems(
