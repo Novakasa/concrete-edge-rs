@@ -362,11 +362,18 @@ fn update_ground_force(
                 -tangent_slope.dot(Vec3::Y) * normal_force.dot(Vec3::Y) * tangent_slope
                     / denominator
             };
-            let mut target_force = 0.2 * (target_vel - tangent_vel)
-                - 0.0000 * (tangent_vel - prev_tangent_vel) / dt.delta_seconds();
 
             let max_lean = 0.25 * PI;
             let max_force = max_lean.tan() * normal_force.length();
+
+            let mut target_force = 0.4 * (target_vel - tangent_vel);
+            if max_force > 0.0 {
+                target_force = (target_force.length() / max_force).powi(2)
+                    * max_force
+                    * target_force.normalize_or_zero()
+            }
+            target_force -= 0.0000 * (tangent_vel - prev_tangent_vel) / dt.delta_seconds();
+
             if target_force.length() > max_force {
                 target_force =
                     add_results_in_length(target_force.normalize_or_zero(), -slope_force, max_force)
