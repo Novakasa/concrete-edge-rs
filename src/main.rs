@@ -1,6 +1,7 @@
 use std::env;
 
 use bevy::{
+    core_pipeline::core_2d::graph::input,
     prelude::*,
     window::{CursorGrabMode, PrimaryWindow},
 };
@@ -15,12 +16,18 @@ mod player;
 #[derive(Actionlike, PartialEq, Eq, Hash, Clone, Debug, Reflect)]
 pub enum GlobalAction {
     Menu,
+    PhysicsSpeedSlower,
+    PhysicsSpeedFaster,
+    PhysicsSpeedReset,
 }
 
 impl GlobalAction {
     fn default_input_map() -> InputMap<Self> {
         let mut input_map = InputMap::default();
         input_map.insert(Self::Menu, KeyCode::Escape);
+        input_map.insert(Self::PhysicsSpeedSlower, KeyCode::Minus);
+        input_map.insert(Self::PhysicsSpeedFaster, KeyCode::Equal);
+        input_map.insert(Self::PhysicsSpeedReset, KeyCode::Digit0);
         input_map
     }
 }
@@ -47,6 +54,22 @@ fn quit_on_menu(
         for window in q_window.iter() {
             commands.entity(window).despawn();
         }
+    }
+}
+
+fn physics_speed_control(mut time: ResMut<Time<Physics>>, input: Res<ActionState<GlobalAction>>) {
+    let relative_speed = time.relative_speed();
+    if input.just_pressed(&GlobalAction::PhysicsSpeedSlower) {
+        time.set_relative_speed((relative_speed / 2.0).max(0.01));
+        println!("Physics speed: {}", time.relative_speed());
+    }
+    if input.just_pressed(&GlobalAction::PhysicsSpeedFaster) {
+        time.set_relative_speed((relative_speed * 2.0).min(100.0));
+        println!("Physics speed: {}", time.relative_speed());
+    }
+    if input.just_pressed(&GlobalAction::PhysicsSpeedReset) {
+        time.set_relative_speed(1.0);
+        println!("Physics speed: {}", time.relative_speed());
     }
 }
 
@@ -123,7 +146,7 @@ fn main() {
         .add_systems(Update, (setup_platforms, setup_player))
         //.add_systems(Update, print_platforms)
         .add_plugins(ExportRegistryPlugin::default())
-        .add_systems(Update, quit_on_menu)
+        .add_systems(Update, (quit_on_menu, physics_speed_control))
         .add_systems(Startup, lock_cursor)
         .run();
 }

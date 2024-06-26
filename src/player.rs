@@ -1,4 +1,4 @@
-use bevy::{core_pipeline::core_2d::graph::input, prelude::*, transform::TransformSystem};
+use bevy::{prelude::*, transform::TransformSystem};
 use bevy_xpbd_3d::{math::PI, prelude::*, SubstepSchedule, SubstepSet};
 use leafwing_input_manager::prelude::*;
 
@@ -53,11 +53,14 @@ struct PlayerGroundSpring {
     rest_length: f32,
     stiffness: f32,
     damping: f32,
+    max_force: f32,
 }
 
 impl PlayerGroundSpring {
     fn force(&self, length: f32, vel: f32) -> f32 {
-        (-self.stiffness * (length - self.rest_length) - self.damping * vel).max(0.0)
+        (-self.stiffness * (length - self.rest_length) - self.damping * vel)
+            .max(0.0)
+            .min(self.max_force)
     }
 }
 
@@ -243,6 +246,7 @@ fn update_ground_force(
     shape_cast: SpatialQuery,
     mut gizmos: Gizmos,
     dt: Res<Time<Substeps>>,
+    gravity: Res<Gravity>,
 ) {
     for (
         mut force,
@@ -286,7 +290,11 @@ fn update_ground_force(
 
             let tangent_plane = normal.cross(Vec3::Y).normalize_or_zero();
             let tangent_slope = normal.cross(tangent_plane).normalize_or_zero();
-            let tangent_z = Vec3::X.cross(normal).normalize_or_zero();
+            let tangent_z = if normal.dot(Vec3::X).abs() > 0.9999 {
+                Vec3::Z
+            } else {
+                Vec3::X.cross(normal).normalize_or_zero()
+            };
             let tangent_x = -tangent_z.cross(normal);
             let acc_tangent = move_state.acc_dir.x * tangent_x + move_state.acc_dir.z * tangent_z;
             let tangent_vel = *velocity - velocity.dot(normal) * normal;
@@ -298,7 +306,7 @@ fn update_ground_force(
             debug.target_vel = target_vel;
             let denominator = 1.0 - tangent_slope.dot(Vec3::Y).powi(2);
             let slope_force = if denominator == 0.0 {
-                Vec3::ZERO
+                gravity.0
             } else {
                 -tangent_slope.dot(Vec3::Y) * normal_force.dot(Vec3::Y) * tangent_slope
                     / denominator
@@ -307,7 +315,7 @@ fn update_ground_force(
             let max_lean = 0.25 * PI;
             let max_force = max_lean.tan() * normal_force.length();
 
-            let mut target_force = 0.2 * (target_vel - tangent_vel);
+            let mut target_force = 0.3 * (target_vel - tangent_vel);
             if max_force > 0.0 {
                 target_force = (target_force.length() / max_force).powi(1)
                     * max_force
@@ -453,6 +461,7 @@ impl Plugin for PlayerPlugin {
             rest_length: 0.0,
             stiffness: 15.0,
             damping: 2.0,
+            max_force: 2.0 * 10.0,
         });
         app.insert_resource(PlayerAngularSpring {
             stiffness: 15.0,

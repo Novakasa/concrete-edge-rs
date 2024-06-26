@@ -11469,6 +11469,11 @@
             "$ref": "#/$defs/f32"
           }
         },
+        "max_force": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        },
         "rest_length": {
           "type": {
             "$ref": "#/$defs/f32"
@@ -11483,7 +11488,8 @@
       "required": [
         "rest_length",
         "stiffness",
-        "damping"
+        "damping",
+        "max_force"
       ],
       "short_name": "PlayerGroundSpring",
       "title": "conrete_edge_rs::player::PlayerGroundSpring",
