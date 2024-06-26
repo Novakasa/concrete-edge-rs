@@ -25,8 +25,8 @@ impl GlobalAction {
     fn default_input_map() -> InputMap<Self> {
         let mut input_map = InputMap::default();
         input_map.insert(Self::Menu, KeyCode::Escape);
-        input_map.insert(Self::PhysicsSpeedSlower, KeyCode::Minus);
-        input_map.insert(Self::PhysicsSpeedFaster, KeyCode::Equal);
+        input_map.insert(Self::PhysicsSpeedSlower, MouseWheelDirection::Down);
+        input_map.insert(Self::PhysicsSpeedFaster, MouseWheelDirection::Up);
         input_map.insert(Self::PhysicsSpeedReset, KeyCode::Digit0);
         input_map
     }
@@ -64,7 +64,7 @@ fn physics_speed_control(mut time: ResMut<Time<Physics>>, input: Res<ActionState
         println!("Physics speed: {}", time.relative_speed());
     }
     if input.just_pressed(&GlobalAction::PhysicsSpeedFaster) {
-        time.set_relative_speed((relative_speed * 2.0).min(100.0));
+        time.set_relative_speed((relative_speed * 2.0).min(1.0));
         println!("Physics speed: {}", time.relative_speed());
     }
     if input.just_pressed(&GlobalAction::PhysicsSpeedReset) {
