@@ -272,6 +272,8 @@ fn update_ground_force(
             false,
             filter.clone(),
         ) {
+            let max_lean = 0.25 * PI;
+
             let normal = coll.normal1;
             debug.grounded = true;
             debug.ground_normal = normal;
@@ -279,13 +281,19 @@ fn update_ground_force(
             let contact_point = coll.point2 + -from_up * coll.time_of_impact;
             debug.contact_point = contact_point;
             debug.shape_toi = coll.time_of_impact;
+
             let spring_vel = velocity.dot(normal) / (from_up.dot(normal));
             // println!("Time {:?}", coll.time_of_impact);
             let spring_force = spring.force(coll.time_of_impact, spring_vel) * from_up;
             debug.spring_force = spring_force;
+
             let normal_force = spring_force.dot(normal) * normal;
             debug.normal_force = normal_force;
-            let tangential_force = spring_force - normal_force;
+            let mut tangential_force = spring_force - normal_force;
+            let friction_force = normal_force.length() * max_lean.tan();
+            if tangential_force.length() > friction_force {
+                tangential_force = friction_force * tangential_force.normalize_or_zero();
+            }
             debug.tangential_force = tangential_force;
 
             let tangent_plane = normal.cross(Vec3::Y).normalize_or_zero();
@@ -312,7 +320,6 @@ fn update_ground_force(
                     / denominator
             };
 
-            let max_lean = 0.25 * PI;
             let max_force = max_lean.tan() * normal_force.length();
 
             let mut target_force = 0.3 * (target_vel - tangent_vel);
@@ -334,7 +341,11 @@ fn update_ground_force(
             // println!("{:?}, {:?}", target_force, normal_force);
 
             force.clear();
-            force.apply_force_at_point(spring_force, 0.0 * contact_point, Vec3::ZERO);
+            force.apply_force_at_point(
+                normal_force + tangential_force,
+                0.0 * contact_point,
+                Vec3::ZERO,
+            );
 
             let pitch = (target_force.length() / normal_force.length())
                 .atan()
