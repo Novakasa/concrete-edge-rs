@@ -3,7 +3,7 @@ use bevy_xpbd_3d::{math::PI, prelude::*, SubstepSchedule, SubstepSet};
 use leafwing_input_manager::prelude::*;
 
 const CAPSULE_RADIUS: f32 = 0.2;
-const CAPSULE_HEIGHT: f32 = 4.0 * CAPSULE_RADIUS;
+const CAPSULE_HEIGHT: f32 = 2.0 * CAPSULE_RADIUS;
 
 #[derive(Actionlike, PartialEq, Eq, Hash, Clone, Debug, Reflect)]
 pub enum PlayerAction {
@@ -105,13 +105,17 @@ fn spawn_player(
     query: Query<(Entity, &GlobalTransform), (With<PlayerSpawn>, Without<PlayerSpawned>)>,
     ground_spring: Res<PlayerGroundSpring>,
     angular_spring: Res<PlayerAngularSpring>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     for (entity, transform) in query.iter() {
         commands.entity(entity).insert(PlayerSpawned);
         println!("Spawning player: {:?}", entity);
+        let capsule = meshes.add(Mesh::from(Capsule3d::new(CAPSULE_RADIUS, CAPSULE_HEIGHT)));
+        let material = materials.add(Color::WHITE);
         let body = commands
             .spawn((
-                Collider::capsule(CAPSULE_RADIUS * 2.0, CAPSULE_RADIUS),
+                Collider::capsule(CAPSULE_HEIGHT, CAPSULE_RADIUS),
                 ColliderDensity(1.5),
                 CollisionLayers::new(Layer::Player, Layer::Platform),
                 RigidBody::default(),
@@ -128,6 +132,11 @@ fn spawn_player(
                 PlayerMoveState::default(),
                 PhysicsDebugInfo::default(),
             ))
+            .insert(MaterialMeshBundle {
+                mesh: capsule,
+                material,
+                ..Default::default()
+            })
             .id();
     }
 }
@@ -219,11 +228,11 @@ fn player_controls(
                 * Vec3::new(move_input.x, 0.0, -move_input.y);
             // println!("{:?}", move_state.acc_dir);
             if action_state.pressed(&PlayerAction::Jump) {
-                spring.rest_length = CAPSULE_HEIGHT * 2.0;
+                spring.rest_length = CAPSULE_HEIGHT * 4.0;
                 spring.min_damping = 2.0;
                 angular_spring.stiffness = 0.0;
             } else {
-                spring.rest_length = CAPSULE_HEIGHT * 1.0;
+                spring.rest_length = CAPSULE_HEIGHT * 2.0;
                 spring.min_damping = 2.0;
                 angular_spring.stiffness = 15.0;
             }
@@ -273,7 +282,7 @@ fn update_ground_force(
             position.clone(),
             Quat::IDENTITY,
             Direction3d::new_unchecked(-from_up.normalize_or_zero()),
-            CAPSULE_HEIGHT * 1.5,
+            CAPSULE_HEIGHT * 3.0,
             false,
             filter.clone(),
         ) {
@@ -483,8 +492,8 @@ impl Plugin for PlayerPlugin {
             max_force: 2.0 * 10.0,
         });
         app.insert_resource(PlayerAngularSpring {
-            stiffness: 15.0,
-            damping: 3.0,
+            stiffness: 10.0,
+            damping: 2.0,
         });
         app.add_systems(Startup, spawn_camera);
         app.add_systems(
@@ -493,7 +502,7 @@ impl Plugin for PlayerPlugin {
                 spawn_player,
                 player_controls,
                 respawn_player,
-                draw_debug_gizmos.after(PhysicsSet::Sync),
+                // draw_debug_gizmos.after(PhysicsSet::Sync),
                 track_camera
                     .after(PhysicsSet::Sync)
                     .before(TransformSystem::TransformPropagate),
