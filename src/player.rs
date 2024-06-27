@@ -68,7 +68,7 @@ impl PlayerGroundSpring {
         let damping = self
             .max_damping
             .lerp(self.min_damping, normal.dot(Vec3::Y).abs());
-        (-self.stiffness * (length - self.rest_length) - damping * vel)
+        (-self.stiffness * (length - self.rest_length).min(0.0) - damping * vel)
             .max(0.0)
             .min(self.max_force)
     }
@@ -521,7 +521,7 @@ impl Plugin for PlayerPlugin {
         app.insert_resource(PlayerGroundSpring {
             rest_length: 0.0,
             stiffness: 15.0,
-            min_damping: 2.0,
+            min_damping: 3.0,
             max_damping: 7.0,
             max_force: 2.0 * 10.0,
         });
