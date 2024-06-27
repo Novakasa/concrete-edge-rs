@@ -10,6 +10,7 @@ use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_registry_export::ExportRegistryPlugin;
 use bevy_xpbd_3d::prelude::*;
 use leafwing_input_manager::prelude::*;
+use player::DebugState;
 
 mod player;
 
@@ -19,6 +20,7 @@ pub enum GlobalAction {
     PhysicsSpeedSlower,
     PhysicsSpeedFaster,
     PhysicsSpeedReset,
+    ToggleDebug,
 }
 
 impl GlobalAction {
@@ -28,6 +30,7 @@ impl GlobalAction {
         input_map.insert(Self::PhysicsSpeedSlower, MouseWheelDirection::Down);
         input_map.insert(Self::PhysicsSpeedFaster, MouseWheelDirection::Up);
         input_map.insert(Self::PhysicsSpeedReset, KeyCode::Digit0);
+        input_map.insert(Self::ToggleDebug, KeyCode::F3);
         input_map
     }
 }
@@ -53,6 +56,19 @@ fn quit_on_menu(
         println!("Quitting on menu");
         for window in q_window.iter() {
             commands.entity(window).despawn();
+        }
+    }
+}
+
+fn toggle_debug_state(
+    mut next_debug_state: ResMut<NextState<DebugState>>,
+    debug_state: Res<State<DebugState>>,
+    input: Res<ActionState<GlobalAction>>,
+) {
+    if input.just_pressed(&GlobalAction::ToggleDebug) {
+        match debug_state.get() {
+            DebugState::None => next_debug_state.set(DebugState::On),
+            DebugState::On => next_debug_state.set(DebugState::None),
         }
     }
 }
@@ -146,7 +162,10 @@ fn main() {
         .add_systems(Update, (setup_platforms, setup_player))
         //.add_systems(Update, print_platforms)
         .add_plugins(ExportRegistryPlugin::default())
-        .add_systems(Update, (quit_on_menu, physics_speed_control))
+        .add_systems(
+            Update,
+            (quit_on_menu, physics_speed_control, toggle_debug_state),
+        )
         .add_systems(Startup, lock_cursor)
         .run();
 }

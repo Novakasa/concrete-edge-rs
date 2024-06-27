@@ -3,7 +3,13 @@ use bevy_xpbd_3d::{math::PI, prelude::*, SubstepSchedule, SubstepSet};
 use leafwing_input_manager::prelude::*;
 
 const CAPSULE_RADIUS: f32 = 0.2;
-const CAPSULE_HEIGHT: f32 = 2.0 * CAPSULE_RADIUS;
+const CAPSULE_HEIGHT: f32 = 4.0 * CAPSULE_RADIUS;
+
+#[derive(States, Debug, Clone, PartialEq, Eq, Hash)]
+pub enum DebugState {
+    None,
+    On,
+}
 
 #[derive(Actionlike, PartialEq, Eq, Hash, Clone, Debug, Reflect)]
 pub enum PlayerAction {
@@ -111,7 +117,10 @@ fn spawn_player(
     for (entity, transform) in query.iter() {
         commands.entity(entity).insert(PlayerSpawned);
         println!("Spawning player: {:?}", entity);
-        let capsule = meshes.add(Mesh::from(Capsule3d::new(CAPSULE_RADIUS, CAPSULE_HEIGHT)));
+        let capsule = meshes.add(Mesh::from(Capsule3d::new(
+            CAPSULE_RADIUS,
+            CAPSULE_HEIGHT - 2.0 * CAPSULE_RADIUS,
+        )));
         let material = materials.add(Color::WHITE);
         let body = commands
             .spawn((
@@ -169,12 +178,12 @@ fn spawn_camera(mut commands: Commands) {
 }
 
 fn track_camera(
-    query: Query<(&GlobalTransform), With<Player>>,
+    query: Query<(&Position), With<Player>>,
     mut camera_query: Query<&mut Transform, With<CameraAnchor>>,
 ) {
-    for (player_transform) in query.iter() {
+    for (Position(pos)) in query.iter() {
         for mut transform in camera_query.iter_mut() {
-            transform.translation = player_transform.translation().clone();
+            transform.translation = pos.clone();
         }
     }
 }
@@ -228,11 +237,11 @@ fn player_controls(
                 * Vec3::new(move_input.x, 0.0, -move_input.y);
             // println!("{:?}", move_state.acc_dir);
             if action_state.pressed(&PlayerAction::Jump) {
-                spring.rest_length = CAPSULE_HEIGHT * 4.0;
+                spring.rest_length = CAPSULE_HEIGHT * 2.0;
                 spring.min_damping = 2.0;
                 angular_spring.stiffness = 0.0;
             } else {
-                spring.rest_length = CAPSULE_HEIGHT * 2.0;
+                spring.rest_length = CAPSULE_HEIGHT * 1.0;
                 spring.min_damping = 2.0;
                 angular_spring.stiffness = 15.0;
             }
@@ -282,7 +291,7 @@ fn update_ground_force(
             position.clone(),
             Quat::IDENTITY,
             Direction3d::new_unchecked(-from_up.normalize_or_zero()),
-            CAPSULE_HEIGHT * 3.0,
+            CAPSULE_HEIGHT * 1.5,
             false,
             filter.clone(),
         ) {
@@ -397,11 +406,21 @@ fn update_ground_force(
     }
 }
 
+fn set_visible<const val: bool>(mut query: Query<&mut Visibility, With<Player>>) {
+    for mut visibility in query.iter_mut() {
+        if val {
+            *visibility = Visibility::Visible;
+        } else {
+            *visibility = Visibility::Hidden;
+        }
+    }
+}
+
 fn draw_debug_gizmos(
-    query: Query<(&PhysicsDebugInfo, &Position, &Rotation), With<Player>>,
+    mut query: Query<(&PhysicsDebugInfo, &Position, &Rotation), With<Player>>,
     mut gizmos: Gizmos,
 ) {
-    for (debug, Position(position), Rotation(quat)) in query.iter() {
+    for (debug, Position(position), Rotation(quat)) in query.iter_mut() {
         if debug.grounded {
             gizmos.sphere(debug.contact_point, Quat::IDENTITY, 0.1, Color::RED);
             gizmos.arrow(
@@ -483,6 +502,7 @@ impl Plugin for PlayerPlugin {
         app.register_type::<DistanceJoint>();
         app.register_type::<PlayerGroundSpring>();
         app.register_type::<PlayerAngularSpring>();
+        app.insert_state(DebugState::None);
         app.insert_resource(SubstepCount(12));
         app.insert_resource(PlayerGroundSpring {
             rest_length: 0.0,
@@ -502,7 +522,9 @@ impl Plugin for PlayerPlugin {
                 spawn_player,
                 player_controls,
                 respawn_player,
-                // draw_debug_gizmos.after(PhysicsSet::Sync),
+                draw_debug_gizmos
+                    .after(PhysicsSet::Sync)
+                    .run_if(in_state(DebugState::On)),
                 track_camera
                     .after(PhysicsSet::Sync)
                     .before(TransformSystem::TransformPropagate),
@@ -512,5 +534,7 @@ impl Plugin for PlayerPlugin {
             SubstepSchedule,
             update_ground_force.before(SubstepSet::Integrate),
         );
+        app.add_systems(OnEnter(DebugState::None), set_visible::<true>);
+        app.add_systems(OnEnter(DebugState::On), set_visible::<false>);
     }
 }
