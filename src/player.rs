@@ -4,6 +4,7 @@ use leafwing_input_manager::prelude::*;
 
 const CAPSULE_RADIUS: f32 = 0.2;
 const CAPSULE_HEIGHT: f32 = 4.0 * CAPSULE_RADIUS;
+const MAX_TOI: f32 = CAPSULE_HEIGHT * 1.5;
 
 #[derive(States, Debug, Clone, PartialEq, Eq, Hash)]
 pub enum DebugState {
@@ -61,14 +62,19 @@ struct PlayerGroundSpring {
     min_damping: f32,
     max_damping: f32,
     max_force: f32,
+    far_rest_length: f32,
+    far_stiffness: f32,
+    damping_range: f32,
 }
 
 impl PlayerGroundSpring {
     fn force(&self, length: f32, vel: f32, normal: Vec3) -> f32 {
-        let damping = self
+        let mut damping = self
             .max_damping
             .lerp(self.min_damping, normal.dot(Vec3::Y).abs());
-        (-self.stiffness * (length - self.rest_length).min(0.0) - damping * vel)
+        (-self.stiffness * (length - self.rest_length).min(0.0)
+            - self.far_stiffness * (length - self.far_rest_length).min(0.0)
+            - damping * vel)
             .max(0.0)
             .min(self.max_force)
     }
@@ -244,11 +250,11 @@ fn player_controls(
                 * Vec3::new(move_input.x, 0.0, -move_input.y);
             // println!("{:?}", move_state.acc_dir);
             if action_state.pressed(&PlayerAction::Jump) {
-                spring.rest_length = CAPSULE_HEIGHT * 2.0;
-                spring.min_damping = 2.0;
+                spring.rest_length = CAPSULE_HEIGHT * 1.4;
+                spring.min_damping = 1.0;
                 angular_spring.stiffness = 0.0;
             } else {
-                spring.rest_length = CAPSULE_HEIGHT * 1.0;
+                spring.rest_length = CAPSULE_HEIGHT * 0.7;
                 spring.min_damping = 2.0;
                 angular_spring.stiffness = 15.0;
             }
@@ -298,7 +304,7 @@ fn update_ground_force(
             position.clone(),
             Quat::IDENTITY,
             Direction3d::new_unchecked(-from_up.normalize_or_zero()),
-            CAPSULE_HEIGHT * 1.5,
+            MAX_TOI,
             false,
             filter.clone(),
         ) {
@@ -521,9 +527,12 @@ impl Plugin for PlayerPlugin {
         app.insert_resource(PlayerGroundSpring {
             rest_length: 0.0,
             stiffness: 15.0,
-            min_damping: 3.0,
-            max_damping: 7.0,
+            min_damping: 2.0,
+            max_damping: 2.0,
             max_force: 2.0 * 10.0,
+            far_rest_length: MAX_TOI,
+            far_stiffness: 0.5,
+            damping_range: MAX_TOI * 0.8,
         });
         app.insert_resource(PlayerAngularSpring {
             stiffness: 10.0,
@@ -536,15 +545,20 @@ impl Plugin for PlayerPlugin {
                 spawn_player,
                 player_controls,
                 respawn_player,
-                draw_debug_gizmos
+                draw_debug_gizmos.run_if(in_state(DebugState::On)),
+                track_camera
                     .after(PhysicsSet::Sync)
                     .run_if(in_state(DebugState::On)),
-                track_camera.after(PhysicsSet::Sync),
             ),
         );
         app.add_systems(
             SubstepSchedule,
-            update_ground_force.before(SubstepSet::Integrate),
+            ((
+                track_camera.run_if(in_state(DebugState::None)),
+                update_ground_force,
+            )
+                .chain())
+            .before(SubstepSet::Integrate),
         );
         app.add_systems(OnEnter(DebugState::None), set_visible::<true>);
         app.add_systems(OnEnter(DebugState::On), set_visible::<false>);

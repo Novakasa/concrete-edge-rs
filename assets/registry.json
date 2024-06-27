@@ -11603,6 +11603,21 @@
       "isComponent": true,
       "isResource": true,
       "properties": {
+        "damping_range": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        },
+        "far_rest_length": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        },
+        "far_stiffness": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        },
         "max_damping": {
           "type": {
             "$ref": "#/$defs/f32"
@@ -11634,7 +11649,10 @@
         "stiffness",
         "min_damping",
         "max_damping",
-        "max_force"
+        "max_force",
+        "far_rest_length",
+        "far_stiffness",
+        "damping_range"
       ],
       "short_name": "PlayerGroundSpring",
       "title": "conrete_edge_rs::player::PlayerGroundSpring",
