@@ -124,7 +124,7 @@ fn spawn_player(
         let material = materials.add(Color::WHITE);
         let body = commands
             .spawn((
-                Collider::capsule(CAPSULE_HEIGHT, CAPSULE_RADIUS),
+                Collider::capsule(CAPSULE_HEIGHT - 2.0 * CAPSULE_RADIUS, CAPSULE_RADIUS),
                 ColliderDensity(1.5),
                 CollisionLayers::new(Layer::Player, Layer::Platform),
                 RigidBody::default(),
@@ -298,7 +298,6 @@ fn update_ground_force(
             let max_lean = 0.25 * PI;
 
             let normal = coll.normal1;
-            debug.grounded = true;
             debug.ground_normal = normal;
 
             let contact_point = coll.point2 + -from_up * coll.time_of_impact;
@@ -308,6 +307,14 @@ fn update_ground_force(
             let spring_vel = velocity.dot(normal) / (from_up.dot(normal));
             // println!("Time {:?}", coll.time_of_impact);
             let spring_force = spring.force(coll.time_of_impact, spring_vel, normal) * from_up;
+            let grounded = spring_force.length() > 0.0001;
+            debug.grounded = grounded;
+            if !grounded {
+                force.clear();
+                torque.clear();
+                continue;
+            }
+
             debug.spring_force = spring_force;
 
             let normal_force = spring_force.dot(normal) * normal;
@@ -353,7 +360,7 @@ fn update_ground_force(
                     * max_force
                     * target_force.normalize_or_zero()
             }
-            target_force -= 0.0000 * (tangent_vel - prev_tangent_vel) / dt.delta_seconds();
+            target_force -= 0.00 * (tangent_vel - prev_tangent_vel) / dt.delta_seconds();
 
             if target_force.length() > max_force {
                 target_force =
@@ -525,9 +532,7 @@ impl Plugin for PlayerPlugin {
                 draw_debug_gizmos
                     .after(PhysicsSet::Sync)
                     .run_if(in_state(DebugState::On)),
-                track_camera
-                    .after(PhysicsSet::Sync)
-                    .before(TransformSystem::TransformPropagate),
+                track_camera.after(PhysicsSet::Sync),
             ),
         );
         app.add_systems(
