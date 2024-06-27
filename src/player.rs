@@ -1,4 +1,4 @@
-use bevy::{prelude::*, transform::TransformSystem};
+use bevy::prelude::*;
 use bevy_xpbd_3d::{math::PI, prelude::*, SubstepSchedule, SubstepSet};
 use leafwing_input_manager::prelude::*;
 
@@ -113,6 +113,7 @@ fn spawn_player(
     angular_spring: Res<PlayerAngularSpring>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    debug_state: Res<State<DebugState>>,
 ) {
     for (entity, transform) in query.iter() {
         commands.entity(entity).insert(PlayerSpawned);
@@ -122,6 +123,11 @@ fn spawn_player(
             CAPSULE_HEIGHT - 2.0 * CAPSULE_RADIUS,
         )));
         let material = materials.add(Color::WHITE);
+        let visibility = if debug_state.get() == &DebugState::On {
+            Visibility::Hidden
+        } else {
+            Visibility::Visible
+        };
         let body = commands
             .spawn((
                 Collider::capsule(CAPSULE_HEIGHT - 2.0 * CAPSULE_RADIUS, CAPSULE_RADIUS),
@@ -144,6 +150,7 @@ fn spawn_player(
             .insert(MaterialMeshBundle {
                 mesh: capsule,
                 material,
+                visibility,
                 ..Default::default()
             })
             .id();
