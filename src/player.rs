@@ -52,13 +52,17 @@ struct Player;
 struct PlayerGroundSpring {
     rest_length: f32,
     stiffness: f32,
-    damping: f32,
+    min_damping: f32,
+    max_damping: f32,
     max_force: f32,
 }
 
 impl PlayerGroundSpring {
-    fn force(&self, length: f32, vel: f32) -> f32 {
-        (-self.stiffness * (length - self.rest_length) - self.damping * vel)
+    fn force(&self, length: f32, vel: f32, normal: Vec3) -> f32 {
+        let damping = self
+            .max_damping
+            .lerp(self.min_damping, normal.dot(Vec3::Y).abs());
+        (-self.stiffness * (length - self.rest_length) - damping * vel)
             .max(0.0)
             .min(self.max_force)
     }
@@ -216,11 +220,11 @@ fn player_controls(
             // println!("{:?}", move_state.acc_dir);
             if action_state.pressed(&PlayerAction::Jump) {
                 spring.rest_length = CAPSULE_HEIGHT * 2.0;
-                spring.damping = 2.0;
+                spring.min_damping = 2.0;
                 angular_spring.stiffness = 0.0;
             } else {
                 spring.rest_length = CAPSULE_HEIGHT * 1.0;
-                spring.damping = 2.0;
+                spring.min_damping = 2.0;
                 angular_spring.stiffness = 15.0;
             }
         }
@@ -261,6 +265,7 @@ fn update_ground_force(
         mut debug,
     ) in query.iter_mut()
     {
+        let external_forces = gravity.0;
         let filter = SpatialQueryFilter::from_mask(Layer::Platform);
         let from_up = *quat * Vec3::Y;
         if let Some(coll) = shape_cast.cast_shape(
@@ -284,7 +289,7 @@ fn update_ground_force(
 
             let spring_vel = velocity.dot(normal) / (from_up.dot(normal));
             // println!("Time {:?}", coll.time_of_impact);
-            let spring_force = spring.force(coll.time_of_impact, spring_vel) * from_up;
+            let spring_force = spring.force(coll.time_of_impact, spring_vel, normal) * from_up;
             debug.spring_force = spring_force;
 
             let normal_force = spring_force.dot(normal) * normal;
@@ -319,6 +324,8 @@ fn update_ground_force(
                 -tangent_slope.dot(Vec3::Y) * normal_force.dot(Vec3::Y) * tangent_slope
                     / denominator
             };
+
+            // let slope_force = external_forces - normal.dot(external_forces) * normal;
 
             let max_force = max_lean.tan() * normal_force.length();
 
@@ -471,7 +478,8 @@ impl Plugin for PlayerPlugin {
         app.insert_resource(PlayerGroundSpring {
             rest_length: 0.0,
             stiffness: 15.0,
-            damping: 2.0,
+            min_damping: 2.0,
+            max_damping: 7.0,
             max_force: 2.0 * 10.0,
         });
         app.insert_resource(PlayerAngularSpring {

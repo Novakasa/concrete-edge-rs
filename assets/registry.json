@@ -11464,12 +11464,17 @@
       "isComponent": true,
       "isResource": true,
       "properties": {
-        "damping": {
+        "max_damping": {
           "type": {
             "$ref": "#/$defs/f32"
           }
         },
         "max_force": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        },
+        "min_damping": {
           "type": {
             "$ref": "#/$defs/f32"
           }
@@ -11488,7 +11493,8 @@
       "required": [
         "rest_length",
         "stiffness",
-        "damping",
+        "min_damping",
+        "max_damping",
         "max_force"
       ],
       "short_name": "PlayerGroundSpring",
