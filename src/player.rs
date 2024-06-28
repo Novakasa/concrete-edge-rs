@@ -4,7 +4,26 @@ use leafwing_input_manager::prelude::*;
 
 const CAPSULE_RADIUS: f32 = 0.2;
 const CAPSULE_HEIGHT: f32 = 4.0 * CAPSULE_RADIUS;
-const MAX_TOI: f32 = CAPSULE_HEIGHT * 1.5;
+const MAX_TOI: f32 = CAPSULE_HEIGHT * 1.0;
+
+#[derive(Component, Reflect, Debug, Clone, Default)]
+struct ScalarSpring {
+    f: f32,
+    zeta: f32,
+    m: f32,
+    velocity: f32,
+    value: f32,
+}
+
+impl ScalarSpring {
+    fn update(&mut self, target: f32, dt: f32) -> f32 {
+        let k = (2.0 * PI * self.f).powi(2) * self.m;
+        let c = self.zeta * self.f * self.m / PI;
+        self.velocity += k * (target - self.value) * dt - c * self.velocity * dt;
+        self.value += self.velocity * dt;
+        self.value
+    }
+}
 
 #[derive(States, Debug, Clone, PartialEq, Eq, Hash)]
 pub enum DebugState {
@@ -62,21 +81,19 @@ struct PlayerGroundSpring {
     min_damping: f32,
     max_damping: f32,
     max_force: f32,
-    far_rest_length: f32,
-    far_stiffness: f32,
-    damping_range: f32,
+    min_force: f32,
+    smoothing_spring: ScalarSpring,
 }
 
 impl PlayerGroundSpring {
-    fn force(&self, length: f32, vel: f32, normal: Vec3) -> f32 {
-        let mut damping = self
+    fn force(&mut self, length: f32, vel: f32, normal: Vec3, dt: f32) -> f32 {
+        let damping = self
             .max_damping
             .lerp(self.min_damping, normal.dot(Vec3::Y).abs());
-        (-self.stiffness * (length - self.rest_length).min(0.0)
-            - self.far_stiffness * (length - self.far_rest_length).min(0.0)
-            - damping * vel)
-            .max(0.0)
+        let target = (-self.stiffness * (length - self.rest_length).min(0.0) - damping * vel)
             .min(self.max_force)
+            .max(self.min_force);
+        self.smoothing_spring.update(target, dt)
     }
 }
 
@@ -134,7 +151,7 @@ fn spawn_player(
         } else {
             Visibility::Visible
         };
-        let body = commands
+        let _body = commands
             .spawn((
                 Collider::capsule(CAPSULE_HEIGHT - 2.0 * CAPSULE_RADIUS, CAPSULE_RADIUS),
                 ColliderDensity(1.5),
@@ -191,10 +208,10 @@ fn spawn_camera(mut commands: Commands) {
 }
 
 fn track_camera(
-    query: Query<(&Position), With<Player>>,
+    query: Query<&Position, With<Player>>,
     mut camera_query: Query<&mut Transform, With<CameraAnchor>>,
 ) {
-    for (Position(pos)) in query.iter() {
+    for Position(pos) in query.iter() {
         for mut transform in camera_query.iter_mut() {
             transform.translation = pos.clone();
         }
@@ -271,7 +288,7 @@ fn update_ground_force(
             &Rotation,
             &LinearVelocity,
             &AngularVelocity,
-            &PlayerGroundSpring,
+            &mut PlayerGroundSpring,
             &PlayerAngularSpring,
             &mut PlayerMoveState,
             &mut PhysicsDebugInfo,
@@ -279,7 +296,6 @@ fn update_ground_force(
         With<Player>,
     >,
     shape_cast: SpatialQuery,
-    mut gizmos: Gizmos,
     dt: Res<Time<Substeps>>,
     gravity: Res<Gravity>,
 ) {
@@ -290,13 +306,13 @@ fn update_ground_force(
         Rotation(quat),
         LinearVelocity(velocity),
         AngularVelocity(angular_vel),
-        spring,
+        mut spring,
         angular_spring,
         mut move_state,
         mut debug,
     ) in query.iter_mut()
     {
-        let external_forces = gravity.0;
+        let _external_forces = gravity.0;
         let filter = SpatialQueryFilter::from_mask(Layer::Platform);
         let from_up = *quat * Vec3::Y;
         if let Some(coll) = shape_cast.cast_shape(
@@ -319,7 +335,8 @@ fn update_ground_force(
 
             let spring_vel = velocity.dot(normal) / (from_up.dot(normal));
             // println!("Time {:?}", coll.time_of_impact);
-            let spring_force = spring.force(coll.time_of_impact, spring_vel, normal) * from_up;
+            let spring_force =
+                spring.force(coll.time_of_impact, spring_vel, normal, dt.delta_seconds()) * from_up;
             let grounded = spring_force.length() > 0.0001;
             debug.grounded = grounded;
             if !grounded {
@@ -332,11 +349,8 @@ fn update_ground_force(
 
             let normal_force = spring_force.dot(normal) * normal;
             debug.normal_force = normal_force;
-            let mut tangential_force = spring_force - normal_force;
             let friction_force = normal_force.length() * max_lean.tan();
-            if tangential_force.length() > friction_force {
-                tangential_force = friction_force * tangential_force.normalize_or_zero();
-            }
+            let tangential_force = (spring_force - normal_force).clamp_length_max(friction_force);
             debug.tangential_force = tangential_force;
 
             let tangent_plane = normal.cross(Vec3::Y).normalize_or_zero();
@@ -426,9 +440,9 @@ fn update_ground_force(
     }
 }
 
-fn set_visible<const val: bool>(mut query: Query<&mut Visibility, With<Player>>) {
+fn set_visible<const VAL: bool>(mut query: Query<&mut Visibility, With<Player>>) {
     for mut visibility in query.iter_mut() {
-        if val {
+        if VAL {
             *visibility = Visibility::Visible;
         } else {
             *visibility = Visibility::Hidden;
@@ -527,12 +541,17 @@ impl Plugin for PlayerPlugin {
         app.insert_resource(PlayerGroundSpring {
             rest_length: 0.0,
             stiffness: 15.0,
-            min_damping: 2.0,
-            max_damping: 2.0,
+            min_damping: 0.0,
+            max_damping: 0.0,
             max_force: 2.0 * 10.0,
-            far_rest_length: MAX_TOI,
-            far_stiffness: 0.5,
-            damping_range: MAX_TOI * 0.8,
+            min_force: 0.0,
+            smoothing_spring: ScalarSpring {
+                f: 60.0,
+                zeta: 10.0,
+                m: 1.0,
+                velocity: 0.0,
+                value: 0.0,
+            },
         });
         app.insert_resource(PlayerAngularSpring {
             stiffness: 10.0,
