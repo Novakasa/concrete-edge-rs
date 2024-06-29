@@ -11630,7 +11630,7 @@
         },
         "smoothing_spring": {
           "type": {
-            "$ref": "#/$defs/conrete_edge_rs::player::ScalarSpring"
+            "$ref": "#/$defs/conrete_edge_rs::player::SpringValue"
           }
         },
         "stiffness": {

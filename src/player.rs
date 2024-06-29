@@ -7,7 +7,7 @@ const CAPSULE_HEIGHT: f32 = 4.0 * CAPSULE_RADIUS;
 const MAX_TOI: f32 = CAPSULE_HEIGHT * 1.0;
 
 #[derive(Component, Reflect, Debug, Clone, Default)]
-struct ScalarSpring {
+struct SpringValue {
     f: f32,
     zeta: f32,
     m: f32,
@@ -15,7 +15,7 @@ struct ScalarSpring {
     value: f32,
 }
 
-impl ScalarSpring {
+impl SpringValue {
     fn update(&mut self, target: f32, dt: f32) -> f32 {
         let k = (2.0 * PI * self.f).powi(2) * self.m;
         let c = self.zeta * self.f * self.m / PI;
@@ -82,7 +82,7 @@ struct PlayerGroundSpring {
     max_damping: f32,
     max_force: f32,
     min_force: f32,
-    smoothing_spring: ScalarSpring,
+    smoothing_spring: SpringValue,
 }
 
 impl PlayerGroundSpring {
@@ -93,7 +93,8 @@ impl PlayerGroundSpring {
         let target = (-self.stiffness * (length - self.rest_length).min(0.0) - damping * vel)
             .min(self.max_force)
             .max(self.min_force);
-        self.smoothing_spring.update(target, dt)
+        self.smoothing_spring.update(target, dt);
+        target
     }
 }
 
@@ -387,7 +388,7 @@ fn update_ground_force(
                     * max_force
                     * target_force.normalize_or_zero()
             }
-            target_force -= 0.00 * (tangent_vel - prev_tangent_vel) / dt.delta_seconds();
+            target_force -= 0.000 * (tangent_vel - prev_tangent_vel) / dt.delta_seconds();
 
             if target_force.length() > max_force {
                 target_force =
@@ -545,7 +546,7 @@ impl Plugin for PlayerPlugin {
             max_damping: 0.0,
             max_force: 2.0 * 10.0,
             min_force: 0.0,
-            smoothing_spring: ScalarSpring {
+            smoothing_spring: SpringValue {
                 f: 60.0,
                 zeta: 10.0,
                 m: 1.0,
