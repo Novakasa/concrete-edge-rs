@@ -313,7 +313,8 @@ fn update_ground_force(
         mut debug,
     ) in query.iter_mut()
     {
-        let _external_forces = gravity.0;
+        let external_forces = gravity.0;
+        let ext_dir = external_forces.normalize_or_zero();
         let filter = SpatialQueryFilter::from_mask(Layer::Platform);
         let from_up = *quat * Vec3::Y;
         if let Some(coll) = shape_cast.cast_shape(
@@ -370,11 +371,11 @@ fn update_ground_force(
 
             let target_vel = acc_tangent * 7.0;
             debug.target_vel = target_vel;
-            let denominator = 1.0 - tangent_slope.dot(Vec3::Y).powi(2);
+            let denominator = 1.0 - tangent_slope.dot(ext_dir).powi(2);
             let slope_force = if denominator == 0.0 {
-                gravity.0
+                external_forces
             } else {
-                -tangent_slope.dot(Vec3::Y) * normal_force.dot(Vec3::Y) * tangent_slope
+                -tangent_slope.dot(ext_dir) * normal_force.dot(ext_dir) * tangent_slope
                     / denominator
             };
 
@@ -400,13 +401,6 @@ fn update_ground_force(
             debug.target_force = target_force;
             // println!("{:?}, {:?}", target_force, normal_force);
 
-            force.clear();
-            force.apply_force_at_point(
-                normal_force + tangential_force,
-                0.0 * contact_point,
-                Vec3::ZERO,
-            );
-
             let pitch = (target_force.length() / normal_force.length())
                 .atan()
                 .min(max_lean);
@@ -420,19 +414,27 @@ fn update_ground_force(
             let target_up = target_quat * ((Vec3::Y).normalize_or_zero());
             let delta_angle = from_up.angle_between(target_up);
             let delta_axis = from_up.cross(target_up).normalize_or_zero();
-            let spring_torque = angular_spring.stiffness * delta_axis * delta_angle
+            let angular_spring_torque = angular_spring.stiffness * delta_axis * delta_angle
                 - (angular_spring.damping * angular_vel.clone());
-            debug.spring_torque = spring_torque;
+            debug.spring_torque = angular_spring_torque;
 
             let y_damping = angular_vel.y * -0.1;
+            let angle_correction_force =
+                normal.cross(angular_spring_torque) / (normal.dot(contact_point));
+
+            debug.torque_cm_force = angle_correction_force;
+
+            force.clear();
+            force.apply_force_at_point(
+                normal_force + tangential_force,
+                0.0 * contact_point,
+                Vec3::ZERO,
+            );
             torque.apply_torque(y_damping * Vec3::Y);
 
-            let cm_force = normal.cross(spring_torque) / (normal.dot(contact_point));
-
-            debug.torque_cm_force = cm_force;
             // force.apply_force_at_point(contact_point, cm_force, Vec3::ZERO);
-            force.apply_force(cm_force);
-            torque.set_torque(spring_torque);
+            force.apply_force(angle_correction_force);
+            torque.set_torque(angular_spring_torque);
         } else {
             debug.grounded = false;
             force.clear();
