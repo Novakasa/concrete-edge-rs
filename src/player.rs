@@ -381,20 +381,21 @@ fn update_ground_force(
 
             // let slope_force = external_forces - normal.dot(external_forces) * normal;
 
-            let max_force = max_lean.tan() * normal_force.length();
-
             let mut target_force = 0.3 * (target_vel - tangent_vel);
-            if max_force > 0.0 {
-                target_force = (target_force.length() / max_force).powi(1)
-                    * max_force
+            if friction_force > 0.0 {
+                target_force = (target_force.length() / friction_force).powi(1)
+                    * friction_force
                     * target_force.normalize_or_zero()
             }
             target_force -= 0.000 * (tangent_vel - prev_tangent_vel) / dt.delta_seconds();
 
-            if target_force.length() > max_force {
-                target_force =
-                    add_results_in_length(target_force.normalize_or_zero(), -slope_force, max_force)
-                        .unwrap_or(target_force)
+            if target_force.length() > friction_force {
+                target_force = add_results_in_length(
+                    target_force.normalize_or_zero(),
+                    -slope_force,
+                    friction_force,
+                )
+                .unwrap_or(target_force)
             }
             target_force -= slope_force;
             move_state.prev_vel = velocity.clone();
