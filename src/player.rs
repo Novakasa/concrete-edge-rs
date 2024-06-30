@@ -279,7 +279,7 @@ fn player_controls(
                 spring.rest_length = CAPSULE_HEIGHT * 0.7;
                 spring.min_damping = 2.0;
                 spring.stiffness = 15.0;
-                angular_spring.stiffness = 0.8;
+                angular_spring.stiffness = 1.2;
                 angular_spring.damping = 0.2;
             }
         }
@@ -391,7 +391,7 @@ fn update_ground_force(
 
             // let slope_force = external_forces - normal.dot(external_forces) * normal;
 
-            let mut target_force = 0.3 * (target_vel - tangent_vel);
+            let mut target_force = 0.4 * (target_vel - tangent_vel);
             if friction_force > 0.0 {
                 target_force = (target_force.length() / friction_force).powi(1)
                     * friction_force
@@ -430,19 +430,19 @@ fn update_ground_force(
 
             let y_damping = angular_vel.y * -0.1;
             let angle_correction_force =
-                normal.cross(angular_spring_torque) / (normal.dot(contact_point));
+                -normal.cross(angular_spring_torque) / (normal.dot(contact_point));
 
             debug.torque_cm_force = angle_correction_force;
 
             force.clear();
             force.apply_force_at_point(
-                normal_force + tangential_force,
-                0.0 * contact_point,
+                normal_force + tangential_force + angle_correction_force,
+                1.0 * contact_point,
                 Vec3::ZERO,
             );
             torque.apply_torque(y_damping * Vec3::Y);
 
-            force.apply_force_at_point(contact_point, angle_correction_force, Vec3::ZERO);
+            // force.apply_force_at_point(angle_correction_force, contact_point, Vec3::ZERO);
             // force.apply_force(angle_correction_force);
             // torque.set_torque(angular_spring_torque);
         } else {
