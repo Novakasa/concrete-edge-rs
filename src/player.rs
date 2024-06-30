@@ -122,6 +122,7 @@ struct PhysicsDebugInfo {
     normal_force: Vec3,
     tangential_force: Vec3,
     shape_toi: f32,
+    cast_dir: Vec3,
     spring_dir: Vec3,
     contact_point: Vec3,
     position: Vec3,
@@ -337,13 +338,17 @@ fn update_ground_force(
             debug.ground_normal = normal;
 
             let contact_point = coll.point2 + -from_up * coll.time_of_impact;
+            let spring_dir = -contact_point.normalize_or_zero();
+            // let spring_dir = from_up;
             debug.contact_point = contact_point;
             debug.shape_toi = coll.time_of_impact;
+            debug.cast_dir = -from_up;
 
             let spring_vel = velocity.dot(normal) / (from_up.dot(normal));
             // println!("Time {:?}", coll.time_of_impact);
             let spring_force =
-                spring.force(coll.time_of_impact, spring_vel, normal, dt.delta_seconds()) * from_up;
+                spring.force(coll.time_of_impact, spring_vel, normal, dt.delta_seconds())
+                    * spring_dir;
             let grounded = spring_force.length() > 0.0001;
             debug.grounded = grounded;
             if !grounded {
@@ -438,9 +443,9 @@ fn update_ground_force(
             );
             torque.apply_torque(y_damping * Vec3::Y);
 
-            // force.apply_force_at_point(contact_point, cm_force, Vec3::ZERO);
-            force.apply_force(angle_correction_force);
-            torque.set_torque(angular_spring_torque);
+            force.apply_force_at_point(contact_point, angle_correction_force, Vec3::ZERO);
+            // force.apply_force(angle_correction_force);
+            // torque.set_torque(angular_spring_torque);
         } else {
             debug.grounded = false;
             force.clear();
@@ -465,7 +470,12 @@ fn draw_debug_gizmos(
 ) {
     for (debug, Position(position), Rotation(quat)) in query.iter_mut() {
         if debug.grounded {
-            gizmos.sphere(debug.contact_point, Quat::IDENTITY, 0.1, Color::RED);
+            gizmos.sphere(
+                position.clone() + debug.shape_toi * debug.cast_dir,
+                Quat::IDENTITY,
+                CAPSULE_RADIUS,
+                Color::RED,
+            );
             gizmos.arrow(
                 position.clone() + debug.contact_point,
                 position.clone() + debug.contact_point + debug.spring_force,
@@ -507,12 +517,6 @@ fn draw_debug_gizmos(
                 position.clone(),
                 position.clone() + debug.spring_torque,
                 Color::CYAN,
-            );
-            gizmos.sphere(
-                position.clone() + -debug.spring_force.normalize_or_zero() * debug.shape_toi,
-                Quat::IDENTITY,
-                CAPSULE_RADIUS,
-                Color::RED,
             );
         }
         gizmos
