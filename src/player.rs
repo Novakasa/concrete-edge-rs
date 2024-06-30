@@ -4,6 +4,7 @@ use leafwing_input_manager::prelude::*;
 
 const CAPSULE_RADIUS: f32 = 0.2;
 const CAPSULE_HEIGHT: f32 = 4.0 * CAPSULE_RADIUS;
+const CAST_RADIUS: f32 = 1.1 * CAPSULE_RADIUS;
 const MAX_TOI: f32 = CAPSULE_HEIGHT * 1.0;
 const FRICTION_MARGIN: f32 = 1.0;
 
@@ -325,7 +326,7 @@ fn update_ground_force(
         let filter = SpatialQueryFilter::from_mask(Layer::Platform);
         let cast_dir = *quat * Vec3::NEG_Y;
         if let Some(coll) = shape_cast.cast_shape(
-            &Collider::sphere(CAPSULE_RADIUS),
+            &Collider::sphere(CAST_RADIUS),
             position.clone(),
             Quat::IDENTITY,
             Direction3d::new_unchecked(cast_dir.normalize_or_zero()),
@@ -417,7 +418,7 @@ fn update_ground_force(
                 .atan()
                 .min(max_lean);
 
-            let max_lean = -((CAPSULE_RADIUS - coll.time_of_impact * force_pitch.cos())
+            let max_lean = -((SHAPE_RADIUS - coll.time_of_impact * force_pitch.cos())
                 / (coll.time_of_impact * force_pitch.sin()))
             .atan();*/
 
@@ -486,7 +487,7 @@ fn draw_debug_gizmos(
             gizmos.sphere(
                 position.clone() + debug.shape_toi * debug.cast_dir,
                 Quat::IDENTITY,
-                CAPSULE_RADIUS,
+                CAST_RADIUS,
                 Color::RED,
             );
             gizmos.arrow(
