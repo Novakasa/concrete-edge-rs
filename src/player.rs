@@ -110,6 +110,8 @@ struct PlayerMoveState {
     acc_dir: Vec3,
     spring_height: f32,
     prev_vel: Vec3,
+    prev_angular_force: Vec3,
+    prev_target_force: Vec3,
 }
 
 #[derive(Component, Reflect, Debug, Default)]
@@ -270,11 +272,14 @@ fn player_controls(
             if action_state.pressed(&PlayerAction::Jump) {
                 spring.rest_length = CAPSULE_HEIGHT * 1.4;
                 spring.min_damping = 1.0;
+                spring.stiffness = 15.0;
                 angular_spring.stiffness = 0.0;
             } else {
                 spring.rest_length = CAPSULE_HEIGHT * 0.7;
                 spring.min_damping = 2.0;
-                angular_spring.stiffness = 15.0;
+                spring.stiffness = 15.0;
+                angular_spring.stiffness = 0.8;
+                angular_spring.damping = 0.2;
             }
         }
     }
@@ -525,7 +530,6 @@ fn add_results_in_length(dir: Vec3, rhs: Vec3, combined_length: f32) -> Option<V
     let dot = dir.dot(rhs);
     let discriminant = dot.powi(2) - rhs.dot(rhs) + combined_length.powi(2);
     if discriminant < 0.0 {
-        // godot_print!("Discriminant is negative");
         return None;
     }
     Some((-dot + discriminant.sqrt()) * dir)
@@ -544,7 +548,7 @@ impl Plugin for PlayerPlugin {
         app.insert_resource(SubstepCount(12));
         app.insert_resource(PlayerGroundSpring {
             rest_length: 0.0,
-            stiffness: 15.0,
+            stiffness: 0.0,
             min_damping: 0.0,
             max_damping: 0.0,
             max_force: 2.0 * 10.0,
@@ -558,8 +562,8 @@ impl Plugin for PlayerPlugin {
             },
         });
         app.insert_resource(PlayerAngularSpring {
-            stiffness: 10.0,
-            damping: 2.0,
+            stiffness: 0.,
+            damping: 0.0,
         });
         app.add_systems(Startup, spawn_camera);
         app.add_systems(
