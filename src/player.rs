@@ -110,6 +110,8 @@ struct PlayerMoveState {
     acc_dir: Vec3,
     spring_height: f32,
     prev_vel: Vec3,
+    prev_angular_force: Vec3,
+    prev_target_force: Vec3,
 }
 
 #[derive(Component, Reflect, Debug, Default)]
@@ -270,11 +272,14 @@ fn player_controls(
             if action_state.pressed(&PlayerAction::Jump) {
                 spring.rest_length = CAPSULE_HEIGHT * 1.4;
                 spring.min_damping = 1.0;
+                spring.stiffness = 15.0;
                 angular_spring.stiffness = 0.0;
             } else {
                 spring.rest_length = CAPSULE_HEIGHT * 0.7;
                 spring.min_damping = 2.0;
-                angular_spring.stiffness = 15.0;
+                spring.stiffness = 15.0;
+                angular_spring.stiffness = 0.8;
+                angular_spring.damping = 0.2;
             }
         }
     }
@@ -341,106 +346,111 @@ fn update_ground_force(
                 spring.force(coll.time_of_impact, spring_vel, normal, dt.delta_seconds()) * from_up;
             let grounded = spring_force.length() > 0.0001;
             debug.grounded = grounded;
-            if !grounded {
+            if grounded {
+                let tangent_plane = normal.cross(Vec3::Y).normalize_or_zero();
+                let tangent_slope = normal.cross(tangent_plane).normalize_or_zero();
+                let tangent_z = if normal.dot(Vec3::X).abs() > 0.9999 {
+                    Vec3::Z
+                } else {
+                    Vec3::X.cross(normal).normalize_or_zero()
+                };
+                let tangent_x = -tangent_z.cross(normal);
+                let acc_tangent =
+                    move_state.acc_dir.x * tangent_x + move_state.acc_dir.z * tangent_z;
+                let tangent_vel = *velocity - velocity.dot(normal) * normal;
+                let prev_tangent_vel =
+                    move_state.prev_vel - move_state.prev_vel.dot(normal) * normal;
+
+                debug.tangent_vel = tangent_vel;
+                debug.spring_force = spring_force;
+
+                let normal_force = spring_force.dot(normal) * normal;
+                debug.normal_force = normal_force;
+                let friction_force = normal_force.length() * max_lean.tan();
+                let tangential_force =
+                    (spring_force - normal_force).clamp_length_max(friction_force);
+                debug.tangential_force = tangential_force;
+
+                let target_force = move_state.prev_target_force;
+
+                let pitch = (target_force.length() / normal_force.length())
+                    .atan()
+                    .min(max_lean);
+
+                let yaw = target_force
+                    .dot(tangent_x)
+                    .atan2(target_force.dot(tangent_z));
+
+                let target_quat = Quat::from_rotation_arc(Vec3::Y, normal)
+                    * Quat::from_euler(EulerRot::YXZ, yaw, pitch, 0.0);
+                let target_up = target_quat * ((Vec3::Y).normalize_or_zero());
+                let delta_angle = from_up.angle_between(target_up);
+                let delta_axis = from_up.cross(target_up).normalize_or_zero();
+                let ground_torque = (normal_force + tangential_force).cross(contact_point);
+                let angular_spring_torque = angular_spring.stiffness * delta_axis * delta_angle
+                    - (angular_spring.damping * angular_vel.clone())
+                    - 1.0 * ground_torque;
+                debug.spring_torque = angular_spring_torque;
+
+                let y_damping = angular_vel.y * -0.1;
+                let angle_correction_force =
+                    normal.cross(angular_spring_torque) / (normal.dot(contact_point));
+                move_state.prev_angular_force = angle_correction_force;
+
+                debug.torque_cm_force = angle_correction_force;
+
+                let target_vel = acc_tangent * 7.0;
+                debug.target_vel = target_vel;
+                let denominator = 1.0 - tangent_slope.dot(ext_dir).powi(2);
+                let slope_force = if denominator == 0.0 {
+                    external_forces
+                } else {
+                    -tangent_slope.dot(ext_dir) * normal_force.dot(ext_dir) * tangent_slope
+                        / denominator
+                };
+
+                // let slope_force = external_forces - normal.dot(external_forces) * normal;
+
+                let mut target_force = 0.3 * (target_vel - tangent_vel);
+                if friction_force > 0.0 {
+                    target_force = (target_force.length() / friction_force).powi(1)
+                        * friction_force
+                        * target_force.normalize_or_zero()
+                }
+                target_force -= 0.000 * (tangent_vel - prev_tangent_vel) / dt.delta_seconds();
+
+                let other_force = slope_force + 1.0 * angle_correction_force;
+                if target_force.length() > friction_force {
+                    target_force = add_results_in_length(
+                        target_force.normalize_or_zero(),
+                        -other_force,
+                        friction_force,
+                    )
+                    .unwrap_or(target_force)
+                }
+                target_force -= other_force;
+                move_state.prev_target_force = target_force;
+                debug.target_force = target_force;
+                // println!("{:?}, {:?}", target_force, normal_force);
+
                 force.clear();
-                torque.clear();
+                force.apply_force_at_point(
+                    normal_force + tangential_force + 0.0 * angle_correction_force,
+                    1.0 * contact_point,
+                    Vec3::ZERO,
+                );
+                torque.apply_torque(y_damping * Vec3::Y);
+
+                // force.apply_force_at_point(contact_point, angle_correction_force, Vec3::ZERO);
+                // force.apply_force(angle_correction_force);
+                torque.set_torque(angular_spring_torque);
                 continue;
             }
-
-            debug.spring_force = spring_force;
-
-            let normal_force = spring_force.dot(normal) * normal;
-            debug.normal_force = normal_force;
-            let friction_force = normal_force.length() * max_lean.tan();
-            let tangential_force = (spring_force - normal_force).clamp_length_max(friction_force);
-            debug.tangential_force = tangential_force;
-
-            let tangent_plane = normal.cross(Vec3::Y).normalize_or_zero();
-            let tangent_slope = normal.cross(tangent_plane).normalize_or_zero();
-            let tangent_z = if normal.dot(Vec3::X).abs() > 0.9999 {
-                Vec3::Z
-            } else {
-                Vec3::X.cross(normal).normalize_or_zero()
-            };
-            let tangent_x = -tangent_z.cross(normal);
-            let acc_tangent = move_state.acc_dir.x * tangent_x + move_state.acc_dir.z * tangent_z;
-            let tangent_vel = *velocity - velocity.dot(normal) * normal;
-            let prev_tangent_vel = move_state.prev_vel - move_state.prev_vel.dot(normal) * normal;
-
-            debug.tangent_vel = tangent_vel;
-
-            let target_vel = acc_tangent * 7.0;
-            debug.target_vel = target_vel;
-            let denominator = 1.0 - tangent_slope.dot(ext_dir).powi(2);
-            let slope_force = if denominator == 0.0 {
-                external_forces
-            } else {
-                -tangent_slope.dot(ext_dir) * normal_force.dot(ext_dir) * tangent_slope
-                    / denominator
-            };
-
-            // let slope_force = external_forces - normal.dot(external_forces) * normal;
-
-            let mut target_force = 0.3 * (target_vel - tangent_vel);
-            if friction_force > 0.0 {
-                target_force = (target_force.length() / friction_force).powi(1)
-                    * friction_force
-                    * target_force.normalize_or_zero()
-            }
-            target_force -= 0.000 * (tangent_vel - prev_tangent_vel) / dt.delta_seconds();
-
-            if target_force.length() > friction_force {
-                target_force = add_results_in_length(
-                    target_force.normalize_or_zero(),
-                    -slope_force,
-                    friction_force,
-                )
-                .unwrap_or(target_force)
-            }
-            target_force -= slope_force;
-            move_state.prev_vel = velocity.clone();
-            debug.target_force = target_force;
-            // println!("{:?}, {:?}", target_force, normal_force);
-
-            let pitch = (target_force.length() / normal_force.length())
-                .atan()
-                .min(max_lean);
-
-            let yaw = target_force
-                .dot(tangent_x)
-                .atan2(target_force.dot(tangent_z));
-
-            let target_quat = Quat::from_rotation_arc(Vec3::Y, normal)
-                * Quat::from_euler(EulerRot::YXZ, yaw, pitch, 0.0);
-            let target_up = target_quat * ((Vec3::Y).normalize_or_zero());
-            let delta_angle = from_up.angle_between(target_up);
-            let delta_axis = from_up.cross(target_up).normalize_or_zero();
-            let angular_spring_torque = angular_spring.stiffness * delta_axis * delta_angle
-                - (angular_spring.damping * angular_vel.clone());
-            debug.spring_torque = angular_spring_torque;
-
-            let y_damping = angular_vel.y * -0.1;
-            let angle_correction_force =
-                normal.cross(angular_spring_torque) / (normal.dot(contact_point));
-
-            debug.torque_cm_force = angle_correction_force;
-
-            force.clear();
-            force.apply_force_at_point(
-                normal_force + tangential_force,
-                0.0 * contact_point,
-                Vec3::ZERO,
-            );
-            torque.apply_torque(y_damping * Vec3::Y);
-
-            // force.apply_force_at_point(contact_point, cm_force, Vec3::ZERO);
-            force.apply_force(angle_correction_force);
-            torque.set_torque(angular_spring_torque);
-        } else {
-            debug.grounded = false;
-            force.clear();
-            torque.clear();
         }
+        debug.grounded = false;
+        force.clear();
+        torque.clear();
+        move_state.prev_vel = velocity.clone();
     }
 }
 
@@ -525,7 +535,6 @@ fn add_results_in_length(dir: Vec3, rhs: Vec3, combined_length: f32) -> Option<V
     let dot = dir.dot(rhs);
     let discriminant = dot.powi(2) - rhs.dot(rhs) + combined_length.powi(2);
     if discriminant < 0.0 {
-        // godot_print!("Discriminant is negative");
         return None;
     }
     Some((-dot + discriminant.sqrt()) * dir)
@@ -544,7 +553,7 @@ impl Plugin for PlayerPlugin {
         app.insert_resource(SubstepCount(12));
         app.insert_resource(PlayerGroundSpring {
             rest_length: 0.0,
-            stiffness: 15.0,
+            stiffness: 0.0,
             min_damping: 0.0,
             max_damping: 0.0,
             max_force: 2.0 * 10.0,
@@ -558,8 +567,8 @@ impl Plugin for PlayerPlugin {
             },
         });
         app.insert_resource(PlayerAngularSpring {
-            stiffness: 10.0,
-            damping: 2.0,
+            stiffness: 0.,
+            damping: 0.0,
         });
         app.add_systems(Startup, spawn_camera);
         app.add_systems(
