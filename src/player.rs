@@ -322,12 +322,12 @@ fn update_ground_force(
         let external_forces = gravity.0;
         let ext_dir = external_forces.normalize_or_zero();
         let filter = SpatialQueryFilter::from_mask(Layer::Platform);
-        let from_up = *quat * Vec3::Y;
+        let cast_dir = *quat * Vec3::NEG_Y;
         if let Some(coll) = shape_cast.cast_shape(
             &Collider::sphere(CAPSULE_RADIUS),
             position.clone(),
             Quat::IDENTITY,
-            Direction3d::new_unchecked(-from_up.normalize_or_zero()),
+            Direction3d::new_unchecked(cast_dir.normalize_or_zero()),
             MAX_TOI,
             false,
             filter.clone(),
@@ -337,14 +337,14 @@ fn update_ground_force(
             let normal = coll.normal1;
             debug.ground_normal = normal;
 
-            let contact_point = coll.point2 + -from_up * coll.time_of_impact;
+            let contact_point = coll.point2 + cast_dir * coll.time_of_impact;
             let spring_dir = -contact_point.normalize_or_zero();
             // let spring_dir = from_up;
             debug.contact_point = contact_point;
             debug.shape_toi = coll.time_of_impact;
-            debug.cast_dir = -from_up;
+            debug.cast_dir = cast_dir;
 
-            let spring_vel = velocity.dot(normal) / (from_up.dot(normal));
+            let spring_vel = -velocity.dot(normal) / (cast_dir.dot(normal));
             // println!("Time {:?}", coll.time_of_impact);
             let spring_force =
                 spring.force(coll.time_of_impact, spring_vel, normal, dt.delta_seconds())
