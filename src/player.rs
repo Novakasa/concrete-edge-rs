@@ -362,7 +362,7 @@ fn update_ground_force(
             let normal_force = spring_force.dot(normal) * normal;
             debug.normal_force = normal_force;
             let friction_force = normal_force.length() * max_lean.tan();
-            let tangential_force = (spring_force - normal_force).clamp_length_max(friction_force);
+            let tangential_force = spring_force - normal_force;
             debug.tangential_force = tangential_force;
 
             let tangent_plane = normal.cross(Vec3::Y).normalize_or_zero();
@@ -436,7 +436,8 @@ fn update_ground_force(
 
             force.clear();
             force.apply_force_at_point(
-                normal_force + tangential_force + angle_correction_force,
+                normal_force
+                    + (tangential_force + angle_correction_force).clamp_length_max(friction_force),
                 1.0 * contact_point,
                 Vec3::ZERO,
             );
