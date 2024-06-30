@@ -412,19 +412,18 @@ fn update_ground_force(
             debug.target_force = target_force;
             // println!("{:?}, {:?}", target_force, normal_force);
 
-            let pitch = (target_force.length() / normal_force.length())
+            /*let pitch = (target_force.length() / normal_force.length())
                 .atan()
                 .min(max_lean);
 
-            let yaw = target_force
-                .dot(tangent_x)
-                .atan2(target_force.dot(tangent_z));
+            let max_lean = -((CAPSULE_RADIUS - coll.time_of_impact * force_pitch.cos())
+                / (coll.time_of_impact * force_pitch.sin()))
+            .atan();*/
 
-            let target_quat = Quat::from_rotation_arc(Vec3::Y, normal)
-                * Quat::from_euler(EulerRot::YXZ, yaw, pitch, 0.0);
-            let target_up = target_quat * ((Vec3::Y).normalize_or_zero());
-            let delta_angle = from_up.angle_between(target_up);
-            let delta_axis = from_up.cross(target_up).normalize_or_zero();
+            let target_spring_dir = (target_force + normal_force).normalize_or_zero();
+
+            let delta_angle = spring_dir.angle_between(target_spring_dir);
+            let delta_axis = spring_dir.cross(target_spring_dir).normalize_or_zero();
             let angular_spring_torque = angular_spring.stiffness * delta_axis * delta_angle
                 - (angular_spring.damping * angular_vel.clone());
             debug.spring_torque = angular_spring_torque;
