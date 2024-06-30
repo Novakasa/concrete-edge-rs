@@ -5,6 +5,7 @@ use leafwing_input_manager::prelude::*;
 const CAPSULE_RADIUS: f32 = 0.2;
 const CAPSULE_HEIGHT: f32 = 4.0 * CAPSULE_RADIUS;
 const MAX_TOI: f32 = CAPSULE_HEIGHT * 1.0;
+const FRICTION_MARGIN: f32 = 1.0;
 
 #[derive(Component, Reflect, Debug, Clone, Default)]
 struct SpringValue {
@@ -399,11 +400,11 @@ fn update_ground_force(
             }
             target_force -= 0.000 * (tangent_vel - prev_tangent_vel) / dt.delta_seconds();
 
-            if target_force.length() > friction_force * 0.8 {
+            if target_force.length() > friction_force * FRICTION_MARGIN {
                 target_force = add_results_in_length(
                     target_force.normalize_or_zero(),
                     -slope_force,
-                    friction_force * 0.8,
+                    friction_force * FRICTION_MARGIN,
                 )
                 .unwrap_or(target_force)
             }
@@ -434,10 +435,22 @@ fn update_ground_force(
 
             debug.torque_cm_force = angle_correction_force;
 
+            let spring_scale = if tangential_force.length() == 0.0 {
+                Vec3::X
+            } else {
+                add_results_in_length(
+                    tangential_force.normalize_or_zero(),
+                    angle_correction_force,
+                    friction_force,
+                )
+                .unwrap_or(tangential_force)
+                    / tangential_force.length()
+            }
+            .length()
+            .min(1.0);
             force.clear();
             force.apply_force_at_point(
-                normal_force
-                    + (tangential_force + angle_correction_force).clamp_length_max(friction_force),
+                (spring_force * spring_scale) + angle_correction_force,
                 1.0 * contact_point,
                 Vec3::ZERO,
             );
