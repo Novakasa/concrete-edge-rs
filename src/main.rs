@@ -1,7 +1,6 @@
 use std::env;
 
 use bevy::{
-    core_pipeline::core_2d::graph::input,
     prelude::*,
     window::{CursorGrabMode, PrimaryWindow},
 };
@@ -123,7 +122,7 @@ fn setup_platforms(
     mut commands: Commands,
     query: Query<(Entity, &Platform, &Children), Without<RigidBody>>,
 ) {
-    for (entity, platform, children) in query.iter() {
+    for (entity, _platform, children) in query.iter() {
         println!("Generating collider for platform: {:?}", entity);
         commands
             .entity(entity)
@@ -154,7 +153,7 @@ fn main() {
         .add_plugins(DefaultPlugins)
         .add_plugins(PhysicsPlugins::default())
         .add_plugins(bevy_framepace::FramepacePlugin)
-        .add_plugins(PhysicsDebugPlugin::default())
+        // .add_plugins(PhysicsDebugPlugin::default())
         .add_plugins(ComponentsFromGltfPlugin { legacy_mode: false })
         .add_plugins(player::PlayerPlugin)
         .add_plugins(WorldInspectorPlugin::new())

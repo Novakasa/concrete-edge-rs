@@ -4,7 +4,7 @@ use leafwing_input_manager::prelude::*;
 
 const CAPSULE_RADIUS: f32 = 0.2;
 const CAPSULE_HEIGHT: f32 = 4.0 * CAPSULE_RADIUS;
-const CAST_RADIUS: f32 = 1.1 * CAPSULE_RADIUS;
+const CAST_RADIUS: f32 = 0.7 * CAPSULE_RADIUS;
 const MAX_TOI: f32 = CAPSULE_HEIGHT * 1.0;
 const FRICTION_MARGIN: f32 = 1.0;
 
