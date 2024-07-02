@@ -348,7 +348,7 @@ fn player_controls(
         let cam_input = action_state.axis_pair(&PlayerAction::View).unwrap().xy();
         if let Ok(mut cam3) = q_cam3.get_single_mut() {
             cam3.yaw += cam_input.x * -0.005;
-            cam3.pitch += cam_input.y * -0.005;
+            cam3.pitch = (cam3.pitch + cam_input.y * -0.005).clamp(-0.5 * PI, 0.5 * PI);
 
             if let Ok(mut cam1) = q_cam1.get_single_mut() {
                 cam1.yaw = cam3.yaw;
