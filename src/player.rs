@@ -9,7 +9,26 @@ const MAX_TOI: f32 = CAPSULE_HEIGHT * 1.0;
 const FRICTION_MARGIN: f32 = 0.7;
 const GLOBAL_FRICTION: f32 = 1.5;
 
-const FRICTION_MARGIN: f32 = 1.0;
+#[derive(Clone)]
+enum SpringParams {
+    Physical { stiffness: f32, damping: f32 },
+    Effective { f: f32, zeta: f32, m: f32 },
+}
+
+impl SpringParams {
+    fn get_physical(&self) -> Self {
+        match self {
+            Self::Physical {
+                stiffness: _,
+                damping: _,
+            } => self.clone(),
+            Self::Effective { f, zeta, m } => Self::Physical {
+                stiffness: (2.0 * PI * f).powi(2) * m,
+                damping: zeta * f * m / PI,
+            },
+        }
+    }
+}
 
 #[derive(Component, Reflect, Debug, Clone, Default)]
 struct SpringValue {
@@ -233,9 +252,8 @@ fn spawn_camera_3rd_person(mut commands: Commands) {
 }
 
 fn spawn_camera_1st_person(mut commands: Commands) {
-    let camera_arm = Vec3::new(0.0, 0.0, 0.0);
-    let transform =
-        Transform::from_translation(camera_arm).looking_to(-camera_arm.normalize(), Vec3::Y);
+    let camera_arm = Vec3::new(0.0, 0.2 * CAPSULE_HEIGHT, 0.0);
+    let transform = Transform::from_translation(camera_arm);
     commands
         .spawn((
             TransformBundle::default(),
@@ -298,7 +316,7 @@ fn track_camera_1st_person(
 ) {
     for (Position(pos), Rotation(quat)) in query.iter() {
         let up_dir = *quat * Vec3::Y;
-        let pos = pos.clone() + up_dir * CAPSULE_HEIGHT * 0.5;
+        let pos = pos.clone() + up_dir * CAPSULE_HEIGHT * 0.3;
         for (mut transform, cam1) in camera_query.iter_mut() {
             let view_unrolled = Quat::from_euler(EulerRot::YXZ, cam1.yaw, cam1.pitch, 0.0);
             let forward = view_unrolled * Vec3::NEG_Z;
@@ -359,12 +377,12 @@ fn player_controls(
                 * Vec3::new(move_input.x, 0.0, -move_input.y);
             // println!("{:?}", move_state.acc_dir);
             if action_state.pressed(&PlayerAction::Jump) {
-                spring.rest_length = CAPSULE_HEIGHT * 1.4;
+                spring.rest_length = CAPSULE_HEIGHT * 1.4 + CAPSULE_RADIUS;
                 spring.min_damping = 1.0;
                 spring.stiffness = 15.0;
                 angular_spring.stiffness = 0.0;
             } else {
-                spring.rest_length = CAPSULE_HEIGHT * 0.7;
+                spring.rest_length = CAPSULE_HEIGHT * 0.7 + CAPSULE_RADIUS;
                 spring.min_damping = 2.0;
                 spring.stiffness = 15.0;
                 angular_spring.stiffness = 1.2;
@@ -430,11 +448,14 @@ fn update_ground_force(
             debug.shape_toi = coll.time_of_impact;
             debug.cast_dir = cast_dir;
 
-            let spring_vel = -velocity.dot(normal) / (cast_dir.dot(normal));
+            let spring_vel = -velocity.dot(normal) / (-spring_dir.dot(normal));
             // println!("Time {:?}", coll.time_of_impact);
-            let spring_force =
-                spring.force(coll.time_of_impact, spring_vel, normal, dt.delta_seconds())
-                    * spring_dir;
+            let spring_force = spring.force(
+                contact_point.length(),
+                spring_vel,
+                normal,
+                dt.delta_seconds(),
+            ) * spring_dir;
             let grounded = spring_force.length() > 0.0001;
             debug.grounded = grounded;
             if !grounded {
