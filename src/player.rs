@@ -4,8 +4,11 @@ use leafwing_input_manager::prelude::*;
 
 const CAPSULE_RADIUS: f32 = 0.2;
 const CAPSULE_HEIGHT: f32 = 4.0 * CAPSULE_RADIUS;
-const CAST_RADIUS: f32 = 0.7 * CAPSULE_RADIUS;
+const CAST_RADIUS: f32 = 1.0 * CAPSULE_RADIUS;
 const MAX_TOI: f32 = CAPSULE_HEIGHT * 1.0;
+const FRICTION_MARGIN: f32 = 0.7;
+const GLOBAL_FRICTION: f32 = 1.5;
+
 const FRICTION_MARGIN: f32 = 1.0;
 
 #[derive(Component, Reflect, Debug, Clone, Default)]
@@ -40,6 +43,7 @@ pub enum PlayerAction {
     View,
     Respawn,
     Menu,
+    ViewMode,
 }
 
 impl PlayerAction {
@@ -50,6 +54,7 @@ impl PlayerAction {
         input_map.insert(Self::Respawn, KeyCode::KeyR);
         input_map.insert(Self::View, DualAxis::mouse_motion());
         input_map.insert(Self::Menu, KeyCode::Escape);
+        input_map.insert(Self::ViewMode, KeyCode::Tab);
         input_map
     }
 }
@@ -182,14 +187,24 @@ fn spawn_player(
                 visibility,
                 ..Default::default()
             })
+            .insert((Restitution::new(0.0), Friction::new(GLOBAL_FRICTION)))
             .id();
     }
 }
 
-#[derive(Component, Reflect, Debug)]
-struct CameraAnchor;
+#[derive(Component, Reflect, Debug, Default)]
+struct CameraAnchor3rdPerson {
+    yaw: f32,
+    pitch: f32,
+}
 
-fn spawn_camera(mut commands: Commands) {
+#[derive(Component, Reflect, Debug, Default)]
+struct CameraAnchor1stPerson {
+    yaw: f32,
+    pitch: f32,
+}
+
+fn spawn_camera_3rd_person(mut commands: Commands) {
     let camera_arm = 0.15 * Vec3::new(0.0, 8.0, 25.0);
     let transform =
         Transform::from_translation(camera_arm).looking_to(-camera_arm.normalize(), Vec3::Y);
@@ -197,7 +212,7 @@ fn spawn_camera(mut commands: Commands) {
         .spawn((
             TransformBundle::default(),
             Name::new("CameraAnchor"),
-            CameraAnchor,
+            CameraAnchor3rdPerson::default(),
         ))
         .with_children(|builder| {
             builder
@@ -206,6 +221,10 @@ fn spawn_camera(mut commands: Commands) {
                         fov: PI / 3.0,
                         ..Default::default()
                     }),
+                    camera: Camera {
+                        is_active: true,
+                        ..Default::default()
+                    },
                     transform: transform,
                     ..Default::default()
                 })
@@ -213,13 +232,77 @@ fn spawn_camera(mut commands: Commands) {
         });
 }
 
-fn track_camera(
+fn spawn_camera_1st_person(mut commands: Commands) {
+    let camera_arm = Vec3::new(0.0, 0.0, 0.0);
+    let transform =
+        Transform::from_translation(camera_arm).looking_to(-camera_arm.normalize(), Vec3::Y);
+    commands
+        .spawn((
+            TransformBundle::default(),
+            Name::new("CameraAnchor"),
+            CameraAnchor1stPerson::default(),
+        ))
+        .with_children(|builder| {
+            builder
+                .spawn(Camera3dBundle {
+                    projection: Projection::Perspective(PerspectiveProjection {
+                        fov: PI / 3.0,
+                        ..Default::default()
+                    }),
+                    camera: Camera {
+                        is_active: false,
+                        ..Default::default()
+                    },
+                    transform: transform,
+                    ..Default::default()
+                })
+                .insert(Name::new("PlayerCamera"));
+        });
+}
+
+fn toggle_active_view(
+    anchor1: Query<(&CameraAnchor1stPerson, &Children)>,
+    anchor3: Query<(&CameraAnchor3rdPerson, &Children)>,
+    mut cams: Query<&mut Camera>,
+    input_query: Query<&ActionState<PlayerAction>>,
+) {
+    for input in input_query.iter() {
+        if input.just_pressed(&PlayerAction::ViewMode) {
+            let mut cam1 = cams
+                .get_mut(*anchor1.get_single().unwrap().1.iter().next().unwrap())
+                .unwrap();
+            cam1.is_active = !cam1.is_active;
+            let mut cam3 = cams
+                .get_mut(*anchor3.get_single().unwrap().1.iter().next().unwrap())
+                .unwrap();
+            cam3.is_active = !cam3.is_active;
+        }
+    }
+}
+
+fn track_camera_3rd_person(
     query: Query<&Position, With<Player>>,
-    mut camera_query: Query<&mut Transform, With<CameraAnchor>>,
+    mut camera_query: Query<(&mut Transform, &CameraAnchor3rdPerson)>,
 ) {
     for Position(pos) in query.iter() {
-        for mut transform in camera_query.iter_mut() {
+        for (mut transform, anchor3) in camera_query.iter_mut() {
             transform.translation = pos.clone();
+            transform.rotation = Quat::from_euler(EulerRot::YXZ, anchor3.yaw, anchor3.pitch, 0.0);
+        }
+    }
+}
+
+fn track_camera_1st_person(
+    query: Query<(&Position, &Rotation), With<Player>>,
+    mut camera_query: Query<(&mut Transform, &CameraAnchor1stPerson)>,
+) {
+    for (Position(pos), Rotation(quat)) in query.iter() {
+        let up_dir = *quat * Vec3::Y;
+        let pos = pos.clone() + up_dir * CAPSULE_HEIGHT * 0.5;
+        for (mut transform, cam1) in camera_query.iter_mut() {
+            let view_unrolled = Quat::from_euler(EulerRot::YXZ, cam1.yaw, cam1.pitch, 0.0);
+            let forward = view_unrolled * Vec3::NEG_Z;
+            *transform = transform.with_translation(pos).looking_to(forward, up_dir);
         }
     }
 }
@@ -252,7 +335,8 @@ fn player_controls(
         ),
         With<Player>,
     >,
-    mut q_cam: Query<(&CameraAnchor, &mut Transform)>,
+    mut q_cam3: Query<&mut CameraAnchor3rdPerson, Without<CameraAnchor1stPerson>>,
+    mut q_cam1: Query<&mut CameraAnchor1stPerson, Without<CameraAnchor3rdPerson>>,
 ) {
     for (action_state, mut move_state, mut spring, mut angular_spring) in query.iter_mut() {
         let move_input = action_state
@@ -262,14 +346,16 @@ fn player_controls(
             .normalize_or_zero();
         // println!("{:?}", move_input);
         let cam_input = action_state.axis_pair(&PlayerAction::View).unwrap().xy();
-        if let Ok((_, mut cam_transform)) = q_cam.get_single_mut() {
-            let mut euler_angles = cam_transform.rotation.to_euler(EulerRot::YXZ);
-            euler_angles.0 += cam_input.x * -0.005;
-            euler_angles.1 += cam_input.y * -0.005;
-            cam_transform.rotation =
-                Quat::from_euler(EulerRot::YXZ, euler_angles.0, euler_angles.1, 0.0);
+        if let Ok(mut cam3) = q_cam3.get_single_mut() {
+            cam3.yaw += cam_input.x * -0.005;
+            cam3.pitch += cam_input.y * -0.005;
 
-            move_state.acc_dir = Quat::from_euler(EulerRot::YXZ, euler_angles.0, 0.0, 0.0)
+            if let Ok(mut cam1) = q_cam1.get_single_mut() {
+                cam1.yaw = cam3.yaw;
+                cam1.pitch = cam3.pitch;
+            }
+
+            move_state.acc_dir = Quat::from_euler(EulerRot::YXZ, cam3.yaw, 0.0, 0.0)
                 * Vec3::new(move_input.x, 0.0, -move_input.y);
             // println!("{:?}", move_state.acc_dir);
             if action_state.pressed(&PlayerAction::Jump) {
@@ -334,8 +420,6 @@ fn update_ground_force(
             false,
             filter.clone(),
         ) {
-            let max_lean = 0.25 * PI;
-
             let normal = coll.normal1;
             debug.ground_normal = normal;
 
@@ -363,7 +447,7 @@ fn update_ground_force(
 
             let normal_force = spring_force.dot(normal) * normal;
             debug.normal_force = normal_force;
-            let friction_force = normal_force.length() * max_lean.tan();
+            let friction_force = normal_force.length() * GLOBAL_FRICTION;
             let tangential_force = spring_force - normal_force;
             debug.tangential_force = tangential_force;
 
@@ -436,7 +520,7 @@ fn update_ground_force(
 
             debug.torque_cm_force = angle_correction_force;
 
-            let spring_scale = if tangential_force.length() == 0.0 {
+            let friction_scale = if tangential_force.length() == 0.0 {
                 Vec3::X
             } else {
                 add_results_in_length(
@@ -451,7 +535,9 @@ fn update_ground_force(
             .min(1.0);
             force.clear();
             force.apply_force_at_point(
-                (spring_force * spring_scale) + angle_correction_force,
+                normal_force
+                    + (tangential_force * friction_scale + angle_correction_force)
+                        .clamp_length_max(friction_force),
                 1.0 * contact_point,
                 Vec3::ZERO,
             );
@@ -493,7 +579,7 @@ fn draw_debug_gizmos(
             gizmos.arrow(
                 position.clone() + debug.contact_point,
                 position.clone() + debug.contact_point + debug.spring_force,
-                Color::GREEN,
+                Color::CYAN,
             );
             gizmos.arrow(
                 position.clone() + debug.contact_point,
@@ -504,7 +590,7 @@ fn draw_debug_gizmos(
             gizmos.arrow(
                 position.clone() + debug.contact_point,
                 position.clone() + debug.contact_point + debug.tangential_force,
-                Color::CYAN,
+                Color::BLACK,
             );
 
             gizmos.arrow(
@@ -523,14 +609,17 @@ fn draw_debug_gizmos(
                 Color::RED,
             );
             gizmos.arrow(
-                position.clone(),
-                position.clone() + debug.torque_cm_force,
+                position.clone() + debug.contact_point + debug.tangential_force,
+                position.clone()
+                    + debug.contact_point
+                    + debug.tangential_force
+                    + debug.torque_cm_force,
                 Color::YELLOW,
             );
             gizmos.arrow(
                 position.clone(),
                 position.clone() + debug.spring_torque,
-                Color::CYAN,
+                Color::YELLOW,
             );
         }
         gizmos
@@ -569,7 +658,7 @@ impl Plugin for PlayerPlugin {
             stiffness: 0.0,
             min_damping: 0.0,
             max_damping: 0.0,
-            max_force: 2.0 * 10.0,
+            max_force: 20.0 * 10.0,
             min_force: 0.0,
             smoothing_spring: SpringValue {
                 f: 60.0,
@@ -583,15 +672,17 @@ impl Plugin for PlayerPlugin {
             stiffness: 0.,
             damping: 0.0,
         });
-        app.add_systems(Startup, spawn_camera);
+        app.add_systems(Startup, (spawn_camera_3rd_person, spawn_camera_1st_person));
         app.add_systems(
             Update,
             (
                 spawn_player,
                 player_controls,
                 respawn_player,
+                toggle_active_view,
                 draw_debug_gizmos.run_if(in_state(DebugState::On)),
-                track_camera
+                (track_camera_3rd_person, track_camera_1st_person)
+                    .chain()
                     .after(PhysicsSet::Sync)
                     .run_if(in_state(DebugState::On)),
             ),
@@ -599,7 +690,9 @@ impl Plugin for PlayerPlugin {
         app.add_systems(
             SubstepSchedule,
             ((
-                track_camera.run_if(in_state(DebugState::None)),
+                (track_camera_3rd_person, track_camera_1st_person)
+                    .chain()
+                    .run_if(in_state(DebugState::None)),
                 update_ground_force,
             )
                 .chain())
