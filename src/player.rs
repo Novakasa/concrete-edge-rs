@@ -97,7 +97,7 @@ struct PlayerSpawned;
 struct PlayerFeet;
 
 #[derive(Component, Reflect, Debug)]
-struct Player;
+pub struct Player;
 
 #[derive(Component, Reflect, Debug, Resource, Clone, Default)]
 #[reflect(Component, Resource)]
@@ -380,7 +380,7 @@ fn player_controls(
                 spring.rest_length = CAPSULE_HEIGHT * 1.4 + CAPSULE_RADIUS;
                 spring.min_damping = 1.0;
                 spring.stiffness = 15.0;
-                angular_spring.stiffness = 0.0;
+                angular_spring.stiffness = 0.5;
             } else {
                 spring.rest_length = CAPSULE_HEIGHT * 0.7 + CAPSULE_RADIUS;
                 spring.min_damping = 2.0;

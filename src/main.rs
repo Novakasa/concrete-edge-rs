@@ -2,6 +2,7 @@ use std::env;
 
 use bevy::{
     prelude::*,
+    render::render_resource::{AsBindGroup, ShaderRef},
     window::{CursorGrabMode, PrimaryWindow},
 };
 use bevy_gltf_components::ComponentsFromGltfPlugin;
@@ -9,7 +10,7 @@ use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_registry_export::ExportRegistryPlugin;
 use bevy_xpbd_3d::prelude::*;
 use leafwing_input_manager::prelude::*;
-use player::DebugState;
+use player::{DebugState, Player};
 
 mod player;
 
@@ -39,6 +40,22 @@ impl GlobalAction {
 struct Platform {
     test: i32,
 }
+
+#[derive(Asset, TypePath, AsBindGroup, Debug, Clone)]
+struct DebugMaterial {
+    #[uniform(0)]
+    color: Color,
+}
+
+impl Material for DebugMaterial {
+    fn fragment_shader() -> ShaderRef {
+        "shaders/debug_material.wgsl".into()
+    }
+}
+
+#[derive(Component, Reflect, Debug)]
+#[reflect(Component)]
+struct DebugMaterialMarker;
 
 #[derive(Component, Reflect, Debug)]
 #[reflect(Component)]
@@ -118,12 +135,32 @@ fn setup_player(
     }
 }
 
+fn replace_platform_material(
+    mut commands: Commands,
+    query: Query<
+        (Entity, &Handle<StandardMaterial>),
+        (Without<Player>, Without<DebugMaterialMarker>),
+    >,
+    mut materials: ResMut<Assets<DebugMaterial>>,
+    standard_materials: Res<Assets<StandardMaterial>>,
+) {
+    for (entity, prev_material) in query.iter() {
+        let color = standard_materials.get(prev_material).unwrap().base_color;
+        println!("Replacing platform material: {:?}", entity);
+        commands.entity(entity).insert(DebugMaterialMarker);
+        commands
+            .entity(entity)
+            .insert(materials.add(DebugMaterial { color: color }));
+        commands.entity(entity).remove::<Handle<StandardMaterial>>();
+    }
+}
+
 fn setup_platforms(
     mut commands: Commands,
     query: Query<(Entity, &Platform, &Children), Without<RigidBody>>,
 ) {
     for (entity, _platform, children) in query.iter() {
-        println!("Generating collider for platform: {:?}", entity);
+        // println!("Generating collider for platform: {:?}", entity);
         commands
             .entity(entity)
             .insert(Name::new(format!("Platform{}", entity.index())))
@@ -157,13 +194,19 @@ fn main() {
         .add_plugins(ComponentsFromGltfPlugin { legacy_mode: false })
         .add_plugins(player::PlayerPlugin)
         .add_plugins(WorldInspectorPlugin::new())
+        .add_plugins(MaterialPlugin::<DebugMaterial>::default())
         .add_systems(Startup, load_level)
         .add_systems(Update, (setup_platforms, setup_player))
         //.add_systems(Update, print_platforms)
         .add_plugins(ExportRegistryPlugin::default())
         .add_systems(
             Update,
-            (quit_on_menu, physics_speed_control, toggle_debug_state),
+            (
+                quit_on_menu,
+                physics_speed_control,
+                toggle_debug_state,
+                replace_platform_material,
+            ),
         )
         .add_systems(Startup, lock_cursor)
         .run();
