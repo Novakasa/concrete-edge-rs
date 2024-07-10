@@ -1,16 +1,31 @@
-#import bevy_pbr::forward_io::VertexOutput
-#import bevy_render::view  View
+#import bevy_pbr::{pbr_fragment::pbr_input_from_standard_material}
 
-@group(2) @binding(0) var<uniform> material_color: vec4<f32>;
+#ifdef PREPASS_PIPELINE
+#import bevy_pbr::{
+    prepass_io::{VertexOutput, FragmentOutput},
+    pbr_deferred_functions::deferred_output,
+}
+#else
+#import bevy_pbr::{forward_io::{VertexOutput, FragmentOutput}, pbr_functions::{apply_pbr_lighting, main_pass_post_lighting_processing},}
+#endif
 
-@group(0) @binding(0) var<uniform> view: View;
 
 @fragment
 fn fragment(
     mesh: VertexOutput,
-) -> @location(0) vec4<f32> {
+    @builtin(front_facing) is_front: bool,
+) -> FragmentOutput {
+    var pbr_input = pbr_input_from_standard_material(mesh, is_front);
+
     let coord = abs(mesh.world_position * 1.0 + 1.0e5);
     let modifier = floor(coord);
     let sum = (modifier.x + modifier.z + 0.0 * modifier.y) % 2.0;
-    return material_color * (1.0 - 0.2 * sum);
+
+
+    var out: FragmentOutput;
+    out.color = apply_pbr_lighting(pbr_input);
+    out.color = out.color * (1.0 - 0.2 * sum);
+    out.color = main_pass_post_lighting_processing(pbr_input, out.color);
+    return out;
+    // return vec4<f32>(sum, sum, sum, 1.0);
 }

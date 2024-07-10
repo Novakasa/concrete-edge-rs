@@ -1,6 +1,7 @@
 use std::env;
 
 use bevy::{
+    pbr::{ExtendedMaterial, MaterialExtension},
     prelude::*,
     render::render_resource::{AsBindGroup, ShaderRef},
     window::{CursorGrabMode, PrimaryWindow},
@@ -42,13 +43,14 @@ struct Platform {
 }
 
 #[derive(Asset, TypePath, AsBindGroup, Debug, Clone)]
-struct DebugMaterial {
-    #[uniform(0)]
-    color: Color,
-}
+struct DebugMaterial {}
 
-impl Material for DebugMaterial {
+impl MaterialExtension for DebugMaterial {
     fn fragment_shader() -> ShaderRef {
+        "shaders/debug_material.wgsl".into()
+    }
+
+    fn deferred_fragment_shader() -> ShaderRef {
         "shaders/debug_material.wgsl".into()
     }
 }
@@ -141,7 +143,7 @@ fn replace_platform_material(
         (Entity, &Handle<StandardMaterial>),
         (Without<Player>, Without<DebugMaterialMarker>),
     >,
-    mut materials: ResMut<Assets<DebugMaterial>>,
+    mut materials: ResMut<Assets<ExtendedMaterial<StandardMaterial, DebugMaterial>>>,
     standard_materials: Res<Assets<StandardMaterial>>,
 ) {
     for (entity, prev_material) in query.iter() {
@@ -150,7 +152,10 @@ fn replace_platform_material(
         commands.entity(entity).insert(DebugMaterialMarker);
         commands
             .entity(entity)
-            .insert(materials.add(DebugMaterial { color: color }));
+            .insert(materials.add(ExtendedMaterial {
+                base: StandardMaterial::from(color),
+                extension: DebugMaterial {},
+            }));
         commands.entity(entity).remove::<Handle<StandardMaterial>>();
     }
 }
@@ -194,7 +199,9 @@ fn main() {
         .add_plugins(ComponentsFromGltfPlugin { legacy_mode: false })
         .add_plugins(player::PlayerPlugin)
         .add_plugins(WorldInspectorPlugin::new())
-        .add_plugins(MaterialPlugin::<DebugMaterial>::default())
+        .add_plugins(MaterialPlugin::<
+            ExtendedMaterial<StandardMaterial, DebugMaterial>,
+        >::default())
         .add_systems(Startup, load_level)
         .add_systems(Update, (setup_platforms, setup_player))
         //.add_systems(Update, print_platforms)
