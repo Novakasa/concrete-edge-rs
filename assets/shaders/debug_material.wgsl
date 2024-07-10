@@ -21,6 +21,8 @@ fn fragment(
     let modifier = floor(coord);
     let sum = (modifier.x + modifier.z + 0.0 * modifier.y) % 2.0;
 
+    pbr_input.material.perceptual_roughness = 0.3 + 0.3 * sum;
+
 
     var out: FragmentOutput;
     out.color = apply_pbr_lighting(pbr_input);
