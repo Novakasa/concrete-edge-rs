@@ -22,11 +22,10 @@ fn fragment(
     let sum = (modifier.x + modifier.z + 0.0 * modifier.y) % 2.0;
 
     pbr_input.material.perceptual_roughness = 0.3 + 0.3 * sum;
-
+    pbr_input.material.base_color = pbr_input.material.base_color * (1.0 - 0.4 * sum);
 
     var out: FragmentOutput;
     out.color = apply_pbr_lighting(pbr_input);
-    out.color = out.color * (1.0 - 0.2 * sum);
     out.color = main_pass_post_lighting_processing(pbr_input, out.color);
     return out;
     // return vec4<f32>(sum, sum, sum, 1.0);
