@@ -6,7 +6,7 @@ const CAPSULE_RADIUS: f32 = 0.2;
 const CAPSULE_HEIGHT: f32 = 4.0 * CAPSULE_RADIUS;
 const CAST_RADIUS: f32 = 1.0 * CAPSULE_RADIUS;
 const MAX_TOI: f32 = CAPSULE_HEIGHT * 1.0;
-const FRICTION_MARGIN: f32 = 0.7;
+const FRICTION_MARGIN: f32 = 0.8;
 const GLOBAL_FRICTION: f32 = 1.5;
 
 #[derive(Clone)]
@@ -138,6 +138,20 @@ struct PlayerMoveState {
     prev_vel: Vec3,
     prev_angular_force: Vec3,
     prev_target_force: Vec3,
+    cast_vec: Vec3,
+}
+
+impl PlayerMoveState {
+    fn default() -> Self {
+        Self {
+            acc_dir: Vec3::ZERO,
+            spring_height: 0.0,
+            prev_vel: Vec3::ZERO,
+            prev_angular_force: Vec3::ZERO,
+            prev_target_force: Vec3::ZERO,
+            cast_vec: Vec3::Y,
+        }
+    }
 }
 
 #[derive(Component, Reflect, Debug, Default)]
@@ -428,7 +442,8 @@ fn update_ground_force(
         let external_forces = gravity.0;
         let ext_dir = external_forces.normalize_or_zero();
         let filter = SpatialQueryFilter::from_mask(Layer::Platform);
-        let cast_dir = *quat * Vec3::NEG_Y;
+        let cast_dir = -move_state.cast_vec.normalize_or_zero();
+        let from_up = *quat * Vec3::Y;
         if let Some(coll) = shape_cast.cast_shape(
             &Collider::sphere(CAST_RADIUS),
             position.clone(),
@@ -498,13 +513,13 @@ fn update_ground_force(
 
             // let slope_force = external_forces - normal.dot(external_forces) * normal;
 
-            let mut target_force = 0.2 * (target_vel - tangent_vel);
+            let mut target_force = 0.4 * (target_vel - tangent_vel);
             if friction_force > 0.0 {
                 target_force = (target_force.length() / friction_force).powi(1)
                     * friction_force
                     * target_force.normalize_or_zero()
             }
-            target_force -= 0.000 * (tangent_vel - prev_tangent_vel) / dt.delta_seconds();
+            target_force -= 0.0 * (tangent_vel - prev_tangent_vel) / dt.delta_seconds();
 
             if target_force.length() > friction_force * FRICTION_MARGIN {
                 target_force = add_results_in_length(
@@ -529,8 +544,11 @@ fn update_ground_force(
 
             let target_spring_dir = (target_force + normal_force).normalize_or_zero();
 
-            let delta_angle = spring_dir.angle_between(target_spring_dir);
-            let delta_axis = spring_dir.cross(target_spring_dir).normalize_or_zero();
+            move_state.cast_vec = move_state.cast_vec
+                + 10.0 * (target_spring_dir - move_state.cast_vec) * dt.delta_seconds();
+
+            let delta_angle = from_up.angle_between(move_state.cast_vec);
+            let delta_axis = from_up.cross(move_state.cast_vec).normalize_or_zero();
             let angular_spring_torque = angular_spring.stiffness * delta_axis * delta_angle
                 - (angular_spring.damping * angular_vel.clone());
             debug.spring_torque = angular_spring_torque;
