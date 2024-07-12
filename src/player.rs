@@ -6,7 +6,7 @@ const CAPSULE_RADIUS: f32 = 0.2;
 const CAPSULE_HEIGHT: f32 = 4.0 * CAPSULE_RADIUS;
 const CAST_RADIUS: f32 = 1.0 * CAPSULE_RADIUS;
 const MAX_TOI: f32 = CAPSULE_HEIGHT * 1.0;
-const FRICTION_MARGIN: f32 = 0.8;
+const FRICTION_MARGIN: f32 = 0.7;
 const GLOBAL_FRICTION: f32 = 1.5;
 
 #[derive(Clone)]
@@ -52,7 +52,8 @@ impl SpringValue {
 #[derive(States, Debug, Clone, PartialEq, Eq, Hash)]
 pub enum DebugState {
     None,
-    On,
+    Colliders,
+    All,
 }
 
 #[derive(Actionlike, PartialEq, Eq, Hash, Clone, Debug, Reflect)]
@@ -190,7 +191,7 @@ fn spawn_player(
             CAPSULE_HEIGHT - 2.0 * CAPSULE_RADIUS,
         )));
         let material = materials.add(Color::WHITE);
-        let visibility = if debug_state.get() == &DebugState::On {
+        let visibility = if debug_state.get() == &DebugState::Colliders {
             Visibility::Hidden
         } else {
             Visibility::Visible
@@ -513,7 +514,7 @@ fn update_ground_force(
 
             // let slope_force = external_forces - normal.dot(external_forces) * normal;
 
-            let mut target_force = 0.4 * (target_vel - tangent_vel);
+            let mut target_force = 0.3 * (target_vel - tangent_vel);
             if friction_force > 0.0 {
                 target_force = (target_force.length() / friction_force).powi(1)
                     * friction_force
@@ -544,8 +545,9 @@ fn update_ground_force(
 
             let target_spring_dir = (target_force + normal_force).normalize_or_zero();
 
-            move_state.cast_vec = move_state.cast_vec
-                + 10.0 * (target_spring_dir - move_state.cast_vec) * dt.delta_seconds();
+            move_state.cast_vec = (move_state.cast_vec
+                + 10.0 * (target_spring_dir - spring_dir) * dt.delta_seconds())
+            .normalize_or_zero();
 
             let delta_angle = from_up.angle_between(move_state.cast_vec);
             let delta_axis = from_up.cross(move_state.cast_vec).normalize_or_zero();
@@ -606,6 +608,7 @@ fn set_visible<const VAL: bool>(mut query: Query<&mut Visibility, With<Player>>)
 fn draw_debug_gizmos(
     mut query: Query<(&PhysicsDebugInfo, &Position, &Rotation), With<Player>>,
     mut gizmos: Gizmos,
+    debug_state: Res<State<DebugState>>,
 ) {
     for (debug, Position(position), Rotation(quat)) in query.iter_mut() {
         if debug.grounded {
@@ -615,51 +618,53 @@ fn draw_debug_gizmos(
                 CAST_RADIUS,
                 Color::RED,
             );
-            gizmos.arrow(
-                position.clone() + debug.contact_point,
-                position.clone() + debug.contact_point + debug.spring_force,
-                Color::CYAN,
-            );
-            gizmos.arrow(
-                position.clone() + debug.contact_point,
-                position.clone() + debug.contact_point + debug.normal_force,
-                Color::BLUE,
-            );
+            if debug_state.get() == &DebugState::All {
+                gizmos.arrow(
+                    position.clone() + debug.contact_point,
+                    position.clone() + debug.contact_point + debug.spring_force,
+                    Color::CYAN,
+                );
+                gizmos.arrow(
+                    position.clone() + debug.contact_point,
+                    position.clone() + debug.contact_point + debug.normal_force,
+                    Color::BLUE,
+                );
 
-            gizmos.arrow(
-                position.clone() + debug.contact_point,
-                position.clone() + debug.contact_point + debug.tangential_force,
-                Color::BLACK,
-            );
+                gizmos.arrow(
+                    position.clone() + debug.contact_point,
+                    position.clone() + debug.contact_point + debug.tangential_force,
+                    Color::BLACK,
+                );
 
-            gizmos.arrow(
-                position.clone() + debug.contact_point,
-                position.clone() + debug.contact_point + debug.tangent_vel,
-                Color::ORANGE,
-            );
-            gizmos.arrow(
-                position.clone() + debug.contact_point,
-                position.clone() + debug.contact_point + debug.target_vel,
-                Color::GREEN,
-            );
-            gizmos.arrow(
-                position.clone() + debug.contact_point,
-                position.clone() + debug.contact_point + debug.target_force,
-                Color::RED,
-            );
-            gizmos.arrow(
-                position.clone() + debug.contact_point + debug.tangential_force,
-                position.clone()
-                    + debug.contact_point
-                    + debug.tangential_force
-                    + debug.torque_cm_force,
-                Color::YELLOW,
-            );
-            gizmos.arrow(
-                position.clone(),
-                position.clone() + debug.spring_torque,
-                Color::YELLOW,
-            );
+                gizmos.arrow(
+                    position.clone() + debug.contact_point,
+                    position.clone() + debug.contact_point + debug.tangent_vel,
+                    Color::ORANGE,
+                );
+                gizmos.arrow(
+                    position.clone() + debug.contact_point,
+                    position.clone() + debug.contact_point + debug.target_vel,
+                    Color::GREEN,
+                );
+                gizmos.arrow(
+                    position.clone() + debug.contact_point,
+                    position.clone() + debug.contact_point + debug.target_force,
+                    Color::RED,
+                );
+                gizmos.arrow(
+                    position.clone() + debug.contact_point + debug.tangential_force,
+                    position.clone()
+                        + debug.contact_point
+                        + debug.tangential_force
+                        + debug.torque_cm_force,
+                    Color::YELLOW,
+                );
+                gizmos.arrow(
+                    position.clone(),
+                    position.clone() + debug.spring_torque,
+                    Color::YELLOW,
+                );
+            }
         }
         gizmos
             .primitive_3d(
@@ -719,11 +724,11 @@ impl Plugin for PlayerPlugin {
                 player_controls,
                 respawn_player,
                 toggle_active_view,
-                draw_debug_gizmos.run_if(in_state(DebugState::On)),
+                draw_debug_gizmos.run_if(not(in_state(DebugState::None))),
                 (track_camera_3rd_person, track_camera_1st_person)
                     .chain()
                     .after(PhysicsSet::Sync)
-                    .run_if(in_state(DebugState::On)),
+                    .run_if(not(in_state(DebugState::None))),
             ),
         );
         app.add_systems(
@@ -738,6 +743,6 @@ impl Plugin for PlayerPlugin {
             .before(SubstepSet::Integrate),
         );
         app.add_systems(OnEnter(DebugState::None), set_visible::<true>);
-        app.add_systems(OnEnter(DebugState::On), set_visible::<false>);
+        app.add_systems(OnExit(DebugState::None), set_visible::<false>);
     }
 }

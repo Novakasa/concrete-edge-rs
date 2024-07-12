@@ -1,4 +1,4 @@
-use std::env;
+use std::{env, fmt::Debug};
 
 use bevy::{
     pbr::{ExtendedMaterial, MaterialExtension},
@@ -85,8 +85,9 @@ fn toggle_debug_state(
 ) {
     if input.just_pressed(&GlobalAction::ToggleDebug) {
         match debug_state.get() {
-            DebugState::None => next_debug_state.set(DebugState::On),
-            DebugState::On => next_debug_state.set(DebugState::None),
+            DebugState::None => next_debug_state.set(DebugState::Colliders),
+            DebugState::Colliders => next_debug_state.set(DebugState::All),
+            DebugState::All => next_debug_state.set(DebugState::None),
         }
     }
 }
