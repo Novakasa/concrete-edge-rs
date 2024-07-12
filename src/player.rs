@@ -141,20 +141,11 @@ struct PlayerMoveState {
     prev_target_force: Vec3,
     cast_vec: Vec3,
     slipping: bool,
+    contact_point: Option<Vec3>,
 }
 
-impl PlayerMoveState {
-    fn default() -> Self {
-        Self {
-            acc_dir: Vec3::ZERO,
-            spring_height: 0.0,
-            prev_vel: Vec3::ZERO,
-            prev_angular_force: Vec3::ZERO,
-            prev_target_force: Vec3::ZERO,
-            cast_vec: Vec3::Y,
-            slipping: false,
-        }
-    }
+struct ProceduralSteps {
+    predicted_lock_pos: Option<Vec3>,
 }
 
 #[derive(Component, Reflect, Debug, Default)]
@@ -214,7 +205,10 @@ fn spawn_player(
                 ground_spring.clone(),
                 angular_spring.clone(),
                 InputManagerBundle::<PlayerAction>::with_map(PlayerAction::default_input_map()),
-                PlayerMoveState::default(),
+                PlayerMoveState {
+                    cast_vec: Vec3::Y,
+                    ..Default::default()
+                },
                 PhysicsDebugInfo::default(),
             ))
             .insert(MaterialMeshBundle {
@@ -460,6 +454,7 @@ fn update_ground_force(
             debug.ground_normal = normal;
 
             let contact_point = coll.point2 + cast_dir * coll.time_of_impact;
+            move_state.contact_point = Some(contact_point);
             let spring_dir = -contact_point.normalize_or_zero();
             // let spring_dir = from_up;
             debug.contact_point = contact_point;
@@ -579,6 +574,8 @@ fn update_ground_force(
             // torque.set_torque(angular_spring_torque);
         } else {
             debug.grounded = false;
+            move_state.cast_vec = from_up.try_normalize().unwrap_or(Vec3::Y);
+            move_state.contact_point = None;
             force.clear();
             torque.clear();
         }
