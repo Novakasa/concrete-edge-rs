@@ -6,8 +6,8 @@ const CAPSULE_RADIUS: f32 = 0.2;
 const CAPSULE_HEIGHT: f32 = 4.0 * CAPSULE_RADIUS;
 const CAST_RADIUS: f32 = 1.0 * CAPSULE_RADIUS;
 const MAX_TOI: f32 = CAPSULE_HEIGHT * 1.0;
-const FRICTION_MARGIN: f32 = 0.7;
-const GLOBAL_FRICTION: f32 = 1.5;
+const FRICTION_MARGIN: f32 = 0.9;
+const GLOBAL_FRICTION: f32 = 1.0;
 
 #[derive(Clone)]
 enum SpringParams {
@@ -172,6 +172,7 @@ struct PhysicsDebugInfo {
     tangent_vel: Vec3,
     target_vel: Vec3,
     target_force: Vec3,
+    slipping: bool,
 }
 
 fn spawn_player(
@@ -560,25 +561,12 @@ fn update_ground_force(
                 -normal.cross(angular_spring_torque) / (normal.dot(contact_point));
 
             debug.torque_cm_force = angle_correction_force;
+            debug.slipping = (tangential_force + angle_correction_force).length() > friction_force;
 
-            let friction_scale = if tangential_force.length() == 0.0 {
-                Vec3::X
-            } else {
-                add_results_in_length(
-                    tangential_force.normalize_or_zero(),
-                    angle_correction_force,
-                    friction_force,
-                )
-                .unwrap_or(tangential_force)
-                    / tangential_force.length()
-            }
-            .length()
-            .min(1.0);
             force.clear();
             force.apply_force_at_point(
                 normal_force
-                    + (tangential_force * friction_scale + angle_correction_force)
-                        .clamp_length_max(friction_force),
+                    + (tangential_force + angle_correction_force).clamp_length_max(friction_force),
                 1.0 * contact_point,
                 Vec3::ZERO,
             );
@@ -612,11 +600,16 @@ fn draw_debug_gizmos(
 ) {
     for (debug, Position(position), Rotation(quat)) in query.iter_mut() {
         if debug.grounded {
+            let contact_color = if debug.slipping {
+                Color::RED
+            } else {
+                Color::GREEN
+            };
             gizmos.sphere(
                 position.clone() + debug.shape_toi * debug.cast_dir,
                 Quat::IDENTITY,
                 CAST_RADIUS,
-                Color::RED,
+                contact_color,
             );
             if debug_state.get() == &DebugState::All {
                 gizmos.arrow(
