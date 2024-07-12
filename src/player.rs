@@ -142,10 +142,16 @@ struct PlayerMoveState {
     neg_cast_vec: Vec3,
     slipping: bool,
     contact_point: Option<Vec3>,
+    contact_normal: Option<Vec3>,
+    current_force: Vec3,
+    ext_force: Vec3,
 }
 
+#[derive(Component, Reflect, Debug, Default)]
 struct ProceduralSteps {
     predicted_lock_pos: Option<Vec3>,
+    left_locked: Option<Vec3>,
+    right_locked: Option<Vec3>,
 }
 
 #[derive(Component, Reflect, Debug, Default)]
@@ -184,10 +190,10 @@ fn spawn_player(
             CAPSULE_HEIGHT - 2.0 * CAPSULE_RADIUS,
         )));
         let material = materials.add(Color::WHITE);
-        let visibility = if debug_state.get() == &DebugState::Colliders {
-            Visibility::Hidden
-        } else {
+        let visibility = if debug_state.get() == &DebugState::None {
             Visibility::Visible
+        } else {
+            Visibility::Hidden
         };
         let _body = commands
             .spawn((
@@ -195,7 +201,6 @@ fn spawn_player(
                 ColliderDensity(1.5),
                 CollisionLayers::new(Layer::Player, Layer::Platform),
                 RigidBody::default(),
-                // Name::new("PlayerBody"),
                 Position::from(transform.translation()),
                 Transform::from_translation(transform.translation()),
                 GlobalTransform::default(),
@@ -218,6 +223,7 @@ fn spawn_player(
                 ..Default::default()
             })
             .insert((Restitution::new(0.0), Friction::new(GLOBAL_FRICTION)))
+            .insert((ProceduralSteps::default(), Name::new("PlayerBody")))
             .id();
     }
 }
@@ -452,6 +458,7 @@ fn update_ground_force(
         ) {
             let normal = coll.normal1;
             debug.ground_normal = normal;
+            move_state.contact_normal = Some(normal);
 
             let contact_point = coll.point2 + cast_dir * coll.time_of_impact;
             move_state.contact_point = Some(contact_point);
@@ -565,6 +572,9 @@ fn update_ground_force(
                 -normal.cross(angular_spring_torque) / (normal.dot(contact_point));
 
             debug.torque_cm_force = angle_correction_force;
+            move_state.current_force =
+                (tangential_force + angle_correction_force).clamp_length_max(friction_force);
+            move_state.ext_force = slope_force;
             move_state.slipping =
                 (tangential_force + angle_correction_force).length() > friction_force;
 
@@ -590,6 +600,34 @@ fn update_ground_force(
     }
 }
 
+fn update_procedural_steps(
+    mut query: Query<
+        (
+            &Position,
+            &mut ProceduralSteps,
+            &PlayerMoveState,
+            &Mass,
+            &LinearVelocity,
+        ),
+        With<Player>,
+    >,
+    _spatial_query: SpatialQuery,
+) {
+    for (Position(position), mut steps, move_state, mass, LinearVelocity(velocity)) in
+        query.iter_mut()
+    {
+        if let Some(contact_point) = move_state.contact_point {
+            let normal = move_state.contact_normal.unwrap();
+            let tangential_vel = *velocity - velocity.dot(normal) * normal;
+            let acceleration = (move_state.current_force + move_state.ext_force) / mass.0;
+            let delta = 0.1;
+            let extrapolated_pos =
+                *position + contact_point + (acceleration * delta + tangential_vel) * delta;
+            steps.predicted_lock_pos = Some(extrapolated_pos);
+        }
+    }
+}
+
 fn set_visible<const VAL: bool>(mut query: Query<&mut Visibility, With<Player>>) {
     for mut visibility in query.iter_mut() {
         if VAL {
@@ -601,12 +639,27 @@ fn set_visible<const VAL: bool>(mut query: Query<&mut Visibility, With<Player>>)
 }
 
 fn draw_debug_gizmos(
-    mut query: Query<(&PhysicsDebugInfo, &Position, &Rotation, &PlayerMoveState), With<Player>>,
+    mut query: Query<
+        (
+            &PhysicsDebugInfo,
+            &Position,
+            &Rotation,
+            &PlayerMoveState,
+            &ProceduralSteps,
+        ),
+        With<Player>,
+    >,
     mut gizmos: Gizmos,
     debug_state: Res<State<DebugState>>,
 ) {
-    for (debug, Position(position), Rotation(quat), move_state) in query.iter_mut() {
+    for (debug, Position(position), Rotation(quat), move_state, steps) in query.iter_mut() {
         if debug.grounded {
+            gizmos.sphere(
+                steps.predicted_lock_pos.unwrap(),
+                Quat::IDENTITY,
+                0.5 * CAPSULE_RADIUS,
+                Color::GREEN,
+            );
             let contact_color = if move_state.slipping {
                 Color::RED
             } else {
@@ -725,6 +778,7 @@ impl Plugin for PlayerPlugin {
                 respawn_player,
                 toggle_active_view,
                 draw_debug_gizmos.run_if(not(in_state(DebugState::None))),
+                update_procedural_steps.after(PhysicsSet::Sync),
                 (track_camera_3rd_person, track_camera_1st_person)
                     .chain()
                     .after(PhysicsSet::Sync)
