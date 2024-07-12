@@ -140,6 +140,7 @@ struct PlayerMoveState {
     prev_angular_force: Vec3,
     prev_target_force: Vec3,
     cast_vec: Vec3,
+    slipping: bool,
 }
 
 impl PlayerMoveState {
@@ -151,6 +152,7 @@ impl PlayerMoveState {
             prev_angular_force: Vec3::ZERO,
             prev_target_force: Vec3::ZERO,
             cast_vec: Vec3::Y,
+            slipping: false,
         }
     }
 }
@@ -172,7 +174,6 @@ struct PhysicsDebugInfo {
     tangent_vel: Vec3,
     target_vel: Vec3,
     target_force: Vec3,
-    slipping: bool,
 }
 
 fn spawn_player(
@@ -561,7 +562,8 @@ fn update_ground_force(
                 -normal.cross(angular_spring_torque) / (normal.dot(contact_point));
 
             debug.torque_cm_force = angle_correction_force;
-            debug.slipping = (tangential_force + angle_correction_force).length() > friction_force;
+            move_state.slipping =
+                (tangential_force + angle_correction_force).length() > friction_force;
 
             force.clear();
             force.apply_force_at_point(
@@ -594,13 +596,13 @@ fn set_visible<const VAL: bool>(mut query: Query<&mut Visibility, With<Player>>)
 }
 
 fn draw_debug_gizmos(
-    mut query: Query<(&PhysicsDebugInfo, &Position, &Rotation), With<Player>>,
+    mut query: Query<(&PhysicsDebugInfo, &Position, &Rotation, &PlayerMoveState), With<Player>>,
     mut gizmos: Gizmos,
     debug_state: Res<State<DebugState>>,
 ) {
-    for (debug, Position(position), Rotation(quat)) in query.iter_mut() {
+    for (debug, Position(position), Rotation(quat), move_state) in query.iter_mut() {
         if debug.grounded {
-            let contact_color = if debug.slipping {
+            let contact_color = if move_state.slipping {
                 Color::RED
             } else {
                 Color::GREEN
