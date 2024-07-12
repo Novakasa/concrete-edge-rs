@@ -139,7 +139,7 @@ struct PlayerMoveState {
     prev_vel: Vec3,
     prev_angular_force: Vec3,
     prev_target_force: Vec3,
-    cast_vec: Vec3,
+    neg_cast_vec: Vec3,
     slipping: bool,
     contact_point: Option<Vec3>,
 }
@@ -206,7 +206,7 @@ fn spawn_player(
                 angular_spring.clone(),
                 InputManagerBundle::<PlayerAction>::with_map(PlayerAction::default_input_map()),
                 PlayerMoveState {
-                    cast_vec: Vec3::Y,
+                    neg_cast_vec: Vec3::Y,
                     ..Default::default()
                 },
                 PhysicsDebugInfo::default(),
@@ -439,7 +439,7 @@ fn update_ground_force(
         let external_forces = gravity.0;
         let ext_dir = external_forces.normalize_or_zero();
         let filter = SpatialQueryFilter::from_mask(Layer::Platform);
-        let cast_dir = -move_state.cast_vec.normalize_or_zero();
+        let cast_dir = -move_state.neg_cast_vec;
         let from_up = *quat * Vec3::Y;
         if let Some(coll) = shape_cast.cast_shape(
             &Collider::sphere(CAST_RADIUS),
@@ -542,12 +542,20 @@ fn update_ground_force(
 
             let target_spring_dir = (target_force + normal_force).normalize_or_zero();
 
-            move_state.cast_vec = (move_state.cast_vec
+            let raw_neg_cast_vec = (move_state.neg_cast_vec
                 + 10.0 * (target_spring_dir - spring_dir) * dt.delta_seconds())
             .normalize_or_zero();
 
-            let delta_angle = from_up.angle_between(move_state.cast_vec);
-            let delta_axis = from_up.cross(move_state.cast_vec).normalize_or_zero();
+            let quat = Quat::from_rotation_arc(from_up, raw_neg_cast_vec);
+            let angle = from_up.angle_between(raw_neg_cast_vec);
+            move_state.neg_cast_vec = if angle < 0.0001 {
+                raw_neg_cast_vec
+            } else {
+                Quat::IDENTITY.slerp(quat, angle.min(0.3 * PI) / angle) * from_up
+            };
+
+            let delta_angle = from_up.angle_between(move_state.neg_cast_vec);
+            let delta_axis = from_up.cross(move_state.neg_cast_vec).normalize_or_zero();
             let angular_spring_torque = angular_spring.stiffness * delta_axis * delta_angle
                 - (angular_spring.damping * angular_vel.clone());
             debug.spring_torque = angular_spring_torque;
@@ -574,7 +582,7 @@ fn update_ground_force(
             // torque.set_torque(angular_spring_torque);
         } else {
             debug.grounded = false;
-            move_state.cast_vec = from_up.try_normalize().unwrap_or(Vec3::Y);
+            move_state.neg_cast_vec = from_up.try_normalize().unwrap_or(Vec3::Y);
             move_state.contact_point = None;
             force.clear();
             torque.clear();
