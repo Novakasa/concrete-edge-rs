@@ -150,8 +150,7 @@ struct PlayerMoveState {
 #[derive(Component, Reflect, Debug, Default)]
 struct ProceduralSteps {
     predicted_lock_pos: Option<Vec3>,
-    left_locked: Option<Vec3>,
-    right_locked: Option<Vec3>,
+    locked: [Option<Vec3>; 2],
 }
 
 #[derive(Component, Reflect, Debug, Default)]
@@ -617,13 +616,28 @@ fn update_procedural_steps(
         query.iter_mut()
     {
         if let Some(contact_point) = move_state.contact_point {
+            let contact = contact_point + *position;
             let normal = move_state.contact_normal.unwrap();
             let tangential_vel = *velocity - velocity.dot(normal) * normal;
             let acceleration = (move_state.current_force + move_state.ext_force) / mass.0;
-            let delta = 0.1;
-            let extrapolated_pos =
-                *position + contact_point + (acceleration * delta + tangential_vel) * delta;
-            steps.predicted_lock_pos = Some(extrapolated_pos);
+            let delta = 0.09;
+            let extrapolated_pos1 = contact + (acceleration * delta + tangential_vel) * delta;
+            steps.predicted_lock_pos = Some(extrapolated_pos1);
+            let extrapolated_pos2 = contact + (acceleration * delta - tangential_vel) * delta;
+
+            for locked in steps.locked.iter_mut() {
+                if let Some(pos) = locked {
+                    let delta1 = (*pos - extrapolated_pos1).length();
+                    let delta2 = (*pos - extrapolated_pos2).length();
+                    let delta3 = (*pos - contact).length();
+                    let delta4 = (extrapolated_pos1 - extrapolated_pos2).length();
+                    if delta3 > delta4 * 0.5 && delta2 < delta1 && delta4 > CAPSULE_RADIUS {
+                        *locked = None;
+                    }
+                } else {
+                    *locked = Some(extrapolated_pos1);
+                }
+            }
         }
     }
 }
@@ -654,12 +668,19 @@ fn draw_debug_gizmos(
 ) {
     for (debug, Position(position), Rotation(quat), move_state, steps) in query.iter_mut() {
         if debug.grounded {
-            gizmos.sphere(
-                steps.predicted_lock_pos.unwrap(),
-                Quat::IDENTITY,
-                0.5 * CAPSULE_RADIUS,
-                Color::GREEN,
-            );
+            if let Some(predicted) = steps.predicted_lock_pos {
+                gizmos.sphere(predicted, Quat::IDENTITY, 0.5 * CAPSULE_RADIUS, Color::CYAN);
+            }
+            for locked in steps.locked.iter() {
+                if let Some(pos) = locked {
+                    gizmos.sphere(
+                        pos.clone(),
+                        Quat::IDENTITY,
+                        0.5 * CAPSULE_RADIUS,
+                        Color::RED,
+                    );
+                }
+            }
             let contact_color = if move_state.slipping {
                 Color::RED
             } else {
