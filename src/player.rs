@@ -147,10 +147,22 @@ struct PlayerMoveState {
     ext_force: Vec3,
 }
 
+#[derive(Reflect, Debug)]
+enum FootState {
+    Locked(Vec3),
+    Unlocked(f32),
+}
+
+impl Default for FootState {
+    fn default() -> Self {
+        Self::Unlocked(0.0)
+    }
+}
+
 #[derive(Component, Reflect, Debug, Default)]
 struct ProceduralSteps {
     predicted_lock_pos: Option<Vec3>,
-    locked: [Option<Vec3>; 2],
+    foot_states: [FootState; 2],
 }
 
 #[derive(Component, Reflect, Debug, Default)]
@@ -620,22 +632,29 @@ fn update_procedural_steps(
             let normal = move_state.contact_normal.unwrap();
             let tangential_vel = *velocity - velocity.dot(normal) * normal;
             let acceleration = (move_state.current_force + move_state.ext_force) / mass.0;
-            let delta = 0.09;
+            let delta = 0.05;
             let extrapolated_pos1 = contact + (acceleration * delta + tangential_vel) * delta;
             steps.predicted_lock_pos = Some(extrapolated_pos1);
             let extrapolated_pos2 = contact + (acceleration * delta - tangential_vel) * delta;
+            let slip_vel = if move_state.slipping {
+                -0.05 * move_state.current_force / mass.0
+            } else {
+                Vec3::ZERO
+            };
+            // println!("{:?}", slip_vel);
 
-            for locked in steps.locked.iter_mut() {
-                if let Some(pos) = locked {
+            for state in steps.foot_states.iter_mut() {
+                if let FootState::Locked(pos) = state {
+                    *pos += slip_vel * delta;
                     let delta1 = (*pos - extrapolated_pos1).length();
                     let delta2 = (*pos - extrapolated_pos2).length();
                     let delta3 = (*pos - contact).length();
                     let delta4 = (extrapolated_pos1 - extrapolated_pos2).length();
-                    if delta3 > delta4 * 0.5 && delta2 < delta1 && delta4 > CAPSULE_RADIUS {
-                        *locked = None;
+                    if delta3 > delta4 * 0.5 && delta2 < delta1 && delta3 > CAPSULE_RADIUS {
+                        *state = FootState::Unlocked(0.0);
                     }
                 } else {
-                    *locked = Some(extrapolated_pos1);
+                    *state = FootState::Locked(extrapolated_pos1);
                 }
             }
         }
@@ -668,31 +687,29 @@ fn draw_debug_gizmos(
 ) {
     for (debug, Position(position), Rotation(quat), move_state, steps) in query.iter_mut() {
         if debug.grounded {
-            if let Some(predicted) = steps.predicted_lock_pos {
-                gizmos.sphere(predicted, Quat::IDENTITY, 0.5 * CAPSULE_RADIUS, Color::CYAN);
-            }
-            for locked in steps.locked.iter() {
-                if let Some(pos) = locked {
+            for state in steps.foot_states.iter() {
+                if let FootState::Locked(pos) = state {
                     gizmos.sphere(
                         pos.clone(),
                         Quat::IDENTITY,
                         0.5 * CAPSULE_RADIUS,
-                        Color::RED,
+                        Color::CYAN,
                     );
                 }
             }
-            let contact_color = if move_state.slipping {
-                Color::RED
-            } else {
-                Color::GREEN
-            };
-            gizmos.sphere(
-                position.clone() + debug.shape_toi * debug.cast_dir,
-                Quat::IDENTITY,
-                CAST_RADIUS,
-                contact_color,
-            );
+
             if debug_state.get() == &DebugState::All {
+                let contact_color = if move_state.slipping {
+                    Color::RED
+                } else {
+                    Color::GREEN
+                };
+                gizmos.sphere(
+                    position.clone() + debug.shape_toi * debug.cast_dir,
+                    Quat::IDENTITY,
+                    CAST_RADIUS,
+                    contact_color,
+                );
                 gizmos.arrow(
                     position.clone() + debug.contact_point,
                     position.clone() + debug.contact_point + debug.spring_force,
