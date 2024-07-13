@@ -623,6 +623,7 @@ fn update_procedural_steps(
         With<Player>,
     >,
     _spatial_query: SpatialQuery,
+    dt: Res<Time>,
 ) {
     for (Position(position), mut steps, move_state, mass, LinearVelocity(velocity)) in
         query.iter_mut()
@@ -644,17 +645,23 @@ fn update_procedural_steps(
             // println!("{:?}", slip_vel);
 
             for state in steps.foot_states.iter_mut() {
-                if let FootState::Locked(pos) = state {
-                    *pos += slip_vel * delta;
-                    let delta1 = (*pos - extrapolated_pos1).length();
-                    let delta2 = (*pos - extrapolated_pos2).length();
-                    let delta3 = (*pos - contact).length();
-                    let delta4 = (extrapolated_pos1 - extrapolated_pos2).length();
-                    if delta3 > delta4 * 0.5 && delta2 < delta1 && delta3 > CAPSULE_RADIUS {
-                        *state = FootState::Unlocked(0.0);
+                match state {
+                    FootState::Locked(pos) => {
+                        *pos += slip_vel * delta;
+                        let delta1 = (*pos - extrapolated_pos1).length();
+                        let delta2 = (*pos - extrapolated_pos2).length();
+                        let delta3 = (*pos - contact).length();
+                        let delta4 = (extrapolated_pos1 - extrapolated_pos2).length();
+                        if delta3 > delta4 * 0.5 && delta2 < delta1 && delta3 > CAPSULE_RADIUS {
+                            *state = FootState::Unlocked(0.0);
+                        }
                     }
-                } else {
-                    *state = FootState::Locked(extrapolated_pos1);
+                    FootState::Unlocked(time) => {
+                        *time += dt.delta_seconds();
+                        if *time > 0.1 {
+                            *state = FootState::Locked(extrapolated_pos1);
+                        }
+                    }
                 }
             }
         }
