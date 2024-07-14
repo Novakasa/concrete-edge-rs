@@ -147,21 +147,33 @@ struct PlayerMoveState {
     ext_force: Vec3,
 }
 
-#[derive(Reflect, Debug)]
+#[derive(Debug, Default)]
+struct FootTravelInfo {
+    time: f32,
+    pos: Vec3,
+}
+
+impl FootTravelInfo {
+    fn at_pos(pos: Vec3) -> Self {
+        Self { time: 0.0, pos }
+    }
+}
+
+#[derive(Debug)]
 enum FootState {
     Locked(Vec3),
-    Unlocked(f32),
+    Unlocked(FootTravelInfo),
 }
 
 impl Default for FootState {
     fn default() -> Self {
-        Self::Unlocked(0.0)
+        Self::Unlocked(FootTravelInfo::default())
     }
 }
 
-#[derive(Component, Reflect, Debug, Default)]
-struct ProceduralSteps {
-    predicted_lock_pos: Option<Vec3>,
+#[derive(Component, Debug, Default)]
+struct ProceduralRigState {
+    hip_pos: Vec3,
     foot_states: [FootState; 2],
 }
 
@@ -234,7 +246,7 @@ fn spawn_player(
                 ..Default::default()
             })
             .insert((Restitution::new(0.0), Friction::new(GLOBAL_FRICTION)))
-            .insert((ProceduralSteps::default(), Name::new("PlayerBody")))
+            .insert((ProceduralRigState::default(), Name::new("PlayerBody")))
             .id();
     }
 }
@@ -615,7 +627,7 @@ fn update_procedural_steps(
     mut query: Query<
         (
             &Position,
-            &mut ProceduralSteps,
+            &mut ProceduralRigState,
             &PlayerMoveState,
             &Mass,
             &LinearVelocity,
@@ -625,7 +637,7 @@ fn update_procedural_steps(
     _spatial_query: SpatialQuery,
     dt: Res<Time>,
 ) {
-    for (Position(position), mut steps, move_state, mass, LinearVelocity(velocity)) in
+    for (Position(position), mut rig_state, move_state, mass, LinearVelocity(velocity)) in
         query.iter_mut()
     {
         if let Some(contact_point) = move_state.contact_point {
@@ -640,7 +652,6 @@ fn update_procedural_steps(
             let window_pos_behind =
                 contact + 0.5 * (acceleration * 0.5 * lock_time - tangential_vel) * lock_time;
             let min_step_size = CAPSULE_RADIUS * 0.5;
-            steps.predicted_lock_pos = Some(window_pos_ahead);
             let window_travel_dist = (window_pos_ahead - window_pos_behind).length();
             let ahead_to_contact = (window_pos_ahead - contact).length();
             let slip_vel = if move_state.slipping {
@@ -650,7 +661,7 @@ fn update_procedural_steps(
             };
             // println!("{:?}", slip_vel);
 
-            for state in steps.foot_states.iter_mut() {
+            for state in rig_state.foot_states.iter_mut() {
                 match state {
                     FootState::Locked(pos) => {
                         *pos += slip_vel * lock_time;
@@ -658,19 +669,19 @@ fn update_procedural_steps(
                             + (acceleration * (foot_travel_time + 0.5 * lock_time)
                                 + tangential_vel)
                                 * (foot_travel_time + 0.5 * lock_time);
-                        let local_travel_dist = (window_pos_ahead - *pos).length();
+                        let _local_travel_dist = (window_pos_ahead - *pos).length();
                         let dist_to_next = (*pos - next_lock_pos).length();
                         let dist_to_contact = (*pos - contact).length();
                         if dist_to_contact > window_travel_dist * 0.5
                             && dist_to_next > min_step_size
                             && dist_to_contact > ahead_to_contact
                         {
-                            *state = FootState::Unlocked(0.0);
+                            *state = FootState::Unlocked(FootTravelInfo::at_pos(*pos));
                         }
                     }
-                    FootState::Unlocked(time) => {
-                        *time += dt.delta_seconds();
-                        if *time > foot_travel_time {
+                    FootState::Unlocked(info) => {
+                        info.time += dt.delta_seconds();
+                        if info.time > foot_travel_time {
                             *state = FootState::Locked(window_pos_ahead);
                         }
                     }
@@ -697,7 +708,7 @@ fn draw_debug_gizmos(
             &Position,
             &Rotation,
             &PlayerMoveState,
-            &ProceduralSteps,
+            &ProceduralRigState,
         ),
         With<Player>,
     >,
