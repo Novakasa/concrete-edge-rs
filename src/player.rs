@@ -633,10 +633,16 @@ fn update_procedural_steps(
             let normal = move_state.contact_normal.unwrap();
             let tangential_vel = *velocity - velocity.dot(normal) * normal;
             let acceleration = (move_state.current_force + move_state.ext_force) / mass.0;
-            let delta = 0.05;
-            let extrapolated_pos1 = contact + (acceleration * delta + tangential_vel) * delta;
-            steps.predicted_lock_pos = Some(extrapolated_pos1);
-            let extrapolated_pos2 = contact + (acceleration * delta - tangential_vel) * delta;
+            let lock_time = 0.1;
+            let foot_travel_time = 0.1;
+            let window_pos_ahead =
+                contact + 0.5 * (acceleration * 0.5 * lock_time + tangential_vel) * lock_time;
+            let window_pos_behind =
+                contact + 0.5 * (acceleration * 0.5 * lock_time - tangential_vel) * lock_time;
+            let min_step_size = CAPSULE_RADIUS * 0.5;
+            steps.predicted_lock_pos = Some(window_pos_ahead);
+            let window_travel_dist = (window_pos_ahead - window_pos_behind).length();
+            let ahead_to_contact = (window_pos_ahead - contact).length();
             let slip_vel = if move_state.slipping {
                 -0.05 * move_state.current_force / mass.0
             } else {
@@ -647,19 +653,25 @@ fn update_procedural_steps(
             for state in steps.foot_states.iter_mut() {
                 match state {
                     FootState::Locked(pos) => {
-                        *pos += slip_vel * delta;
-                        let delta1 = (*pos - extrapolated_pos1).length();
-                        let delta2 = (*pos - extrapolated_pos2).length();
-                        let delta3 = (*pos - contact).length();
-                        let delta4 = (extrapolated_pos1 - extrapolated_pos2).length();
-                        if delta3 > delta4 * 0.5 && delta2 < delta1 && delta3 > CAPSULE_RADIUS {
+                        *pos += slip_vel * lock_time;
+                        let next_lock_pos = contact
+                            + (acceleration * (foot_travel_time + 0.5 * lock_time)
+                                + tangential_vel)
+                                * (foot_travel_time + 0.5 * lock_time);
+                        let local_travel_dist = (window_pos_ahead - *pos).length();
+                        let dist_to_next = (*pos - next_lock_pos).length();
+                        let dist_to_contact = (*pos - contact).length();
+                        if dist_to_contact > window_travel_dist * 0.5
+                            && dist_to_next > min_step_size
+                            && dist_to_contact > ahead_to_contact
+                        {
                             *state = FootState::Unlocked(0.0);
                         }
                     }
                     FootState::Unlocked(time) => {
                         *time += dt.delta_seconds();
-                        if *time > 0.1 {
-                            *state = FootState::Locked(extrapolated_pos1);
+                        if *time > foot_travel_time {
+                            *state = FootState::Locked(window_pos_ahead);
                         }
                     }
                 }
