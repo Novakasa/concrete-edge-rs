@@ -635,6 +635,7 @@ fn update_procedural_steps(
         With<Player>,
     >,
     _spatial_query: SpatialQuery,
+    dt_physics: Res<Time<Physics>>,
     dt: Res<Time>,
 ) {
     for (Position(position), mut rig_state, move_state, mass, LinearVelocity(velocity)) in
@@ -670,17 +671,17 @@ fn update_procedural_steps(
                                 + tangential_vel)
                                 * (foot_travel_time + 0.5 * lock_time);
                         let _local_travel_dist = (window_pos_ahead - *pos).length();
-                        let dist_to_next = (*pos - next_lock_pos).length();
-                        let dist_to_contact = (*pos - contact).length();
-                        if dist_to_contact > window_travel_dist * 0.5
-                            && dist_to_next > min_step_size
-                            && dist_to_contact > ahead_to_contact
+                        let pos_to_next = (*pos - next_lock_pos).length();
+                        let pos_to_contact = (*pos - contact).length();
+                        if pos_to_next > min_step_size
+                            && pos_to_contact > window_travel_dist * 0.5
+                            && pos_to_contact > ahead_to_contact
                         {
                             *state = FootState::Unlocked(FootTravelInfo::at_pos(*pos));
                         }
                     }
                     FootState::Unlocked(info) => {
-                        info.time += dt.delta_seconds();
+                        info.time += dt.delta_seconds() * dt_physics.relative_speed();
                         if info.time > foot_travel_time {
                             *state = FootState::Locked(window_pos_ahead);
                         }

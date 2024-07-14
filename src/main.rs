@@ -1,6 +1,7 @@
 use std::{env, fmt::Debug};
 
 use bevy::{
+    diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin},
     pbr::{ExtendedMaterial, MaterialExtension},
     prelude::*,
     render::render_resource::{AsBindGroup, ShaderRef},
@@ -192,6 +193,8 @@ fn main() {
         .insert_resource(Gravity::default())
         .init_resource::<ActionState<GlobalAction>>()
         .insert_resource(GlobalAction::default_input_map())
+        // .add_plugins(LogDiagnosticsPlugin::default())
+        // .add_plugins(FrameTimeDiagnosticsPlugin::default())
         .add_plugins(InputManagerPlugin::<GlobalAction>::default())
         .add_plugins(DefaultPlugins)
         .add_plugins(PhysicsPlugins::default())
