@@ -145,6 +145,7 @@ struct PlayerMoveState {
     contact_normal: Option<Vec3>,
     current_force: Vec3,
     ext_force: Vec3,
+    forward_dir: Vec3,
 }
 
 #[derive(Debug, Default)]
@@ -470,6 +471,7 @@ fn update_ground_force(
         let filter = SpatialQueryFilter::from_mask(Layer::Platform);
         let cast_dir = -move_state.neg_cast_vec;
         let from_up = *quat * Vec3::Y;
+        move_state.forward_dir = *quat * Vec3::NEG_Z;
         if let Some(coll) = shape_cast.cast_shape(
             &Collider::sphere(CAST_RADIUS),
             position.clone(),
@@ -796,6 +798,11 @@ fn draw_debug_gizmos(
                 Color::WHITE,
             )
             .segments(6);
+        gizmos.arrow(
+            *position,
+            *position + 0.2 * move_state.forward_dir,
+            Color::BLUE,
+        );
     }
 }
 
