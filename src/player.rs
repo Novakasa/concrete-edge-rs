@@ -585,6 +585,16 @@ fn update_ground_force(
             } else {
                 Quat::IDENTITY.slerp(quat, angle.min(0.3 * PI) / angle) * from_up
             };
+            let mut target_forward = target_vel - from_up.dot(target_vel) * from_up;
+            if target_forward.length() < 0.01 {
+                target_forward = move_state.forward_dir;
+            }
+
+            let y_damping = (-0.4 * angular_vel.dot(from_up)
+                - 0.6
+                    * target_forward.angle_between(move_state.forward_dir)
+                    * target_forward.length().min(1.0))
+                * from_up;
 
             let delta_angle = from_up.angle_between(move_state.neg_cast_vec);
             let delta_axis = from_up.cross(move_state.neg_cast_vec).normalize_or_zero();
@@ -592,7 +602,6 @@ fn update_ground_force(
                 - (angular_spring.damping * angular_vel.clone());
             debug.spring_torque = angular_spring_torque;
 
-            let y_damping = angular_vel.y * -0.1;
             let angle_correction_force =
                 -normal.cross(angular_spring_torque) / (normal.dot(contact_point));
 
@@ -610,7 +619,8 @@ fn update_ground_force(
                 1.0 * contact_point,
                 Vec3::ZERO,
             );
-            torque.apply_torque(y_damping * Vec3::Y);
+            torque.clear();
+            torque.apply_torque(y_damping);
 
             // force.apply_force_at_point(angle_correction_force, contact_point, Vec3::ZERO);
             // force.apply_force(angle_correction_force);
