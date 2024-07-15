@@ -585,20 +585,20 @@ fn update_ground_force(
             } else {
                 Quat::IDENTITY.slerp(quat, angle.min(0.3 * PI) / angle) * from_up
             };
-            let mut target_forward = target_vel - from_up.dot(target_vel) * from_up;
-            if target_forward.length() < 0.01 {
-                target_forward = move_state.forward_dir;
-            }
 
-            let y_damping = (-0.4 * angular_vel.dot(from_up)
-                - 0.6
-                    * target_forward.angle_between(move_state.forward_dir)
-                    * target_forward.length().min(1.0))
-                * from_up;
+            let target_up = target_spring_dir;
+            let target_up = from_up;
+            let target_right = velocity.cross(target_up).try_normalize().unwrap_or(Vec3::X);
+            let target_right = move_state.forward_dir.cross(target_up);
+            let target_back = target_right.cross(target_up).try_normalize().unwrap();
 
-            let delta_angle = from_up.angle_between(move_state.neg_cast_vec);
-            let delta_axis = from_up.cross(move_state.neg_cast_vec).normalize_or_zero();
-            let angular_spring_torque = angular_spring.stiffness * delta_axis * delta_angle
+            let target_quat =
+                Quat::from_mat3(&Mat3::from_cols(target_right, target_up, target_back));
+            let from_quat = Quat::from_rotation_arc(Vec3::Y, from_up);
+            let target_quat = Quat::from_rotation_arc(Vec3::Y, target_up);
+            let delta_quat = target_quat * from_quat.inverse();
+            // let delta_quat = Quat::from_rotation_arc(from_up, target_up);
+            let angular_spring_torque = angular_spring.stiffness * delta_quat.to_scaled_axis()
                 - (angular_spring.damping * angular_vel.clone());
             debug.spring_torque = angular_spring_torque;
 
@@ -619,8 +619,6 @@ fn update_ground_force(
                 1.0 * contact_point,
                 Vec3::ZERO,
             );
-            torque.clear();
-            torque.apply_torque(y_damping);
 
             // force.apply_force_at_point(angle_correction_force, contact_point, Vec3::ZERO);
             // force.apply_force(angle_correction_force);
@@ -813,6 +811,11 @@ fn draw_debug_gizmos(
             *position + 0.2 * move_state.forward_dir,
             Color::BLUE,
         );
+        gizmos.arrow(
+            *position,
+            *position - 0.2 * move_state.forward_dir,
+            Color::RED,
+        );
     }
 }
 
@@ -884,5 +887,21 @@ impl Plugin for PlayerPlugin {
         );
         app.add_systems(OnEnter(DebugState::None), set_visible::<true>);
         app.add_systems(OnExit(DebugState::None), set_visible::<false>);
+    }
+}
+
+// tests for quaternions
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_delta() {
+        let from = Quat::from_mat3(&Mat3::from_cols(Vec3::X, Vec3::Y, Vec3::Z));
+        let target = Quat::from_mat3(&Mat3::from_cols(Vec3::NEG_X, Vec3::Y, Vec3::Z));
+        let delta = target * from.inverse();
+        println!("{:?}", delta.to_scaled_axis());
+        assert!(false);
     }
 }
