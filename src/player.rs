@@ -195,6 +195,7 @@ struct PhysicsDebugInfo {
     tangent_vel: Vec3,
     target_vel: Vec3,
     target_force: Vec3,
+    target_quat: Quat,
 }
 
 fn spawn_player(
@@ -471,6 +472,7 @@ fn update_ground_force(
         let filter = SpatialQueryFilter::from_mask(Layer::Platform);
         let cast_dir = -move_state.neg_cast_vec;
         let from_up = *quat * Vec3::Y;
+        let right_dir = *quat * Vec3::X;
         move_state.forward_dir = *quat * Vec3::NEG_Z;
         if let Some(coll) = shape_cast.cast_shape(
             &Collider::sphere(CAST_RADIUS),
@@ -580,25 +582,33 @@ fn update_ground_force(
 
             let quat = Quat::from_rotation_arc(from_up, raw_neg_cast_vec);
             let angle = from_up.angle_between(raw_neg_cast_vec);
-            move_state.neg_cast_vec = if angle < 0.0001 {
+            move_state.neg_cast_vec = if angle < 1000.0001 {
                 raw_neg_cast_vec
             } else {
                 Quat::IDENTITY.slerp(quat, angle.min(0.3 * PI) / angle) * from_up
             };
 
-            let target_up = target_spring_dir;
-            let target_up = from_up;
-            let target_right = velocity.cross(target_up).try_normalize().unwrap_or(Vec3::X);
-            let target_right = move_state.forward_dir.cross(target_up);
+            let from_quat = quat;
+            let target_up = move_state.neg_cast_vec;
+            // let target_up = from_up;
+            let target_right = Vec3::NEG_Z.cross(target_up).try_normalize().unwrap_or(
+                move_state
+                    .forward_dir
+                    .cross(target_up)
+                    .try_normalize()
+                    .unwrap(),
+            );
+            // let target_right = move_state.forward_dir.cross(target_up);
             let target_back = target_right.cross(target_up).try_normalize().unwrap();
 
             let target_quat =
                 Quat::from_mat3(&Mat3::from_cols(target_right, target_up, target_back));
-            let from_quat = Quat::from_rotation_arc(Vec3::Y, from_up);
-            let target_quat = Quat::from_rotation_arc(Vec3::Y, target_up);
+            debug.target_quat = target_quat;
+            // let from_quat = Quat::from_rotation_arc(Vec3::Y, from_up);
+            // let target_quat = Quat::from_rotation_arc(Vec3::Y, target_up);
             let delta_quat = target_quat * from_quat.inverse();
             // let delta_quat = Quat::from_rotation_arc(from_up, target_up);
-            let angular_spring_torque = angular_spring.stiffness * delta_quat.to_scaled_axis()
+            let angular_spring_torque = -angular_spring.stiffness * delta_quat.to_scaled_axis()
                 - (angular_spring.damping * angular_vel.clone());
             debug.spring_torque = angular_spring_torque;
 
@@ -615,10 +625,15 @@ fn update_ground_force(
             force.clear();
             force.apply_force_at_point(
                 normal_force
-                    + (tangential_force + angle_correction_force).clamp_length_max(friction_force),
-                1.0 * contact_point,
+                    + 0.0
+                        * (tangential_force + angle_correction_force)
+                            .clamp_length_max(friction_force),
+                0.0 * contact_point,
                 Vec3::ZERO,
             );
+
+            torque.clear();
+            torque.apply_torque(angular_spring_torque);
 
             // force.apply_force_at_point(angle_correction_force, contact_point, Vec3::ZERO);
             // force.apply_force(angle_correction_force);
@@ -740,6 +755,19 @@ fn draw_debug_gizmos(
             }
 
             if debug_state.get() == &DebugState::All {
+                gizmos
+                    .primitive_3d(
+                        Capsule3d::new(CAPSULE_RADIUS, CAPSULE_HEIGHT - CAPSULE_RADIUS * 2.0),
+                        position.clone(),
+                        debug.target_quat,
+                        Color::GRAY,
+                    )
+                    .segments(6);
+                gizmos.arrow(
+                    *position,
+                    *position + debug.target_quat * Vec3::NEG_Z,
+                    Color::WHITE,
+                );
                 let contact_color = if move_state.slipping {
                     Color::RED
                 } else {
@@ -899,7 +927,7 @@ mod test {
     #[test]
     fn test_delta() {
         let from = Quat::from_mat3(&Mat3::from_cols(Vec3::X, Vec3::Y, Vec3::Z));
-        let target = Quat::from_mat3(&Mat3::from_cols(Vec3::NEG_X, Vec3::Y, Vec3::Z));
+        let target = Quat::from_mat3(&Mat3::from_cols(Vec3::NEG_X, Vec3::NEG_Y, Vec3::Z));
         let delta = target * from.inverse();
         println!("{:?}", delta.to_scaled_axis());
         assert!(false);
