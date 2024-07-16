@@ -86,8 +86,9 @@ fn toggle_debug_state(
     if input.just_pressed(&GlobalAction::ToggleDebug) {
         match debug_state.get() {
             DebugState::None => next_debug_state.set(DebugState::Colliders),
-            DebugState::Colliders => next_debug_state.set(DebugState::All),
-            DebugState::All => next_debug_state.set(DebugState::None),
+            DebugState::Colliders => next_debug_state.set(DebugState::Forces),
+            DebugState::Forces => next_debug_state.set(DebugState::Torque),
+            DebugState::Torque => next_debug_state.set(DebugState::None),
         }
     }
 }

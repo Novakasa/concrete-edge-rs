@@ -53,7 +53,8 @@ impl SpringValue {
 pub enum DebugState {
     None,
     Colliders,
-    All,
+    Torque,
+    Forces,
 }
 
 #[derive(Actionlike, PartialEq, Eq, Hash, Clone, Debug, Reflect)]
@@ -195,7 +196,7 @@ struct PhysicsDebugInfo {
     tangent_vel: Vec3,
     target_vel: Vec3,
     target_force: Vec3,
-    target_quat: Quat,
+    delta_quat: Quat,
 }
 
 fn spawn_player(
@@ -472,7 +473,7 @@ fn update_ground_force(
         let filter = SpatialQueryFilter::from_mask(Layer::Platform);
         let cast_dir = -move_state.neg_cast_vec;
         let from_up = *quat * Vec3::Y;
-        let right_dir = *quat * Vec3::X;
+        let from_right = *quat * Vec3::X;
         move_state.forward_dir = *quat * Vec3::NEG_Z;
         if let Some(coll) = shape_cast.cast_shape(
             &Collider::sphere(CAST_RADIUS),
@@ -588,9 +589,7 @@ fn update_ground_force(
                 Quat::IDENTITY.slerp(quat, angle.min(0.3 * PI) / angle) * from_up
             };
 
-            let from_quat = quat;
             let target_up = move_state.neg_cast_vec;
-            // let target_up = from_up;
             let target_right = target_vel.cross(target_up).try_normalize().unwrap_or(
                 move_state
                     .forward_dir
@@ -598,21 +597,9 @@ fn update_ground_force(
                     .try_normalize()
                     .unwrap(),
             );
-            // let target_right = move_state.forward_dir.cross(target_up);
-            let target_back = target_right.cross(target_up).try_normalize().unwrap();
-
-            let target_quat =
-                Quat::from_mat3(&Mat3::from_cols(target_right, target_up, target_back));
-            let target_quat = Quat::from_rotation_arc(right_dir, target_right)
-                * Quat::from_rotation_arc(from_up, target_up)
-                * from_quat;
-            debug.target_quat = target_quat;
-            // let from_quat = Quat::from_rotation_arc(Vec3::Y, from_up);
-            // let target_quat = Quat::from_rotation_arc(Vec3::Y, target_up);
-            let delta_angle = target_quat.angle_between(from_quat);
-            let dquat = from_quat.slerp(target_quat, 0.1) * from_quat.inverse();
-            let delta_quat = target_quat * from_quat.inverse();
-            // let delta_quat = Quat::from_rotation_arc(from_up, target_up);
+            let delta_quat = Quat::from_rotation_arc(from_up, target_up)
+                * Quat::from_rotation_arc(from_right, target_right);
+            debug.delta_quat = delta_quat;
             let angular_spring_torque = angular_spring.stiffness * delta_quat.to_scaled_axis()
                 - (angular_spring.damping * angular_vel.clone());
             debug.spring_torque = angular_spring_torque;
@@ -759,26 +746,29 @@ fn draw_debug_gizmos(
                 }
             }
 
-            if debug_state.get() == &DebugState::All {
+            if debug_state.get() == &DebugState::Torque {
                 gizmos
                     .primitive_3d(
                         Capsule3d::new(CAPSULE_RADIUS, CAPSULE_HEIGHT - CAPSULE_RADIUS * 2.0),
                         position.clone(),
-                        debug.target_quat,
+                        debug.delta_quat,
                         Color::GRAY,
                     )
                     .segments(6);
                 gizmos.arrow(
                     *position,
-                    *position + debug.target_quat * Vec3::NEG_Z,
+                    *position + debug.delta_quat * Vec3::NEG_Z,
                     Color::WHITE,
                 );
-                let delta_quat = debug.target_quat * quat.inverse();
+                let delta_quat = debug.delta_quat * quat.inverse();
                 gizmos.arrow(
                     *position,
                     *position + delta_quat.to_scaled_axis(),
                     Color::BLACK,
                 );
+            }
+
+            if debug_state.get() == &DebugState::Forces {
                 let contact_color = if move_state.slipping {
                     Color::RED
                 } else {
