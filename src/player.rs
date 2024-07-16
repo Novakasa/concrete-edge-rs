@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{ecs::system::SystemParam, prelude::*};
 use bevy_xpbd_3d::{math::PI, prelude::*, SubstepSchedule, SubstepSet};
 use leafwing_input_manager::prelude::*;
 
@@ -628,10 +628,30 @@ fn update_ground_force(
     }
 }
 
+#[derive(SystemParam)]
+struct ProceduralRigQuery<'w, 's> {
+    query: Query<
+        'w,
+        's,
+        (
+            &'static Position,
+            &'static Rotation,
+            &'static mut ProceduralRigState,
+            &'static PlayerMoveState,
+            &'static Mass,
+            &'static LinearVelocity,
+        ),
+        With<Player>,
+    >,
+}
+
+impl<'w, 's> ProceduralRigQuery<'w, 's> {}
+
 fn update_procedural_steps(
     mut query: Query<
         (
             &Position,
+            &Rotation,
             &mut ProceduralRigState,
             &PlayerMoveState,
             &Mass,
@@ -644,9 +664,18 @@ fn update_procedural_steps(
     dt_real: Res<Time>,
 ) {
     let dt = dt_real.delta_seconds() * dt_physics.relative_speed();
-    for (Position(position), mut rig_state, move_state, mass, LinearVelocity(velocity)) in
-        query.iter_mut()
+    for (
+        Position(position),
+        Rotation(quat),
+        mut rig_state,
+        move_state,
+        mass,
+        LinearVelocity(velocity),
+    ) in query.iter_mut()
     {
+        let up_dir = *quat * Vec3::Y;
+        let right_dir = *quat * Vec3::X;
+        let hip_pos = *position - up_dir * CAPSULE_HEIGHT * 0.5;
         if let Some(contact_point) = move_state.contact_point {
             let contact = contact_point + *position;
             let normal = move_state.contact_normal.unwrap();
