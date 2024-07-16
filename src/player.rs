@@ -583,7 +583,7 @@ fn update_ground_force(
 
             let quat = Quat::from_rotation_arc(from_up, raw_neg_cast_vec);
             let angle = from_up.angle_between(raw_neg_cast_vec);
-            move_state.neg_cast_vec = if angle < 1000.0001 {
+            move_state.neg_cast_vec = if angle < 0.0001 {
                 raw_neg_cast_vec
             } else {
                 Quat::IDENTITY.slerp(quat, angle.min(0.3 * PI) / angle) * from_up
@@ -617,19 +617,13 @@ fn update_ground_force(
             force.clear();
             force.apply_force_at_point(
                 normal_force
-                    + 0.0
-                        * (tangential_force + angle_correction_force)
-                            .clamp_length_max(friction_force),
-                0.0 * contact_point,
+                    + (tangential_force + angle_correction_force).clamp_length_max(friction_force),
+                contact_point,
                 Vec3::ZERO,
             );
-
             torque.clear();
-            torque.apply_torque(angular_spring_torque);
-
-            // force.apply_force_at_point(angle_correction_force, contact_point, Vec3::ZERO);
-            // force.apply_force(angle_correction_force);
-            // torque.set_torque(angular_spring_torque);
+            torque
+                .apply_torque(angular_spring_torque - contact_point.cross(angle_correction_force));
         } else {
             debug.grounded = false;
             move_state.neg_cast_vec = from_up.try_normalize().unwrap_or(Vec3::Y);
