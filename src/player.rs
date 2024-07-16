@@ -603,12 +603,15 @@ fn update_ground_force(
 
             let target_quat =
                 Quat::from_mat3(&Mat3::from_cols(target_right, target_up, target_back));
+            let target_quat = Quat::from_rotation_arc(from_up, target_up) * from_quat;
             debug.target_quat = target_quat;
             // let from_quat = Quat::from_rotation_arc(Vec3::Y, from_up);
             // let target_quat = Quat::from_rotation_arc(Vec3::Y, target_up);
+            let delta_angle = target_quat.angle_between(from_quat);
+            let dquat = from_quat.slerp(target_quat, 0.1) * from_quat.inverse();
             let delta_quat = target_quat * from_quat.inverse();
             // let delta_quat = Quat::from_rotation_arc(from_up, target_up);
-            let angular_spring_torque = -angular_spring.stiffness * delta_quat.to_scaled_axis()
+            let angular_spring_torque = angular_spring.stiffness * delta_quat.to_scaled_axis()
                 - (angular_spring.damping * angular_vel.clone());
             debug.spring_torque = angular_spring_torque;
 
@@ -767,6 +770,12 @@ fn draw_debug_gizmos(
                     *position,
                     *position + debug.target_quat * Vec3::NEG_Z,
                     Color::WHITE,
+                );
+                let delta_quat = debug.target_quat * quat.inverse();
+                gizmos.arrow(
+                    *position,
+                    *position + delta_quat.to_scaled_axis(),
+                    Color::BLACK,
                 );
                 let contact_color = if move_state.slipping {
                     Color::RED
