@@ -591,7 +591,7 @@ fn update_ground_force(
             let from_quat = quat;
             let target_up = move_state.neg_cast_vec;
             // let target_up = from_up;
-            let target_right = Vec3::NEG_Z.cross(target_up).try_normalize().unwrap_or(
+            let target_right = target_vel.cross(target_up).try_normalize().unwrap_or(
                 move_state
                     .forward_dir
                     .cross(target_up)
@@ -603,7 +603,9 @@ fn update_ground_force(
 
             let target_quat =
                 Quat::from_mat3(&Mat3::from_cols(target_right, target_up, target_back));
-            let target_quat = Quat::from_rotation_arc(from_up, target_up) * from_quat;
+            let target_quat = Quat::from_rotation_arc(right_dir, target_right)
+                * Quat::from_rotation_arc(from_up, target_up)
+                * from_quat;
             debug.target_quat = target_quat;
             // let from_quat = Quat::from_rotation_arc(Vec3::Y, from_up);
             // let target_quat = Quat::from_rotation_arc(Vec3::Y, target_up);
