@@ -11532,11 +11532,17 @@
           "type": {
             "$ref": "#/$defs/f32"
           }
+        },
+        "turn_stiffness": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
         }
       },
       "required": [
         "stiffness",
-        "damping"
+        "damping",
+        "turn_stiffness"
       ],
       "short_name": "PlayerAngularSpring",
       "title": "conrete_edge_rs::player::PlayerAngularSpring",

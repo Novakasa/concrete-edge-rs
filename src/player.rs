@@ -131,6 +131,7 @@ impl PlayerGroundSpring {
 struct PlayerAngularSpring {
     stiffness: f32,
     damping: f32,
+    turn_stiffness: f32,
 }
 
 #[derive(Component, Reflect, Debug, Default)]
@@ -430,6 +431,7 @@ fn player_controls(
                 spring.stiffness = 15.0;
                 angular_spring.stiffness = 1.2;
                 angular_spring.damping = 0.2;
+                angular_spring.turn_stiffness = 0.4;
             }
         }
     }
@@ -567,14 +569,6 @@ fn update_ground_force(
             debug.target_force = target_force;
             // println!("{:?}, {:?}", target_force, normal_force);
 
-            /*let pitch = (target_force.length() / normal_force.length())
-                .atan()
-                .min(max_lean);
-
-            let max_lean = -((SHAPE_RADIUS - coll.time_of_impact * force_pitch.cos())
-                / (coll.time_of_impact * force_pitch.sin()))
-            .atan();*/
-
             let target_spring_dir = (target_force + normal_force).normalize_or_zero();
 
             let raw_neg_cast_vec = (move_state.neg_cast_vec
@@ -597,11 +591,15 @@ fn update_ground_force(
                     .try_normalize()
                     .unwrap(),
             );
-            let delta_quat = Quat::from_rotation_arc(from_up, target_up)
-                * Quat::from_rotation_arc(from_right, target_right);
+            let delta_quat = Quat::from_rotation_arc(from_up, target_up);
+
             debug.delta_quat = delta_quat;
-            let angular_spring_torque = angular_spring.stiffness * delta_quat.to_scaled_axis()
-                - (angular_spring.damping * angular_vel.clone());
+            let angular_spring_torque = angular_spring.stiffness
+                * Quat::from_rotation_arc(from_up, target_up).to_scaled_axis()
+                + (angular_spring.turn_stiffness
+                    * Quat::from_rotation_arc(from_right, target_right).to_scaled_axis())
+                - angular_spring.damping * angular_vel.clone();
+
             debug.spring_torque = angular_spring_torque;
 
             let angle_correction_force =
@@ -880,6 +878,7 @@ impl Plugin for PlayerPlugin {
         app.insert_resource(PlayerAngularSpring {
             stiffness: 0.,
             damping: 0.0,
+            turn_stiffness: 0.0,
         });
         app.add_systems(Startup, (spawn_camera_3rd_person, spawn_camera_1st_person));
         app.add_systems(
