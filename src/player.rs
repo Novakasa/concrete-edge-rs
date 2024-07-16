@@ -192,7 +192,7 @@ struct PhysicsDebugInfo {
     spring_dir: Vec3,
     contact_point: Vec3,
     position: Vec3,
-    torque_cm_force: Vec3,
+    angle_force: Vec3,
     ground_normal: Vec3,
     tangent_vel: Vec3,
     target_vel: Vec3,
@@ -602,26 +602,22 @@ fn update_ground_force(
 
             debug.spring_torque = angular_spring_torque;
 
-            let angle_correction_force =
-                -normal.cross(angular_spring_torque) / (normal.dot(contact_point));
+            let angle_force = -normal.cross(angular_spring_torque) / (normal.dot(contact_point));
 
-            debug.torque_cm_force = angle_correction_force;
+            debug.angle_force = angle_force;
             move_state.current_force =
-                (tangential_force + angle_correction_force).clamp_length_max(friction_force);
+                (tangential_force + angle_force).clamp_length_max(friction_force);
             move_state.ext_force = slope_force;
-            move_state.slipping =
-                (tangential_force + angle_correction_force).length() > friction_force;
+            move_state.slipping = (tangential_force + angle_force).length() > friction_force;
 
             force.clear();
             force.apply_force_at_point(
-                normal_force
-                    + (tangential_force + angle_correction_force).clamp_length_max(friction_force),
+                normal_force + (tangential_force + angle_force).clamp_length_max(friction_force),
                 contact_point,
                 Vec3::ZERO,
             );
             torque.clear();
-            torque
-                .apply_torque(angular_spring_torque - contact_point.cross(angle_correction_force));
+            torque.apply_torque(angular_spring_torque - contact_point.cross(angle_force));
         } else {
             debug.grounded = false;
             move_state.neg_cast_vec = from_up.try_normalize().unwrap_or(Vec3::Y);
@@ -645,8 +641,9 @@ fn update_procedural_steps(
     >,
     _spatial_query: SpatialQuery,
     dt_physics: Res<Time<Physics>>,
-    dt: Res<Time>,
+    dt_real: Res<Time>,
 ) {
+    let dt = dt_real.delta_seconds() * dt_physics.relative_speed();
     for (Position(position), mut rig_state, move_state, mass, LinearVelocity(velocity)) in
         query.iter_mut()
     {
@@ -665,7 +662,7 @@ fn update_procedural_steps(
             let window_travel_dist = (window_pos_ahead - window_pos_behind).length();
             let ahead_to_contact = (window_pos_ahead - contact).length();
             let slip_vel = if move_state.slipping {
-                -0.05 * move_state.current_force / mass.0
+                -0.5 * move_state.current_force / mass.0
             } else {
                 Vec3::ZERO
             };
@@ -674,7 +671,7 @@ fn update_procedural_steps(
             for state in rig_state.foot_states.iter_mut() {
                 match state {
                     FootState::Locked(pos) => {
-                        *pos += slip_vel * lock_time;
+                        *pos += slip_vel * dt;
                         let next_lock_pos = contact
                             + (acceleration * (foot_travel_time + 0.5 * lock_time)
                                 + tangential_vel)
@@ -690,7 +687,7 @@ fn update_procedural_steps(
                         }
                     }
                     FootState::Unlocked(info) => {
-                        info.time += dt.delta_seconds() * dt_physics.relative_speed();
+                        info.time += dt;
                         if info.time > foot_travel_time {
                             *state = FootState::Locked(window_pos_ahead);
                         }
@@ -786,7 +783,7 @@ fn draw_debug_gizmos(
                 gizmos.arrow(
                     position.clone() + debug.contact_point,
                     position.clone() + debug.contact_point + debug.tangential_force,
-                    Color::BLACK,
+                    Color::PINK,
                 );
 
                 gizmos.arrow(
@@ -809,7 +806,7 @@ fn draw_debug_gizmos(
                     position.clone()
                         + debug.contact_point
                         + debug.tangential_force
-                        + debug.torque_cm_force,
+                        + debug.angle_force,
                     Color::YELLOW,
                 );
                 gizmos.arrow(
