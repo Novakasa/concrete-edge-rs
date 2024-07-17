@@ -155,14 +155,16 @@ struct FootTravelInfo {
     time: f32,
     pos: Vec3,
     pos0: Vec3,
+    duration: f32,
 }
 
 impl FootTravelInfo {
-    fn at_pos(pos: Vec3) -> Self {
+    fn unlocked(pos: Vec3, duration: f32) -> Self {
         Self {
             time: 0.0,
             pos,
             pos0: pos,
+            duration,
         }
     }
 }
@@ -686,7 +688,7 @@ fn update_procedural_steps(
     {
         let up_dir = *quat * Vec3::Y;
         let right_dir = *quat * Vec3::X;
-        let hip_pos = *position - up_dir * CAPSULE_HEIGHT * 0.5;
+        let _hip_pos = *position - up_dir * CAPSULE_HEIGHT * 0.5;
         if let Some(contact_point) = move_state.contact_point {
             let contact = contact_point + *position;
             let normal = move_state.contact_normal.unwrap();
@@ -695,7 +697,7 @@ fn update_procedural_steps(
             let tangential_vel = *velocity - velocity.dot(normal) * normal;
             let acceleration = (move_state.current_force + move_state.ext_force) / mass.0;
             let lock_duration = 0.06;
-            let travel_duration = lock_duration * 1.5;
+            let travel_duration = lock_duration * 2.0;
             let window_pos_ahead = contact
                 + 0.5 * (acceleration * 0.5 * lock_duration + tangential_vel) * lock_duration;
             let window_pos_behind = contact
@@ -747,25 +749,32 @@ fn update_procedural_steps(
                         let pos_to_contact = (*pos - contact).length();
                         if pos_to_next > min_step_size
                             && pos_to_contact > window_travel_dist * 0.5
-                            && pos_to_contact > 1.5 * ahead_to_contact
+                            && pos_to_contact > 1.3 * ahead_to_contact
                         {
-                            *state = FootState::Unlocked(FootTravelInfo::at_pos(*pos));
+                            *state = FootState::Unlocked(FootTravelInfo::unlocked(
+                                *pos,
+                                travel_duration,
+                            ));
                         }
                     }
                     FootState::Unlocked(info) => {
+                        if i != i_other {
+                            info.duration += dt;
+                        }
                         info.time += dt;
-                        if info.time > travel_duration {
+                        if info.time > info.duration {
                             *state = FootState::Locked(window_pos_ahead + foot_offset);
                         } else {
-                            let t = info.time / travel_duration;
-                            let lock_time = travel_duration - info.time + 0.5 * lock_duration;
+                            let t = info.time / info.duration;
+                            let lock_time = info.duration - info.time + 0.5 * lock_duration;
                             let target = contact
                                 + (acceleration * lock_time + tangential_vel) * lock_time
                                 + foot_offset;
-                            let floor_pos =
-                                info.pos0.lerp(target, 3.0 * t.powi(2) - 2.0 * t.powi(3));
-                            let lift =
-                                up_dir * 0.5 * CAPSULE_RADIUS * (1.0 - 4.0 * (t - 0.5).powi(2));
+                            let floor_pos = info.pos0.lerp(target, smoothstep(smoothstep(t)));
+                            let lift = up_dir
+                                * 0.1
+                                * (target - info.pos0).length()
+                                * smoothstep(1.0 - 2.0 * (t - 0.5).abs());
                             info.pos = floor_pos + lift;
                         }
                     }
@@ -773,6 +782,10 @@ fn update_procedural_steps(
             }
         }
     }
+}
+
+fn smoothstep(t: f32) -> f32 {
+    3.0 * t.powi(2) - 2.0 * t.powi(3)
 }
 
 fn set_visible<const VAL: bool>(mut query: Query<&mut Visibility, With<Player>>) {
@@ -808,7 +821,12 @@ fn draw_debug_gizmos(
                         gizmos.sphere(*pos, Quat::IDENTITY, 0.5 * CAPSULE_RADIUS, color);
                     }
                     FootState::Unlocked(info) => {
-                        gizmos.sphere(info.pos, Quat::IDENTITY, 0.5 * CAPSULE_RADIUS, Color::GRAY);
+                        gizmos.sphere(
+                            info.pos,
+                            Quat::IDENTITY,
+                            0.5 * CAPSULE_RADIUS,
+                            color.with_s(0.5),
+                        );
                     }
                 }
             }
