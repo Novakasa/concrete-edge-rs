@@ -154,11 +154,16 @@ struct PlayerMoveState {
 struct FootTravelInfo {
     time: f32,
     pos: Vec3,
+    pos0: Vec3,
 }
 
 impl FootTravelInfo {
     fn at_pos(pos: Vec3) -> Self {
-        Self { time: 0.0, pos }
+        Self {
+            time: 0.0,
+            pos,
+            pos0: pos,
+        }
     }
 }
 
@@ -689,12 +694,12 @@ fn update_procedural_steps(
             let right_tangent = (right_dir - right_dir.dot(normal) * normal).normalize_or_zero();
             let tangential_vel = *velocity - velocity.dot(normal) * normal;
             let acceleration = (move_state.current_force + move_state.ext_force) / mass.0;
-            let lock_time = 0.1;
+            let lock_duration = 0.1;
             let foot_travel_time = 0.14;
-            let window_pos_ahead =
-                contact + 0.5 * (acceleration * 0.5 * lock_time + tangential_vel) * lock_time;
-            let window_pos_behind =
-                contact + 0.5 * (acceleration * 0.5 * lock_time - tangential_vel) * lock_time;
+            let window_pos_ahead = contact
+                + 0.5 * (acceleration * 0.5 * lock_duration + tangential_vel) * lock_duration;
+            let window_pos_behind = contact
+                + 0.5 * (acceleration * 0.5 * lock_duration - tangential_vel) * lock_duration;
             let min_step_size = CAPSULE_RADIUS * 0.5;
             let window_travel_dist = (window_pos_ahead - window_pos_behind).length();
             let ahead_to_contact = (window_pos_ahead - contact).length();
@@ -726,32 +731,40 @@ fn update_procedural_steps(
 
             let offset_length = 0.4 * CAPSULE_RADIUS;
 
-            let state_unlock = &mut rig_state.foot_states[i_unlock];
-            if let FootState::Locked(pos) = state_unlock {
-                let lr = if i_unlock == 0 { -1.0 } else { 1.0 };
+            for (i, state) in rig_state.foot_states.iter_mut().enumerate() {
+                let lr = if i == 0 { -1.0 } else { 1.0 };
                 let foot_offset = right_tangent * lr * offset_length;
-                *pos += slip_vel * dt;
-                let next_lock_pos = contact
-                    + (acceleration * (foot_travel_time + 0.5 * lock_time) + tangential_vel)
-                        * (foot_travel_time + 0.5 * lock_time)
-                    + foot_offset;
-                let _local_travel_dist = (window_pos_ahead - *pos).length();
-                let pos_to_next = (*pos - next_lock_pos).length();
-                let pos_to_contact = (*pos - contact).length();
-                if pos_to_next > min_step_size
-                    && pos_to_contact > window_travel_dist * 0.5
-                    && pos_to_contact > 1.5 * ahead_to_contact
-                {
-                    *state_unlock = FootState::Unlocked(FootTravelInfo::at_pos(*pos));
-                }
-            }
-            let state_other = &mut rig_state.foot_states[i_other];
-            if let FootState::Unlocked(info) = state_other {
-                let lr = if i_other == 0 { -1.0 } else { 1.0 };
-                let foot_offset = right_tangent * lr * offset_length;
-                info.time += dt;
-                if info.time > foot_travel_time {
-                    *state_other = FootState::Locked(window_pos_ahead + foot_offset);
+                match state {
+                    FootState::Locked(pos) => {
+                        *pos += slip_vel * dt;
+                        let next_lock_pos = contact
+                            + (acceleration * (foot_travel_time + 0.5 * lock_duration)
+                                + tangential_vel)
+                                * (foot_travel_time + 0.5 * lock_duration)
+                            + foot_offset;
+                        let _local_travel_dist = (window_pos_ahead - *pos).length();
+                        let pos_to_next = (*pos - next_lock_pos).length();
+                        let pos_to_contact = (*pos - contact).length();
+                        if pos_to_next > min_step_size
+                            && pos_to_contact > window_travel_dist * 0.5
+                            && pos_to_contact > 1.5 * ahead_to_contact
+                        {
+                            *state = FootState::Unlocked(FootTravelInfo::at_pos(*pos));
+                        }
+                    }
+                    FootState::Unlocked(info) => {
+                        info.time += dt;
+                        if info.time > foot_travel_time {
+                            *state = FootState::Locked(window_pos_ahead + foot_offset);
+                        } else {
+                            let t = info.time / foot_travel_time;
+                            let lock_time = foot_travel_time - info.time + 0.5 * lock_duration;
+                            let target = contact
+                                + (acceleration * lock_time + tangential_vel) * lock_time
+                                + foot_offset;
+                            info.pos = info.pos0.lerp(target, t);
+                        }
+                    }
                 }
             }
         }
@@ -786,8 +799,13 @@ fn draw_debug_gizmos(
         if debug.grounded {
             for (i, state) in steps.foot_states.iter().enumerate() {
                 let color = if i == 0 { Color::RED } else { Color::GREEN };
-                if let FootState::Locked(pos) = state {
-                    gizmos.sphere(pos.clone(), Quat::IDENTITY, 0.5 * CAPSULE_RADIUS, color);
+                match state {
+                    FootState::Locked(pos) => {
+                        gizmos.sphere(*pos, Quat::IDENTITY, 0.5 * CAPSULE_RADIUS, color);
+                    }
+                    FootState::Unlocked(info) => {
+                        gizmos.sphere(info.pos, Quat::IDENTITY, 0.5 * CAPSULE_RADIUS, Color::GRAY);
+                    }
                 }
             }
 
