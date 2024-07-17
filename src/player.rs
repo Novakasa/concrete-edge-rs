@@ -694,8 +694,8 @@ fn update_procedural_steps(
             let right_tangent = (right_dir - right_dir.dot(normal) * normal).normalize_or_zero();
             let tangential_vel = *velocity - velocity.dot(normal) * normal;
             let acceleration = (move_state.current_force + move_state.ext_force) / mass.0;
-            let lock_duration = 0.1;
-            let foot_travel_time = 0.14;
+            let lock_duration = 0.06;
+            let travel_duration = lock_duration * 1.5;
             let window_pos_ahead = contact
                 + 0.5 * (acceleration * 0.5 * lock_duration + tangential_vel) * lock_duration;
             let window_pos_behind = contact
@@ -729,7 +729,7 @@ fn update_procedural_steps(
                 }
             };
 
-            let offset_length = 0.4 * CAPSULE_RADIUS;
+            let offset_length = 0.3 * CAPSULE_RADIUS;
 
             for (i, state) in rig_state.foot_states.iter_mut().enumerate() {
                 let lr = if i == 0 { -1.0 } else { 1.0 };
@@ -738,9 +738,9 @@ fn update_procedural_steps(
                     FootState::Locked(pos) => {
                         *pos += slip_vel * dt;
                         let next_lock_pos = contact
-                            + (acceleration * (foot_travel_time + 0.5 * lock_duration)
+                            + (acceleration * (travel_duration + 0.5 * lock_duration)
                                 + tangential_vel)
-                                * (foot_travel_time + 0.5 * lock_duration)
+                                * (travel_duration + 0.5 * lock_duration)
                             + foot_offset;
                         let _local_travel_dist = (window_pos_ahead - *pos).length();
                         let pos_to_next = (*pos - next_lock_pos).length();
@@ -754,15 +754,19 @@ fn update_procedural_steps(
                     }
                     FootState::Unlocked(info) => {
                         info.time += dt;
-                        if info.time > foot_travel_time {
+                        if info.time > travel_duration {
                             *state = FootState::Locked(window_pos_ahead + foot_offset);
                         } else {
-                            let t = info.time / foot_travel_time;
-                            let lock_time = foot_travel_time - info.time + 0.5 * lock_duration;
+                            let t = info.time / travel_duration;
+                            let lock_time = travel_duration - info.time + 0.5 * lock_duration;
                             let target = contact
                                 + (acceleration * lock_time + tangential_vel) * lock_time
                                 + foot_offset;
-                            info.pos = info.pos0.lerp(target, t);
+                            let floor_pos =
+                                info.pos0.lerp(target, 3.0 * t.powi(2) - 2.0 * t.powi(3));
+                            let lift =
+                                up_dir * 0.5 * CAPSULE_RADIUS * (1.0 - 4.0 * (t - 0.5).powi(2));
+                            info.pos = floor_pos + lift;
                         }
                     }
                 }
