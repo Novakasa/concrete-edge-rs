@@ -437,12 +437,12 @@ fn player_controls(
                 spring.rest_length = CAPSULE_HEIGHT * 1.4 + CAPSULE_RADIUS;
                 spring.min_damping = 1.0;
                 spring.stiffness = 15.0;
-                angular_spring.stiffness = 0.5;
+                angular_spring.stiffness = 0.3;
             } else {
                 spring.rest_length = CAPSULE_HEIGHT * 0.7 + CAPSULE_RADIUS;
                 spring.min_damping = 2.0;
                 spring.stiffness = 15.0;
-                angular_spring.stiffness = 1.2;
+                angular_spring.stiffness = 0.5;
                 angular_spring.damping = 0.2;
                 angular_spring.turn_stiffness = 0.4;
             }
@@ -585,7 +585,7 @@ fn update_ground_force(
             let target_spring_dir = (target_force + normal_force).normalize_or_zero();
 
             let raw_neg_cast_vec = (move_state.neg_cast_vec
-                + 10.0 * (target_spring_dir - spring_dir) * dt.delta_seconds())
+                + 15.0 * (target_spring_dir - spring_dir) * dt.delta_seconds())
             .normalize_or_zero();
 
             let quat = Quat::from_rotation_arc(from_up, raw_neg_cast_vec);
@@ -770,11 +770,11 @@ fn update_procedural_steps(
                             let target = contact
                                 + (acceleration * lock_time + tangential_vel) * lock_time
                                 + foot_offset;
-                            let floor_pos = info.pos0.lerp(target, smoothstep(smoothstep(t)));
+                            let floor_pos = info.pos0.lerp(target, smoothstep(t));
                             let lift = up_dir
                                 * 0.1
                                 * (target - info.pos0).length()
-                                * smoothstep(1.0 - 2.0 * (t - 0.5).abs());
+                                * smoothstep(smoothstep(1.0 - 2.0 * (t - 0.5).abs()));
                             info.pos = floor_pos + lift;
                         }
                     }
