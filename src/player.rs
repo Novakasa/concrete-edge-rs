@@ -156,6 +156,7 @@ struct FootTravelInfo {
     pos: Vec3,
     pos0: Vec3,
     duration: f32,
+    target: Option<Vec3>,
 }
 
 impl FootTravelInfo {
@@ -165,6 +166,7 @@ impl FootTravelInfo {
             pos,
             pos0: pos,
             duration,
+            target: None,
         }
     }
 }
@@ -712,7 +714,7 @@ fn update_procedural_steps(
             };
             // println!("{:?}", slip_vel);
 
-            let (i_unlock, i_other) = match (&rig_state.foot_states[0], &rig_state.foot_states[1]) {
+            let (i_unlock, i_lock) = match (&rig_state.foot_states[0], &rig_state.foot_states[1]) {
                 (FootState::Locked(pos0), FootState::Locked(pos1)) => {
                     if (window_pos_ahead - *pos0).length() > (window_pos_ahead - *pos1).length() {
                         (0, 1)
@@ -723,10 +725,17 @@ fn update_procedural_steps(
                 (FootState::Locked(_), FootState::Unlocked(_)) => (0, 1),
                 (FootState::Unlocked(_), FootState::Locked(_)) => (1, 0),
                 (FootState::Unlocked(info0), FootState::Unlocked(info1)) => {
-                    if info0.time < info1.time {
-                        (0, 1)
-                    } else {
-                        (1, 0)
+                    match (info0.target, info1.target) {
+                        (Some(_), None) => (1, 0),
+                        (None, Some(_)) => (0, 1),
+                        (Some(target0), Some(target1)) => {
+                            if (info0.pos - target0).length() > (info1.pos - target1).length() {
+                                (0, 1)
+                            } else {
+                                (1, 0)
+                            }
+                        }
+                        _ => (0, 1),
                     }
                 }
             };
@@ -758,7 +767,7 @@ fn update_procedural_steps(
                         }
                     }
                     FootState::Unlocked(info) => {
-                        if i != i_other {
+                        if i != i_lock {
                             info.duration += dt;
                         }
                         info.time += dt;
@@ -770,6 +779,7 @@ fn update_procedural_steps(
                             let target = contact
                                 + (acceleration * lock_time + tangential_vel) * lock_time
                                 + foot_offset;
+                            info.target = Some(target);
                             let floor_pos = info.pos0.lerp(target, smoothstep(t));
                             let lift = up_dir
                                 * 0.1
