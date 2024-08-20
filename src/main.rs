@@ -8,7 +8,7 @@ use bevy::{
 };
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_xpbd_3d::prelude::*;
-use blenvy::BlenvyPlugin;
+use blenvy::{BlenvyPlugin, BlueprintInfo, GameWorldTag, HideUntilReady, SpawnBlueprint};
 use leafwing_input_manager::prelude::*;
 use player::{DebugState, Player};
 
@@ -108,13 +108,13 @@ fn physics_speed_control(mut time: ResMut<Time<Physics>>, input: Res<ActionState
     }
 }
 
-fn load_level(mut commands: Commands, asset_server: Res<AssetServer>) {
-    commands
-        .spawn(SceneBundle {
-            scene: asset_server.load("Scene.glb#Scene0"),
-            ..Default::default()
-        })
-        .insert(Name::new("LevelScene"));
+fn load_level(mut commands: Commands) {
+    commands.spawn((
+        BlueprintInfo::from_path("levels/World.glb"),
+        SpawnBlueprint,
+        HideUntilReady,
+        GameWorldTag,
+    ));
 }
 
 fn print_platforms(query: Query<(&Platform, &Transform)>) {
