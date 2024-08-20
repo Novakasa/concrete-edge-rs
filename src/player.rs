@@ -853,7 +853,7 @@ fn draw_debug_gizmos(
                             info.pos,
                             Quat::IDENTITY,
                             0.5 * CAPSULE_RADIUS,
-                            color.with_alpha(0.7),
+                            color.with_luminance(0.2),
                         );
                     }
                 }
@@ -867,7 +867,7 @@ fn draw_debug_gizmos(
                         debug.delta_quat,
                         Color::from(GRAY),
                     )
-                    .resolution(6);
+                    .resolution(12);
                 gizmos.arrow(
                     *position,
                     *position + debug.delta_quat * Vec3::NEG_Z,
@@ -947,7 +947,7 @@ fn draw_debug_gizmos(
                 quat.clone(),
                 Color::WHITE,
             )
-            .resolution(6);
+            .resolution(12);
         gizmos.arrow(
             *position,
             *position + 0.2 * move_state.forward_dir,
