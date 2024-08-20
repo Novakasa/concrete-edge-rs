@@ -1,4 +1,11 @@
-use bevy::{ecs::system::SystemParam, prelude::*};
+use bevy::{
+    color::palettes::{
+        css::{BLUE, GRAY, GREEN, ORANGE, PINK, RED, YELLOW},
+        tailwind::CYAN_100,
+    },
+    ecs::system::SystemParam,
+    prelude::*,
+};
 use bevy_xpbd_3d::{math::PI, prelude::*, SubstepSchedule, SubstepSet};
 use leafwing_input_manager::prelude::*;
 
@@ -57,7 +64,7 @@ pub enum DebugState {
     Forces,
 }
 
-#[derive(Actionlike, PartialEq, Eq, Hash, Clone, Debug, Reflect)]
+#[derive(PartialEq, Eq, Hash, Clone, Debug, Reflect)]
 pub enum PlayerAction {
     Jump,
     Move,
@@ -67,13 +74,22 @@ pub enum PlayerAction {
     ViewMode,
 }
 
+impl Actionlike for PlayerAction {
+    fn input_control_kind(&self) -> InputControlKind {
+        match self {
+            Self::Move | Self::View => InputControlKind::DualAxis,
+            _ => InputControlKind::Button,
+        }
+    }
+}
+
 impl PlayerAction {
     fn default_input_map() -> InputMap<Self> {
         let mut input_map = InputMap::default();
-        input_map.insert(Self::Move, VirtualDPad::wasd());
+        input_map.insert_dual_axis(Self::Move, KeyboardVirtualDPad::WASD);
         input_map.insert(Self::Jump, KeyCode::Space);
         input_map.insert(Self::Respawn, KeyCode::KeyR);
-        input_map.insert(Self::View, DualAxis::mouse_motion());
+        input_map.insert_dual_axis(Self::View, MouseMove::default());
         input_map.insert(Self::Menu, KeyCode::Escape);
         input_map.insert(Self::ViewMode, KeyCode::Tab);
         input_map
@@ -418,11 +434,9 @@ fn player_controls(
     for (action_state, mut move_state, mut spring, mut angular_spring) in query.iter_mut() {
         let move_input = action_state
             .clamped_axis_pair(&PlayerAction::Move)
-            .unwrap()
-            .xy()
             .normalize_or_zero();
         // println!("{:?}", move_input);
-        let cam_input = action_state.axis_pair(&PlayerAction::View).unwrap().xy();
+        let cam_input = action_state.axis_pair(&PlayerAction::View);
         if let Ok(mut cam3) = q_cam3.get_single_mut() {
             cam3.yaw += cam_input.x * -0.005;
             cam3.pitch = (cam3.pitch + cam_input.y * -0.005).clamp(-0.5 * PI, 0.5 * PI);
@@ -496,7 +510,7 @@ fn update_ground_force(
             &Collider::sphere(CAST_RADIUS),
             position.clone(),
             Quat::IDENTITY,
-            Direction3d::new_unchecked(cast_dir.normalize_or_zero()),
+            Dir3::new_unchecked(cast_dir.normalize_or_zero()),
             MAX_TOI,
             false,
             filter.clone(),
@@ -825,7 +839,11 @@ fn draw_debug_gizmos(
     for (debug, Position(position), Rotation(quat), move_state, steps) in query.iter_mut() {
         if debug.grounded {
             for (i, state) in steps.foot_states.iter().enumerate() {
-                let color = if i == 0 { Color::RED } else { Color::GREEN };
+                let color = if i == 0 {
+                    Color::from(RED)
+                } else {
+                    Color::from(GREEN)
+                };
                 match state {
                     FootState::Locked(pos) => {
                         gizmos.sphere(*pos, Quat::IDENTITY, 0.5 * CAPSULE_RADIUS, color);
@@ -835,7 +853,7 @@ fn draw_debug_gizmos(
                             info.pos,
                             Quat::IDENTITY,
                             0.5 * CAPSULE_RADIUS,
-                            color.with_s(0.5),
+                            color.with_alpha(0.7),
                         );
                     }
                 }
@@ -844,12 +862,12 @@ fn draw_debug_gizmos(
             if debug_state.get() == &DebugState::Torque {
                 gizmos
                     .primitive_3d(
-                        Capsule3d::new(CAPSULE_RADIUS, CAPSULE_HEIGHT - CAPSULE_RADIUS * 2.0),
+                        &Capsule3d::new(CAPSULE_RADIUS, CAPSULE_HEIGHT - CAPSULE_RADIUS * 2.0),
                         position.clone(),
                         debug.delta_quat,
-                        Color::GRAY,
+                        Color::from(GRAY),
                     )
-                    .segments(6);
+                    .resolution(6);
                 gizmos.arrow(
                     *position,
                     *position + debug.delta_quat * Vec3::NEG_Z,
@@ -865,9 +883,9 @@ fn draw_debug_gizmos(
 
             if debug_state.get() == &DebugState::Forces {
                 let contact_color = if move_state.slipping {
-                    Color::RED
+                    Color::from(RED)
                 } else {
-                    Color::GREEN
+                    Color::from(GREEN)
                 };
                 gizmos.sphere(
                     position.clone() + debug.shape_toi * debug.cast_dir,
@@ -878,34 +896,34 @@ fn draw_debug_gizmos(
                 gizmos.arrow(
                     position.clone() + debug.contact_point,
                     position.clone() + debug.contact_point + debug.spring_force,
-                    Color::CYAN,
+                    Color::from(CYAN_100),
                 );
                 gizmos.arrow(
                     position.clone() + debug.contact_point,
                     position.clone() + debug.contact_point + debug.normal_force,
-                    Color::BLUE,
+                    Color::from(BLUE),
                 );
 
                 gizmos.arrow(
                     position.clone() + debug.contact_point,
                     position.clone() + debug.contact_point + debug.tangential_force,
-                    Color::PINK,
+                    Color::from(PINK),
                 );
 
                 gizmos.arrow(
                     position.clone() + debug.contact_point,
                     position.clone() + debug.contact_point + debug.tangent_vel,
-                    Color::ORANGE,
+                    Color::from(ORANGE),
                 );
                 gizmos.arrow(
                     position.clone() + debug.contact_point,
                     position.clone() + debug.contact_point + debug.target_vel,
-                    Color::GREEN,
+                    Color::from(GREEN),
                 );
                 gizmos.arrow(
                     position.clone() + debug.contact_point,
                     position.clone() + debug.contact_point + debug.target_force,
-                    Color::RED,
+                    Color::from(RED),
                 );
                 gizmos.arrow(
                     position.clone() + debug.contact_point + debug.tangential_force,
@@ -913,32 +931,32 @@ fn draw_debug_gizmos(
                         + debug.contact_point
                         + debug.tangential_force
                         + debug.angle_force,
-                    Color::YELLOW,
+                    Color::from(YELLOW),
                 );
                 gizmos.arrow(
                     position.clone(),
                     position.clone() + debug.spring_torque,
-                    Color::YELLOW,
+                    Color::from(YELLOW),
                 );
             }
         }
         gizmos
             .primitive_3d(
-                Capsule3d::new(CAPSULE_RADIUS, CAPSULE_HEIGHT - CAPSULE_RADIUS * 2.0),
+                &Capsule3d::new(CAPSULE_RADIUS, CAPSULE_HEIGHT - CAPSULE_RADIUS * 2.0),
                 position.clone(),
                 quat.clone(),
                 Color::WHITE,
             )
-            .segments(6);
+            .resolution(6);
         gizmos.arrow(
             *position,
             *position + 0.2 * move_state.forward_dir,
-            Color::BLUE,
+            Color::from(BLUE),
         );
         gizmos.arrow(
             *position,
             *position - 0.2 * move_state.forward_dir,
-            Color::RED,
+            Color::from(RED),
         );
     }
 }

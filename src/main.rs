@@ -6,10 +6,9 @@ use bevy::{
     render::render_resource::{AsBindGroup, ShaderRef},
     window::{CursorGrabMode, PrimaryWindow},
 };
-use bevy_gltf_components::ComponentsFromGltfPlugin;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
-use bevy_registry_export::ExportRegistryPlugin;
 use bevy_xpbd_3d::prelude::*;
+use blenvy::BlenvyPlugin;
 use leafwing_input_manager::prelude::*;
 use player::{DebugState, Player};
 
@@ -28,8 +27,8 @@ impl GlobalAction {
     fn default_input_map() -> InputMap<Self> {
         let mut input_map = InputMap::default();
         input_map.insert(Self::Menu, KeyCode::Escape);
-        input_map.insert(Self::PhysicsSpeedSlower, MouseWheelDirection::Down);
-        input_map.insert(Self::PhysicsSpeedFaster, MouseWheelDirection::Up);
+        input_map.insert(Self::PhysicsSpeedSlower, MouseScrollDirection::DOWN);
+        input_map.insert(Self::PhysicsSpeedFaster, MouseScrollDirection::UP);
         input_map.insert(Self::PhysicsSpeedReset, KeyCode::Digit0);
         input_map.insert(Self::ToggleDebug, KeyCode::F3);
         input_map
@@ -200,7 +199,7 @@ fn main() {
         .add_plugins(PhysicsPlugins::default())
         .add_plugins(bevy_framepace::FramepacePlugin)
         // .add_plugins(PhysicsDebugPlugin::default())
-        .add_plugins(ComponentsFromGltfPlugin { legacy_mode: false })
+        .add_plugins(BlenvyPlugin::default())
         .add_plugins(player::PlayerPlugin)
         .add_plugins(WorldInspectorPlugin::new())
         .add_plugins(MaterialPlugin::<
@@ -209,7 +208,6 @@ fn main() {
         .add_systems(Startup, load_level)
         .add_systems(Update, (setup_platforms, setup_player))
         //.add_systems(Update, print_platforms)
-        .add_plugins(ExportRegistryPlugin::default())
         .add_systems(
             Update,
             (
