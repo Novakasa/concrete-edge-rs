@@ -6,11 +6,11 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+avian3d = "0.1.2"
 bevy = { version = "0.14", features = ["dynamic_linking"] }
 bevy-inspector-egui = "0.25"
 bevy_framepace = "0.17"
 blenvy = "0.1.0-alpha.1"
-bevy_xpbd_3d = "0.5"
 leafwing-input-manager = "0.15"
 
 # Enable a small amount of optimization in debug mode

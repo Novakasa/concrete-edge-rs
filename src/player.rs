@@ -1,3 +1,6 @@
+use std::f32::consts::PI;
+
+use avian3d::prelude::*;
 use bevy::{
     color::palettes::{
         css::{BLUE, GRAY, GREEN, ORANGE, PINK, RED, YELLOW},
@@ -6,7 +9,7 @@ use bevy::{
     ecs::system::SystemParam,
     prelude::*,
 };
-use bevy_xpbd_3d::{math::PI, prelude::*, SubstepSchedule, SubstepSet};
+use dynamics::integrator::IntegrationSet;
 use leafwing_input_manager::prelude::*;
 
 const CAPSULE_RADIUS: f32 = 0.2;
@@ -255,7 +258,7 @@ fn spawn_player(
         };
         let _body = commands
             .spawn((
-                Collider::capsule(CAPSULE_HEIGHT - 2.0 * CAPSULE_RADIUS, CAPSULE_RADIUS),
+                Collider::capsule(CAPSULE_RADIUS, CAPSULE_HEIGHT - 2.0 * CAPSULE_RADIUS),
                 ColliderDensity(1.5),
                 CollisionLayers::new(Layer::Player, Layer::Platform),
                 RigidBody::default(),
@@ -1026,10 +1029,11 @@ impl Plugin for PlayerPlugin {
                 update_ground_force,
             )
                 .chain())
-            .before(SubstepSet::Integrate),
+            .before(IntegrationSet::Velocity),
         );
         app.add_systems(OnEnter(DebugState::None), set_visible::<true>);
         app.add_systems(OnExit(DebugState::None), set_visible::<false>);
+        // app.add_plugins(PhysicsDebugPlugin::default());
     }
 }
 

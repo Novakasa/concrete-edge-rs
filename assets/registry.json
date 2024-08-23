@@ -52,6 +52,32 @@
       "type": "array",
       "typeInfo": "Tuple"
     },
+    "[u32; 2]": {
+      "isComponent": false,
+      "isResource": false,
+      "items": {
+        "type": {
+          "$ref": "#/$defs/u32"
+        }
+      },
+      "long_name": "[u32; 2]",
+      "short_name": "[u32; 2]",
+      "type": "array",
+      "typeInfo": "Array"
+    },
+    "[u32; 3]": {
+      "isComponent": false,
+      "isResource": false,
+      "items": {
+        "type": {
+          "$ref": "#/$defs/u32"
+        }
+      },
+      "long_name": "[u32; 3]",
+      "short_name": "[u32; 3]",
+      "type": "array",
+      "typeInfo": "Array"
+    },
     "alloc::borrow::Cow<str>": {
       "isComponent": false,
       "isResource": false,
@@ -81,6 +107,32 @@
       "type": "array",
       "typeInfo": "List"
     },
+    "alloc::vec::Vec<[u32; 2]>": {
+      "isComponent": false,
+      "isResource": false,
+      "items": {
+        "type": {
+          "$ref": "#/$defs/[u32; 2]"
+        }
+      },
+      "long_name": "alloc::vec::Vec<[u32; 2]>",
+      "short_name": "Vec<[u32; 2]>",
+      "type": "array",
+      "typeInfo": "List"
+    },
+    "alloc::vec::Vec<[u32; 3]>": {
+      "isComponent": false,
+      "isResource": false,
+      "items": {
+        "type": {
+          "$ref": "#/$defs/[u32; 3]"
+        }
+      },
+      "long_name": "alloc::vec::Vec<[u32; 3]>",
+      "short_name": "Vec<[u32; 3]>",
+      "type": "array",
+      "typeInfo": "List"
+    },
     "alloc::vec::Vec<alloc::string::String>": {
       "isComponent": false,
       "isResource": false,
@@ -91,6 +143,19 @@
       },
       "long_name": "alloc::vec::Vec<alloc::string::String>",
       "short_name": "Vec<String>",
+      "type": "array",
+      "typeInfo": "List"
+    },
+    "alloc::vec::Vec<alloc::vec::Vec<f32>>": {
+      "isComponent": false,
+      "isResource": false,
+      "items": {
+        "type": {
+          "$ref": "#/$defs/alloc::vec::Vec<f32>"
+        }
+      },
+      "long_name": "alloc::vec::Vec<alloc::vec::Vec<f32>>",
+      "short_name": "Vec<Vec<f32>>",
       "type": "array",
       "typeInfo": "List"
     },
@@ -379,6 +444,2595 @@
       "short_name": "Vec<u32>",
       "type": "array",
       "typeInfo": "List"
+    },
+    "avian3d::collision::broad_phase::AabbIntersections": {
+      "isComponent": true,
+      "isResource": false,
+      "items": false,
+      "long_name": "avian3d::collision::broad_phase::AabbIntersections",
+      "prefixItems": [
+        {
+          "type": {
+            "$ref": "#/$defs/alloc::vec::Vec<bevy_ecs::entity::Entity>"
+          }
+        }
+      ],
+      "short_name": "AabbIntersections",
+      "type": "array",
+      "typeInfo": "TupleStruct"
+    },
+    "avian3d::collision::broad_phase::BroadCollisionPairs": {
+      "isComponent": false,
+      "isResource": true,
+      "items": false,
+      "long_name": "avian3d::collision::broad_phase::BroadCollisionPairs",
+      "prefixItems": [
+        {
+          "type": {
+            "$ref": "#/$defs/alloc::vec::Vec<(bevy_ecs::entity::Entity, bevy_ecs::entity::Entity)>"
+          }
+        }
+      ],
+      "short_name": "BroadCollisionPairs",
+      "type": "array",
+      "typeInfo": "TupleStruct"
+    },
+    "avian3d::collision::collider::ColliderAabb": {
+      "additionalProperties": false,
+      "isComponent": true,
+      "isResource": false,
+      "long_name": "avian3d::collision::collider::ColliderAabb",
+      "properties": {
+        "max": {
+          "type": {
+            "$ref": "#/$defs/glam::Vec3"
+          }
+        },
+        "min": {
+          "type": {
+            "$ref": "#/$defs/glam::Vec3"
+          }
+        }
+      },
+      "required": [
+        "min",
+        "max"
+      ],
+      "short_name": "ColliderAabb",
+      "type": "object",
+      "typeInfo": "Struct"
+    },
+    "avian3d::collision::collider::ColliderParent": {
+      "isComponent": true,
+      "isResource": false,
+      "items": false,
+      "long_name": "avian3d::collision::collider::ColliderParent",
+      "prefixItems": [
+        {
+          "type": {
+            "$ref": "#/$defs/bevy_ecs::entity::Entity"
+          }
+        }
+      ],
+      "short_name": "ColliderParent",
+      "type": "array",
+      "typeInfo": "TupleStruct"
+    },
+    "avian3d::collision::collider::ColliderTransform": {
+      "additionalProperties": false,
+      "isComponent": true,
+      "isResource": false,
+      "long_name": "avian3d::collision::collider::ColliderTransform",
+      "properties": {
+        "rotation": {
+          "type": {
+            "$ref": "#/$defs/avian3d::position::Rotation"
+          }
+        },
+        "scale": {
+          "type": {
+            "$ref": "#/$defs/glam::Vec3"
+          }
+        },
+        "translation": {
+          "type": {
+            "$ref": "#/$defs/glam::Vec3"
+          }
+        }
+      },
+      "required": [
+        "translation",
+        "rotation",
+        "scale"
+      ],
+      "short_name": "ColliderTransform",
+      "type": "object",
+      "typeInfo": "Struct"
+    },
+    "avian3d::collision::collider::CollidingEntities": {
+      "isComponent": true,
+      "isResource": false,
+      "items": false,
+      "long_name": "avian3d::collision::collider::CollidingEntities",
+      "prefixItems": [
+        {
+          "type": {
+            "$ref": "#/$defs/bevy_utils::hashbrown::HashSet<bevy_ecs::entity::Entity, bevy_utils::hashbrown::hash_map::DefaultHashBuilder>"
+          }
+        }
+      ],
+      "short_name": "CollidingEntities",
+      "type": "array",
+      "typeInfo": "TupleStruct"
+    },
+    "avian3d::collision::collider::CollisionMargin": {
+      "isComponent": true,
+      "isResource": false,
+      "items": false,
+      "long_name": "avian3d::collision::collider::CollisionMargin",
+      "prefixItems": [
+        {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        }
+      ],
+      "short_name": "CollisionMargin",
+      "type": "array",
+      "typeInfo": "TupleStruct"
+    },
+    "avian3d::collision::collider::PreviousColliderTransform": {
+      "isComponent": true,
+      "isResource": false,
+      "items": false,
+      "long_name": "avian3d::collision::collider::PreviousColliderTransform",
+      "prefixItems": [
+        {
+          "type": {
+            "$ref": "#/$defs/avian3d::collision::collider::ColliderTransform"
+          }
+        }
+      ],
+      "short_name": "PreviousColliderTransform",
+      "type": "array",
+      "typeInfo": "TupleStruct"
+    },
+    "avian3d::collision::collider::Sensor": {
+      "additionalProperties": false,
+      "isComponent": true,
+      "isResource": false,
+      "long_name": "avian3d::collision::collider::Sensor",
+      "properties": {},
+      "required": [],
+      "short_name": "Sensor",
+      "type": "object",
+      "typeInfo": "Struct"
+    },
+    "avian3d::collision::collider::constructor::ColliderConstructor": {
+      "isComponent": true,
+      "isResource": false,
+      "long_name": "avian3d::collision::collider::constructor::ColliderConstructor",
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "long_name": "Sphere",
+          "properties": {
+            "radius": {
+              "long_name": "radius",
+              "type": {
+                "$ref": "#/$defs/f32"
+              }
+            }
+          },
+          "required": [
+            "radius"
+          ],
+          "short_name": "Sphere",
+          "type": "object",
+          "typeInfo": "Struct"
+        },
+        {
+          "additionalProperties": false,
+          "long_name": "Cuboid",
+          "properties": {
+            "x_length": {
+              "long_name": "x_length",
+              "type": {
+                "$ref": "#/$defs/f32"
+              }
+            },
+            "y_length": {
+              "long_name": "y_length",
+              "type": {
+                "$ref": "#/$defs/f32"
+              }
+            },
+            "z_length": {
+              "long_name": "z_length",
+              "type": {
+                "$ref": "#/$defs/f32"
+              }
+            }
+          },
+          "required": [
+            "x_length",
+            "y_length",
+            "z_length"
+          ],
+          "short_name": "Cuboid",
+          "type": "object",
+          "typeInfo": "Struct"
+        },
+        {
+          "additionalProperties": false,
+          "long_name": "RoundCuboid",
+          "properties": {
+            "border_radius": {
+              "long_name": "border_radius",
+              "type": {
+                "$ref": "#/$defs/f32"
+              }
+            },
+            "x_length": {
+              "long_name": "x_length",
+              "type": {
+                "$ref": "#/$defs/f32"
+              }
+            },
+            "y_length": {
+              "long_name": "y_length",
+              "type": {
+                "$ref": "#/$defs/f32"
+              }
+            },
+            "z_length": {
+              "long_name": "z_length",
+              "type": {
+                "$ref": "#/$defs/f32"
+              }
+            }
+          },
+          "required": [
+            "x_length",
+            "y_length",
+            "z_length",
+            "border_radius"
+          ],
+          "short_name": "RoundCuboid",
+          "type": "object",
+          "typeInfo": "Struct"
+        },
+        {
+          "additionalProperties": false,
+          "long_name": "Cylinder",
+          "properties": {
+            "height": {
+              "long_name": "height",
+              "type": {
+                "$ref": "#/$defs/f32"
+              }
+            },
+            "radius": {
+              "long_name": "radius",
+              "type": {
+                "$ref": "#/$defs/f32"
+              }
+            }
+          },
+          "required": [
+            "radius",
+            "height"
+          ],
+          "short_name": "Cylinder",
+          "type": "object",
+          "typeInfo": "Struct"
+        },
+        {
+          "additionalProperties": false,
+          "long_name": "Cone",
+          "properties": {
+            "height": {
+              "long_name": "height",
+              "type": {
+                "$ref": "#/$defs/f32"
+              }
+            },
+            "radius": {
+              "long_name": "radius",
+              "type": {
+                "$ref": "#/$defs/f32"
+              }
+            }
+          },
+          "required": [
+            "radius",
+            "height"
+          ],
+          "short_name": "Cone",
+          "type": "object",
+          "typeInfo": "Struct"
+        },
+        {
+          "additionalProperties": false,
+          "long_name": "Capsule",
+          "properties": {
+            "height": {
+              "long_name": "height",
+              "type": {
+                "$ref": "#/$defs/f32"
+              }
+            },
+            "radius": {
+              "long_name": "radius",
+              "type": {
+                "$ref": "#/$defs/f32"
+              }
+            }
+          },
+          "required": [
+            "radius",
+            "height"
+          ],
+          "short_name": "Capsule",
+          "type": "object",
+          "typeInfo": "Struct"
+        },
+        {
+          "additionalProperties": false,
+          "long_name": "CapsuleEndpoints",
+          "properties": {
+            "a": {
+              "long_name": "a",
+              "type": {
+                "$ref": "#/$defs/glam::Vec3"
+              }
+            },
+            "b": {
+              "long_name": "b",
+              "type": {
+                "$ref": "#/$defs/glam::Vec3"
+              }
+            },
+            "radius": {
+              "long_name": "radius",
+              "type": {
+                "$ref": "#/$defs/f32"
+              }
+            }
+          },
+          "required": [
+            "radius",
+            "a",
+            "b"
+          ],
+          "short_name": "CapsuleEndpoints",
+          "type": "object",
+          "typeInfo": "Struct"
+        },
+        {
+          "additionalProperties": false,
+          "long_name": "HalfSpace",
+          "properties": {
+            "outward_normal": {
+              "long_name": "outward_normal",
+              "type": {
+                "$ref": "#/$defs/glam::Vec3"
+              }
+            }
+          },
+          "required": [
+            "outward_normal"
+          ],
+          "short_name": "HalfSpace",
+          "type": "object",
+          "typeInfo": "Struct"
+        },
+        {
+          "additionalProperties": false,
+          "long_name": "Segment",
+          "properties": {
+            "a": {
+              "long_name": "a",
+              "type": {
+                "$ref": "#/$defs/glam::Vec3"
+              }
+            },
+            "b": {
+              "long_name": "b",
+              "type": {
+                "$ref": "#/$defs/glam::Vec3"
+              }
+            }
+          },
+          "required": [
+            "a",
+            "b"
+          ],
+          "short_name": "Segment",
+          "type": "object",
+          "typeInfo": "Struct"
+        },
+        {
+          "additionalProperties": false,
+          "long_name": "Triangle",
+          "properties": {
+            "a": {
+              "long_name": "a",
+              "type": {
+                "$ref": "#/$defs/glam::Vec3"
+              }
+            },
+            "b": {
+              "long_name": "b",
+              "type": {
+                "$ref": "#/$defs/glam::Vec3"
+              }
+            },
+            "c": {
+              "long_name": "c",
+              "type": {
+                "$ref": "#/$defs/glam::Vec3"
+              }
+            }
+          },
+          "required": [
+            "a",
+            "b",
+            "c"
+          ],
+          "short_name": "Triangle",
+          "type": "object",
+          "typeInfo": "Struct"
+        },
+        {
+          "additionalProperties": false,
+          "long_name": "Polyline",
+          "properties": {
+            "indices": {
+              "long_name": "indices",
+              "type": {
+                "$ref": "#/$defs/core::option::Option<alloc::vec::Vec<[u32; 2]>>"
+              }
+            },
+            "vertices": {
+              "long_name": "vertices",
+              "type": {
+                "$ref": "#/$defs/alloc::vec::Vec<glam::Vec3>"
+              }
+            }
+          },
+          "required": [
+            "vertices"
+          ],
+          "short_name": "Polyline",
+          "type": "object",
+          "typeInfo": "Struct"
+        },
+        {
+          "additionalProperties": false,
+          "long_name": "Trimesh",
+          "properties": {
+            "indices": {
+              "long_name": "indices",
+              "type": {
+                "$ref": "#/$defs/alloc::vec::Vec<[u32; 3]>"
+              }
+            },
+            "vertices": {
+              "long_name": "vertices",
+              "type": {
+                "$ref": "#/$defs/alloc::vec::Vec<glam::Vec3>"
+              }
+            }
+          },
+          "required": [
+            "vertices",
+            "indices"
+          ],
+          "short_name": "Trimesh",
+          "type": "object",
+          "typeInfo": "Struct"
+        },
+        {
+          "additionalProperties": false,
+          "long_name": "TrimeshWithConfig",
+          "properties": {
+            "flags": {
+              "long_name": "flags",
+              "type": {
+                "$ref": "#/$defs/avian3d::collision::collider::parry::TrimeshFlags"
+              }
+            },
+            "indices": {
+              "long_name": "indices",
+              "type": {
+                "$ref": "#/$defs/alloc::vec::Vec<[u32; 3]>"
+              }
+            },
+            "vertices": {
+              "long_name": "vertices",
+              "type": {
+                "$ref": "#/$defs/alloc::vec::Vec<glam::Vec3>"
+              }
+            }
+          },
+          "required": [
+            "vertices",
+            "indices",
+            "flags"
+          ],
+          "short_name": "TrimeshWithConfig",
+          "type": "object",
+          "typeInfo": "Struct"
+        },
+        {
+          "additionalProperties": false,
+          "long_name": "ConvexDecomposition",
+          "properties": {
+            "indices": {
+              "long_name": "indices",
+              "type": {
+                "$ref": "#/$defs/alloc::vec::Vec<[u32; 3]>"
+              }
+            },
+            "vertices": {
+              "long_name": "vertices",
+              "type": {
+                "$ref": "#/$defs/alloc::vec::Vec<glam::Vec3>"
+              }
+            }
+          },
+          "required": [
+            "vertices",
+            "indices"
+          ],
+          "short_name": "ConvexDecomposition",
+          "type": "object",
+          "typeInfo": "Struct"
+        },
+        {
+          "additionalProperties": false,
+          "long_name": "ConvexDecompositionWithConfig",
+          "properties": {
+            "indices": {
+              "long_name": "indices",
+              "type": {
+                "$ref": "#/$defs/alloc::vec::Vec<[u32; 3]>"
+              }
+            },
+            "params": {
+              "long_name": "params",
+              "type": {
+                "$ref": "#/$defs/avian3d::collision::collider::parry::VhacdParameters"
+              }
+            },
+            "vertices": {
+              "long_name": "vertices",
+              "type": {
+                "$ref": "#/$defs/alloc::vec::Vec<glam::Vec3>"
+              }
+            }
+          },
+          "required": [
+            "vertices",
+            "indices",
+            "params"
+          ],
+          "short_name": "ConvexDecompositionWithConfig",
+          "type": "object",
+          "typeInfo": "Struct"
+        },
+        {
+          "additionalProperties": false,
+          "long_name": "ConvexHull",
+          "properties": {
+            "points": {
+              "long_name": "points",
+              "type": {
+                "$ref": "#/$defs/alloc::vec::Vec<glam::Vec3>"
+              }
+            }
+          },
+          "required": [
+            "points"
+          ],
+          "short_name": "ConvexHull",
+          "type": "object",
+          "typeInfo": "Struct"
+        },
+        {
+          "additionalProperties": false,
+          "long_name": "Heightfield",
+          "properties": {
+            "heights": {
+              "long_name": "heights",
+              "type": {
+                "$ref": "#/$defs/alloc::vec::Vec<alloc::vec::Vec<f32>>"
+              }
+            },
+            "scale": {
+              "long_name": "scale",
+              "type": {
+                "$ref": "#/$defs/glam::Vec3"
+              }
+            }
+          },
+          "required": [
+            "heights",
+            "scale"
+          ],
+          "short_name": "Heightfield",
+          "type": "object",
+          "typeInfo": "Struct"
+        },
+        {
+          "long_name": "TrimeshFromMesh"
+        },
+        {
+          "items": false,
+          "long_name": "TrimeshFromMeshWithConfig",
+          "prefixItems": [
+            {
+              "type": {
+                "$ref": "#/$defs/avian3d::collision::collider::parry::TrimeshFlags"
+              }
+            }
+          ],
+          "short_name": "TrimeshFromMeshWithConfig",
+          "type": "array",
+          "typeInfo": "Tuple"
+        },
+        {
+          "long_name": "ConvexDecompositionFromMesh"
+        },
+        {
+          "items": false,
+          "long_name": "ConvexDecompositionFromMeshWithConfig",
+          "prefixItems": [
+            {
+              "type": {
+                "$ref": "#/$defs/avian3d::collision::collider::parry::VhacdParameters"
+              }
+            }
+          ],
+          "short_name": "ConvexDecompositionFromMeshWithConfig",
+          "type": "array",
+          "typeInfo": "Tuple"
+        },
+        {
+          "long_name": "ConvexHullFromMesh"
+        }
+      ],
+      "short_name": "ColliderConstructor",
+      "type": "object",
+      "typeInfo": "Enum"
+    },
+    "avian3d::collision::collider::constructor::ColliderConstructorHierarchy": {
+      "additionalProperties": false,
+      "isComponent": true,
+      "isResource": false,
+      "long_name": "avian3d::collision::collider::constructor::ColliderConstructorHierarchy",
+      "properties": {
+        "config": {
+          "type": {
+            "$ref": "#/$defs/bevy_utils::hashbrown::HashMap<alloc::string::String, core::option::Option<avian3d::collision::collider::constructor::ColliderConstructorHierarchyConfig>, bevy_utils::hashbrown::hash_map::DefaultHashBuilder>"
+          }
+        },
+        "default_constructor": {
+          "type": {
+            "$ref": "#/$defs/core::option::Option<avian3d::collision::collider::constructor::ColliderConstructor>"
+          }
+        },
+        "default_density": {
+          "type": {
+            "$ref": "#/$defs/avian3d::dynamics::rigid_body::mass_properties::ColliderDensity"
+          }
+        },
+        "default_layers": {
+          "type": {
+            "$ref": "#/$defs/avian3d::collision::layers::CollisionLayers"
+          }
+        }
+      },
+      "required": [
+        "default_layers",
+        "default_density",
+        "config"
+      ],
+      "short_name": "ColliderConstructorHierarchy",
+      "type": "object",
+      "typeInfo": "Struct"
+    },
+    "avian3d::collision::collider::constructor::ColliderConstructorHierarchyConfig": {
+      "additionalProperties": false,
+      "isComponent": false,
+      "isResource": false,
+      "long_name": "avian3d::collision::collider::constructor::ColliderConstructorHierarchyConfig",
+      "properties": {
+        "constructor": {
+          "type": {
+            "$ref": "#/$defs/core::option::Option<avian3d::collision::collider::constructor::ColliderConstructor>"
+          }
+        },
+        "density": {
+          "type": {
+            "$ref": "#/$defs/core::option::Option<avian3d::dynamics::rigid_body::mass_properties::ColliderDensity>"
+          }
+        },
+        "layers": {
+          "type": {
+            "$ref": "#/$defs/core::option::Option<avian3d::collision::layers::CollisionLayers>"
+          }
+        }
+      },
+      "required": [],
+      "short_name": "ColliderConstructorHierarchyConfig",
+      "type": "object",
+      "typeInfo": "Struct"
+    },
+    "avian3d::collision::collider::parry::FillMode": {
+      "isComponent": false,
+      "isResource": false,
+      "long_name": "avian3d::collision::collider::parry::FillMode",
+      "oneOf": [
+        {
+          "long_name": "SurfaceOnly"
+        },
+        {
+          "additionalProperties": false,
+          "long_name": "FloodFill",
+          "properties": {
+            "detect_cavities": {
+              "long_name": "detect_cavities",
+              "type": {
+                "$ref": "#/$defs/bool"
+              }
+            }
+          },
+          "required": [
+            "detect_cavities"
+          ],
+          "short_name": "FloodFill",
+          "type": "object",
+          "typeInfo": "Struct"
+        }
+      ],
+      "short_name": "FillMode",
+      "type": "object",
+      "typeInfo": "Enum"
+    },
+    "avian3d::collision::collider::parry::TrimeshFlags": {
+      "isComponent": false,
+      "isResource": false,
+      "long_name": "avian3d::collision::collider::parry::TrimeshFlags",
+      "short_name": "TrimeshFlags",
+      "type": "object",
+      "typeInfo": "Value"
+    },
+    "avian3d::collision::collider::parry::VhacdParameters": {
+      "additionalProperties": false,
+      "isComponent": false,
+      "isResource": false,
+      "long_name": "avian3d::collision::collider::parry::VhacdParameters",
+      "properties": {
+        "alpha": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        },
+        "beta": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        },
+        "concavity": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        },
+        "convex_hull_approximation": {
+          "type": {
+            "$ref": "#/$defs/bool"
+          }
+        },
+        "convex_hull_downsampling": {
+          "type": {
+            "$ref": "#/$defs/u32"
+          }
+        },
+        "fill_mode": {
+          "type": {
+            "$ref": "#/$defs/avian3d::collision::collider::parry::FillMode"
+          }
+        },
+        "max_convex_hulls": {
+          "type": {
+            "$ref": "#/$defs/u32"
+          }
+        },
+        "plane_downsampling": {
+          "type": {
+            "$ref": "#/$defs/u32"
+          }
+        },
+        "resolution": {
+          "type": {
+            "$ref": "#/$defs/u32"
+          }
+        }
+      },
+      "required": [
+        "concavity",
+        "alpha",
+        "beta",
+        "resolution",
+        "plane_downsampling",
+        "convex_hull_downsampling",
+        "fill_mode",
+        "convex_hull_approximation",
+        "max_convex_hulls"
+      ],
+      "short_name": "VhacdParameters",
+      "type": "object",
+      "typeInfo": "Struct"
+    },
+    "avian3d::collision::layers::CollisionLayers": {
+      "additionalProperties": false,
+      "isComponent": true,
+      "isResource": false,
+      "long_name": "avian3d::collision::layers::CollisionLayers",
+      "properties": {
+        "filters": {
+          "type": {
+            "$ref": "#/$defs/avian3d::collision::layers::LayerMask"
+          }
+        },
+        "memberships": {
+          "type": {
+            "$ref": "#/$defs/avian3d::collision::layers::LayerMask"
+          }
+        }
+      },
+      "required": [
+        "memberships",
+        "filters"
+      ],
+      "short_name": "CollisionLayers",
+      "type": "object",
+      "typeInfo": "Struct"
+    },
+    "avian3d::collision::layers::LayerMask": {
+      "isComponent": false,
+      "isResource": false,
+      "items": false,
+      "long_name": "avian3d::collision::layers::LayerMask",
+      "prefixItems": [
+        {
+          "type": {
+            "$ref": "#/$defs/u32"
+          }
+        }
+      ],
+      "short_name": "LayerMask",
+      "type": "array",
+      "typeInfo": "TupleStruct"
+    },
+    "avian3d::collision::narrow_phase::NarrowPhaseConfig": {
+      "additionalProperties": false,
+      "isComponent": false,
+      "isResource": true,
+      "long_name": "avian3d::collision::narrow_phase::NarrowPhaseConfig",
+      "properties": {
+        "contact_tolerance": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        },
+        "default_speculative_margin": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        },
+        "match_contacts": {
+          "type": {
+            "$ref": "#/$defs/bool"
+          }
+        }
+      },
+      "required": [
+        "default_speculative_margin",
+        "contact_tolerance",
+        "match_contacts"
+      ],
+      "short_name": "NarrowPhaseConfig",
+      "type": "object",
+      "typeInfo": "Struct"
+    },
+    "avian3d::dynamics::ccd::SpeculativeMargin": {
+      "isComponent": true,
+      "isResource": false,
+      "items": false,
+      "long_name": "avian3d::dynamics::ccd::SpeculativeMargin",
+      "prefixItems": [
+        {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        }
+      ],
+      "short_name": "SpeculativeMargin",
+      "type": "array",
+      "typeInfo": "TupleStruct"
+    },
+    "avian3d::dynamics::ccd::SweepMode": {
+      "isComponent": false,
+      "isResource": false,
+      "long_name": "avian3d::dynamics::ccd::SweepMode",
+      "oneOf": [
+        "Linear",
+        "NonLinear"
+      ],
+      "short_name": "SweepMode",
+      "type": "string",
+      "typeInfo": "Enum"
+    },
+    "avian3d::dynamics::ccd::SweptCcd": {
+      "additionalProperties": false,
+      "isComponent": true,
+      "isResource": false,
+      "long_name": "avian3d::dynamics::ccd::SweptCcd",
+      "properties": {
+        "angular_threshold": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        },
+        "include_dynamic": {
+          "type": {
+            "$ref": "#/$defs/bool"
+          }
+        },
+        "linear_threshold": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        },
+        "mode": {
+          "type": {
+            "$ref": "#/$defs/avian3d::dynamics::ccd::SweepMode"
+          }
+        }
+      },
+      "required": [
+        "mode",
+        "include_dynamic",
+        "linear_threshold",
+        "angular_threshold"
+      ],
+      "short_name": "SweptCcd",
+      "type": "object",
+      "typeInfo": "Struct"
+    },
+    "avian3d::dynamics::integrator::Gravity": {
+      "isComponent": false,
+      "isResource": true,
+      "items": false,
+      "long_name": "avian3d::dynamics::integrator::Gravity",
+      "prefixItems": [
+        {
+          "type": {
+            "$ref": "#/$defs/glam::Vec3"
+          }
+        }
+      ],
+      "short_name": "Gravity",
+      "type": "array",
+      "typeInfo": "TupleStruct"
+    },
+    "avian3d::dynamics::rigid_body::AccumulatedTranslation": {
+      "isComponent": true,
+      "isResource": false,
+      "items": false,
+      "long_name": "avian3d::dynamics::rigid_body::AccumulatedTranslation",
+      "prefixItems": [
+        {
+          "type": {
+            "$ref": "#/$defs/glam::Vec3"
+          }
+        }
+      ],
+      "short_name": "AccumulatedTranslation",
+      "type": "array",
+      "typeInfo": "TupleStruct"
+    },
+    "avian3d::dynamics::rigid_body::AngularDamping": {
+      "isComponent": true,
+      "isResource": false,
+      "items": false,
+      "long_name": "avian3d::dynamics::rigid_body::AngularDamping",
+      "prefixItems": [
+        {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        }
+      ],
+      "short_name": "AngularDamping",
+      "type": "array",
+      "typeInfo": "TupleStruct"
+    },
+    "avian3d::dynamics::rigid_body::AngularVelocity": {
+      "isComponent": true,
+      "isResource": false,
+      "items": false,
+      "long_name": "avian3d::dynamics::rigid_body::AngularVelocity",
+      "prefixItems": [
+        {
+          "type": {
+            "$ref": "#/$defs/glam::Vec3"
+          }
+        }
+      ],
+      "short_name": "AngularVelocity",
+      "type": "array",
+      "typeInfo": "TupleStruct"
+    },
+    "avian3d::dynamics::rigid_body::CoefficientCombine": {
+      "isComponent": false,
+      "isResource": false,
+      "long_name": "avian3d::dynamics::rigid_body::CoefficientCombine",
+      "oneOf": [
+        "Average",
+        "Min",
+        "Multiply",
+        "Max"
+      ],
+      "short_name": "CoefficientCombine",
+      "type": "string",
+      "typeInfo": "Enum"
+    },
+    "avian3d::dynamics::rigid_body::Dominance": {
+      "isComponent": true,
+      "isResource": false,
+      "items": false,
+      "long_name": "avian3d::dynamics::rigid_body::Dominance",
+      "prefixItems": [
+        {
+          "type": {
+            "$ref": "#/$defs/i8"
+          }
+        }
+      ],
+      "short_name": "Dominance",
+      "type": "array",
+      "typeInfo": "TupleStruct"
+    },
+    "avian3d::dynamics::rigid_body::Friction": {
+      "additionalProperties": false,
+      "isComponent": true,
+      "isResource": false,
+      "long_name": "avian3d::dynamics::rigid_body::Friction",
+      "properties": {
+        "combine_rule": {
+          "type": {
+            "$ref": "#/$defs/avian3d::dynamics::rigid_body::CoefficientCombine"
+          }
+        },
+        "dynamic_coefficient": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        },
+        "static_coefficient": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        }
+      },
+      "required": [
+        "dynamic_coefficient",
+        "static_coefficient",
+        "combine_rule"
+      ],
+      "short_name": "Friction",
+      "type": "object",
+      "typeInfo": "Struct"
+    },
+    "avian3d::dynamics::rigid_body::GravityScale": {
+      "isComponent": true,
+      "isResource": false,
+      "items": false,
+      "long_name": "avian3d::dynamics::rigid_body::GravityScale",
+      "prefixItems": [
+        {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        }
+      ],
+      "short_name": "GravityScale",
+      "type": "array",
+      "typeInfo": "TupleStruct"
+    },
+    "avian3d::dynamics::rigid_body::LinearDamping": {
+      "isComponent": true,
+      "isResource": false,
+      "items": false,
+      "long_name": "avian3d::dynamics::rigid_body::LinearDamping",
+      "prefixItems": [
+        {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        }
+      ],
+      "short_name": "LinearDamping",
+      "type": "array",
+      "typeInfo": "TupleStruct"
+    },
+    "avian3d::dynamics::rigid_body::LinearVelocity": {
+      "isComponent": true,
+      "isResource": false,
+      "items": false,
+      "long_name": "avian3d::dynamics::rigid_body::LinearVelocity",
+      "prefixItems": [
+        {
+          "type": {
+            "$ref": "#/$defs/glam::Vec3"
+          }
+        }
+      ],
+      "short_name": "LinearVelocity",
+      "type": "array",
+      "typeInfo": "TupleStruct"
+    },
+    "avian3d::dynamics::rigid_body::PreSolveAngularVelocity": {
+      "isComponent": true,
+      "isResource": false,
+      "items": false,
+      "long_name": "avian3d::dynamics::rigid_body::PreSolveAngularVelocity",
+      "prefixItems": [
+        {
+          "type": {
+            "$ref": "#/$defs/glam::Vec3"
+          }
+        }
+      ],
+      "short_name": "PreSolveAngularVelocity",
+      "type": "array",
+      "typeInfo": "TupleStruct"
+    },
+    "avian3d::dynamics::rigid_body::PreSolveLinearVelocity": {
+      "isComponent": true,
+      "isResource": false,
+      "items": false,
+      "long_name": "avian3d::dynamics::rigid_body::PreSolveLinearVelocity",
+      "prefixItems": [
+        {
+          "type": {
+            "$ref": "#/$defs/glam::Vec3"
+          }
+        }
+      ],
+      "short_name": "PreSolveLinearVelocity",
+      "type": "array",
+      "typeInfo": "TupleStruct"
+    },
+    "avian3d::dynamics::rigid_body::Restitution": {
+      "additionalProperties": false,
+      "isComponent": true,
+      "isResource": false,
+      "long_name": "avian3d::dynamics::rigid_body::Restitution",
+      "properties": {
+        "coefficient": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        },
+        "combine_rule": {
+          "type": {
+            "$ref": "#/$defs/avian3d::dynamics::rigid_body::CoefficientCombine"
+          }
+        }
+      },
+      "required": [
+        "coefficient",
+        "combine_rule"
+      ],
+      "short_name": "Restitution",
+      "type": "object",
+      "typeInfo": "Struct"
+    },
+    "avian3d::dynamics::rigid_body::RigidBody": {
+      "isComponent": true,
+      "isResource": false,
+      "long_name": "avian3d::dynamics::rigid_body::RigidBody",
+      "oneOf": [
+        "Dynamic",
+        "Static",
+        "Kinematic"
+      ],
+      "short_name": "RigidBody",
+      "type": "string",
+      "typeInfo": "Enum"
+    },
+    "avian3d::dynamics::rigid_body::Sleeping": {
+      "additionalProperties": false,
+      "isComponent": true,
+      "isResource": false,
+      "long_name": "avian3d::dynamics::rigid_body::Sleeping",
+      "properties": {},
+      "required": [],
+      "short_name": "Sleeping",
+      "type": "object",
+      "typeInfo": "Struct"
+    },
+    "avian3d::dynamics::rigid_body::SleepingDisabled": {
+      "additionalProperties": false,
+      "isComponent": true,
+      "isResource": false,
+      "long_name": "avian3d::dynamics::rigid_body::SleepingDisabled",
+      "properties": {},
+      "required": [],
+      "short_name": "SleepingDisabled",
+      "type": "object",
+      "typeInfo": "Struct"
+    },
+    "avian3d::dynamics::rigid_body::TimeSleeping": {
+      "isComponent": true,
+      "isResource": false,
+      "items": false,
+      "long_name": "avian3d::dynamics::rigid_body::TimeSleeping",
+      "prefixItems": [
+        {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        }
+      ],
+      "short_name": "TimeSleeping",
+      "type": "array",
+      "typeInfo": "TupleStruct"
+    },
+    "avian3d::dynamics::rigid_body::forces::ExternalAngularImpulse": {
+      "additionalProperties": false,
+      "isComponent": true,
+      "isResource": false,
+      "long_name": "avian3d::dynamics::rigid_body::forces::ExternalAngularImpulse",
+      "properties": {
+        "impulse": {
+          "type": {
+            "$ref": "#/$defs/glam::Vec3"
+          }
+        },
+        "persistent": {
+          "type": {
+            "$ref": "#/$defs/bool"
+          }
+        }
+      },
+      "required": [
+        "impulse",
+        "persistent"
+      ],
+      "short_name": "ExternalAngularImpulse",
+      "type": "object",
+      "typeInfo": "Struct"
+    },
+    "avian3d::dynamics::rigid_body::forces::ExternalForce": {
+      "additionalProperties": false,
+      "isComponent": true,
+      "isResource": false,
+      "long_name": "avian3d::dynamics::rigid_body::forces::ExternalForce",
+      "properties": {
+        "force": {
+          "type": {
+            "$ref": "#/$defs/glam::Vec3"
+          }
+        },
+        "persistent": {
+          "type": {
+            "$ref": "#/$defs/bool"
+          }
+        },
+        "torque": {
+          "type": {
+            "$ref": "#/$defs/glam::Vec3"
+          }
+        }
+      },
+      "required": [
+        "force",
+        "persistent",
+        "torque"
+      ],
+      "short_name": "ExternalForce",
+      "type": "object",
+      "typeInfo": "Struct"
+    },
+    "avian3d::dynamics::rigid_body::forces::ExternalImpulse": {
+      "additionalProperties": false,
+      "isComponent": true,
+      "isResource": false,
+      "long_name": "avian3d::dynamics::rigid_body::forces::ExternalImpulse",
+      "properties": {
+        "angular_impulse": {
+          "type": {
+            "$ref": "#/$defs/glam::Vec3"
+          }
+        },
+        "impulse": {
+          "type": {
+            "$ref": "#/$defs/glam::Vec3"
+          }
+        },
+        "persistent": {
+          "type": {
+            "$ref": "#/$defs/bool"
+          }
+        }
+      },
+      "required": [
+        "impulse",
+        "persistent",
+        "angular_impulse"
+      ],
+      "short_name": "ExternalImpulse",
+      "type": "object",
+      "typeInfo": "Struct"
+    },
+    "avian3d::dynamics::rigid_body::forces::ExternalTorque": {
+      "additionalProperties": false,
+      "isComponent": true,
+      "isResource": false,
+      "long_name": "avian3d::dynamics::rigid_body::forces::ExternalTorque",
+      "properties": {
+        "persistent": {
+          "type": {
+            "$ref": "#/$defs/bool"
+          }
+        },
+        "torque": {
+          "type": {
+            "$ref": "#/$defs/glam::Vec3"
+          }
+        }
+      },
+      "required": [
+        "torque",
+        "persistent"
+      ],
+      "short_name": "ExternalTorque",
+      "type": "object",
+      "typeInfo": "Struct"
+    },
+    "avian3d::dynamics::rigid_body::locked_axes::LockedAxes": {
+      "isComponent": true,
+      "isResource": false,
+      "items": false,
+      "long_name": "avian3d::dynamics::rigid_body::locked_axes::LockedAxes",
+      "prefixItems": [
+        {
+          "type": {
+            "$ref": "#/$defs/u8"
+          }
+        }
+      ],
+      "short_name": "LockedAxes",
+      "type": "array",
+      "typeInfo": "TupleStruct"
+    },
+    "avian3d::dynamics::rigid_body::mass_properties::CenterOfMass": {
+      "isComponent": true,
+      "isResource": false,
+      "items": false,
+      "long_name": "avian3d::dynamics::rigid_body::mass_properties::CenterOfMass",
+      "prefixItems": [
+        {
+          "type": {
+            "$ref": "#/$defs/glam::Vec3"
+          }
+        }
+      ],
+      "short_name": "CenterOfMass",
+      "type": "array",
+      "typeInfo": "TupleStruct"
+    },
+    "avian3d::dynamics::rigid_body::mass_properties::ColliderDensity": {
+      "isComponent": true,
+      "isResource": false,
+      "items": false,
+      "long_name": "avian3d::dynamics::rigid_body::mass_properties::ColliderDensity",
+      "prefixItems": [
+        {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        }
+      ],
+      "short_name": "ColliderDensity",
+      "type": "array",
+      "typeInfo": "TupleStruct"
+    },
+    "avian3d::dynamics::rigid_body::mass_properties::ColliderMassProperties": {
+      "additionalProperties": false,
+      "isComponent": true,
+      "isResource": false,
+      "long_name": "avian3d::dynamics::rigid_body::mass_properties::ColliderMassProperties",
+      "properties": {
+        "center_of_mass": {
+          "type": {
+            "$ref": "#/$defs/avian3d::dynamics::rigid_body::mass_properties::CenterOfMass"
+          }
+        },
+        "inertia": {
+          "type": {
+            "$ref": "#/$defs/avian3d::dynamics::rigid_body::mass_properties::Inertia"
+          }
+        },
+        "inverse_inertia": {
+          "type": {
+            "$ref": "#/$defs/avian3d::dynamics::rigid_body::mass_properties::InverseInertia"
+          }
+        },
+        "inverse_mass": {
+          "type": {
+            "$ref": "#/$defs/avian3d::dynamics::rigid_body::mass_properties::InverseMass"
+          }
+        },
+        "mass": {
+          "type": {
+            "$ref": "#/$defs/avian3d::dynamics::rigid_body::mass_properties::Mass"
+          }
+        }
+      },
+      "required": [
+        "mass",
+        "inverse_mass",
+        "inertia",
+        "inverse_inertia",
+        "center_of_mass"
+      ],
+      "short_name": "ColliderMassProperties",
+      "type": "object",
+      "typeInfo": "Struct"
+    },
+    "avian3d::dynamics::rigid_body::mass_properties::Inertia": {
+      "isComponent": true,
+      "isResource": false,
+      "items": false,
+      "long_name": "avian3d::dynamics::rigid_body::mass_properties::Inertia",
+      "prefixItems": [
+        {
+          "type": {
+            "$ref": "#/$defs/glam::Mat3"
+          }
+        }
+      ],
+      "short_name": "Inertia",
+      "type": "array",
+      "typeInfo": "TupleStruct"
+    },
+    "avian3d::dynamics::rigid_body::mass_properties::InverseInertia": {
+      "isComponent": true,
+      "isResource": false,
+      "items": false,
+      "long_name": "avian3d::dynamics::rigid_body::mass_properties::InverseInertia",
+      "prefixItems": [
+        {
+          "type": {
+            "$ref": "#/$defs/glam::Mat3"
+          }
+        }
+      ],
+      "short_name": "InverseInertia",
+      "type": "array",
+      "typeInfo": "TupleStruct"
+    },
+    "avian3d::dynamics::rigid_body::mass_properties::InverseMass": {
+      "isComponent": true,
+      "isResource": false,
+      "items": false,
+      "long_name": "avian3d::dynamics::rigid_body::mass_properties::InverseMass",
+      "prefixItems": [
+        {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        }
+      ],
+      "short_name": "InverseMass",
+      "type": "array",
+      "typeInfo": "TupleStruct"
+    },
+    "avian3d::dynamics::rigid_body::mass_properties::Mass": {
+      "isComponent": true,
+      "isResource": false,
+      "items": false,
+      "long_name": "avian3d::dynamics::rigid_body::mass_properties::Mass",
+      "prefixItems": [
+        {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        }
+      ],
+      "short_name": "Mass",
+      "type": "array",
+      "typeInfo": "TupleStruct"
+    },
+    "avian3d::dynamics::sleeping::DeactivationTime": {
+      "isComponent": false,
+      "isResource": false,
+      "items": false,
+      "long_name": "avian3d::dynamics::sleeping::DeactivationTime",
+      "prefixItems": [
+        {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        }
+      ],
+      "short_name": "DeactivationTime",
+      "type": "array",
+      "typeInfo": "TupleStruct"
+    },
+    "avian3d::dynamics::sleeping::SleepingThreshold": {
+      "additionalProperties": false,
+      "isComponent": false,
+      "isResource": true,
+      "long_name": "avian3d::dynamics::sleeping::SleepingThreshold",
+      "properties": {
+        "angular": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        },
+        "linear": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        }
+      },
+      "required": [
+        "linear",
+        "angular"
+      ],
+      "short_name": "SleepingThreshold",
+      "type": "object",
+      "typeInfo": "Struct"
+    },
+    "avian3d::dynamics::solver::SolverConfig": {
+      "additionalProperties": false,
+      "isComponent": false,
+      "isResource": true,
+      "long_name": "avian3d::dynamics::solver::SolverConfig",
+      "properties": {
+        "contact_damping_ratio": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        },
+        "contact_frequency_factor": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        },
+        "max_overlap_solve_speed": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        },
+        "restitution_iterations": {
+          "type": {
+            "$ref": "#/$defs/usize"
+          }
+        },
+        "restitution_threshold": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        },
+        "warm_start_coefficient": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        }
+      },
+      "required": [
+        "contact_damping_ratio",
+        "contact_frequency_factor",
+        "max_overlap_solve_speed",
+        "warm_start_coefficient",
+        "restitution_threshold",
+        "restitution_iterations"
+      ],
+      "short_name": "SolverConfig",
+      "type": "object",
+      "typeInfo": "Struct"
+    },
+    "avian3d::dynamics::solver::joints::AngleLimit": {
+      "additionalProperties": false,
+      "isComponent": false,
+      "isResource": false,
+      "long_name": "avian3d::dynamics::solver::joints::AngleLimit",
+      "properties": {
+        "max": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        },
+        "min": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        }
+      },
+      "required": [
+        "min",
+        "max"
+      ],
+      "short_name": "AngleLimit",
+      "type": "object",
+      "typeInfo": "Struct"
+    },
+    "avian3d::dynamics::solver::joints::DistanceLimit": {
+      "additionalProperties": false,
+      "isComponent": false,
+      "isResource": false,
+      "long_name": "avian3d::dynamics::solver::joints::DistanceLimit",
+      "properties": {
+        "max": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        },
+        "min": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        }
+      },
+      "required": [
+        "min",
+        "max"
+      ],
+      "short_name": "DistanceLimit",
+      "type": "object",
+      "typeInfo": "Struct"
+    },
+    "avian3d::dynamics::solver::joints::distance::DistanceJoint": {
+      "additionalProperties": false,
+      "isComponent": true,
+      "isResource": false,
+      "long_name": "avian3d::dynamics::solver::joints::distance::DistanceJoint",
+      "properties": {
+        "compliance": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        },
+        "damping_angular": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        },
+        "damping_linear": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        },
+        "entity1": {
+          "type": {
+            "$ref": "#/$defs/bevy_ecs::entity::Entity"
+          }
+        },
+        "entity2": {
+          "type": {
+            "$ref": "#/$defs/bevy_ecs::entity::Entity"
+          }
+        },
+        "force": {
+          "type": {
+            "$ref": "#/$defs/glam::Vec3"
+          }
+        },
+        "lagrange": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        },
+        "length_limits": {
+          "type": {
+            "$ref": "#/$defs/core::option::Option<avian3d::dynamics::solver::joints::DistanceLimit>"
+          }
+        },
+        "local_anchor1": {
+          "type": {
+            "$ref": "#/$defs/glam::Vec3"
+          }
+        },
+        "local_anchor2": {
+          "type": {
+            "$ref": "#/$defs/glam::Vec3"
+          }
+        },
+        "rest_length": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        }
+      },
+      "required": [
+        "entity1",
+        "entity2",
+        "local_anchor1",
+        "local_anchor2",
+        "rest_length",
+        "damping_linear",
+        "damping_angular",
+        "lagrange",
+        "compliance",
+        "force"
+      ],
+      "short_name": "DistanceJoint",
+      "type": "object",
+      "typeInfo": "Struct"
+    },
+    "avian3d::dynamics::solver::joints::fixed::FixedJoint": {
+      "additionalProperties": false,
+      "isComponent": true,
+      "isResource": false,
+      "long_name": "avian3d::dynamics::solver::joints::fixed::FixedJoint",
+      "properties": {
+        "align_lagrange": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        },
+        "align_torque": {
+          "type": {
+            "$ref": "#/$defs/glam::Vec3"
+          }
+        },
+        "compliance": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        },
+        "damping_angular": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        },
+        "damping_linear": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        },
+        "entity1": {
+          "type": {
+            "$ref": "#/$defs/bevy_ecs::entity::Entity"
+          }
+        },
+        "entity2": {
+          "type": {
+            "$ref": "#/$defs/bevy_ecs::entity::Entity"
+          }
+        },
+        "force": {
+          "type": {
+            "$ref": "#/$defs/glam::Vec3"
+          }
+        },
+        "local_anchor1": {
+          "type": {
+            "$ref": "#/$defs/glam::Vec3"
+          }
+        },
+        "local_anchor2": {
+          "type": {
+            "$ref": "#/$defs/glam::Vec3"
+          }
+        },
+        "position_lagrange": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        }
+      },
+      "required": [
+        "entity1",
+        "entity2",
+        "local_anchor1",
+        "local_anchor2",
+        "damping_linear",
+        "damping_angular",
+        "position_lagrange",
+        "align_lagrange",
+        "compliance",
+        "force",
+        "align_torque"
+      ],
+      "short_name": "FixedJoint",
+      "type": "object",
+      "typeInfo": "Struct"
+    },
+    "avian3d::dynamics::solver::joints::prismatic::PrismaticJoint": {
+      "additionalProperties": false,
+      "isComponent": true,
+      "isResource": false,
+      "long_name": "avian3d::dynamics::solver::joints::prismatic::PrismaticJoint",
+      "properties": {
+        "align_lagrange": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        },
+        "align_torque": {
+          "type": {
+            "$ref": "#/$defs/glam::Vec3"
+          }
+        },
+        "compliance": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        },
+        "damping_angular": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        },
+        "damping_linear": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        },
+        "entity1": {
+          "type": {
+            "$ref": "#/$defs/bevy_ecs::entity::Entity"
+          }
+        },
+        "entity2": {
+          "type": {
+            "$ref": "#/$defs/bevy_ecs::entity::Entity"
+          }
+        },
+        "force": {
+          "type": {
+            "$ref": "#/$defs/glam::Vec3"
+          }
+        },
+        "free_axis": {
+          "type": {
+            "$ref": "#/$defs/glam::Vec3"
+          }
+        },
+        "free_axis_limits": {
+          "type": {
+            "$ref": "#/$defs/core::option::Option<avian3d::dynamics::solver::joints::DistanceLimit>"
+          }
+        },
+        "local_anchor1": {
+          "type": {
+            "$ref": "#/$defs/glam::Vec3"
+          }
+        },
+        "local_anchor2": {
+          "type": {
+            "$ref": "#/$defs/glam::Vec3"
+          }
+        },
+        "position_lagrange": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        }
+      },
+      "required": [
+        "entity1",
+        "entity2",
+        "local_anchor1",
+        "local_anchor2",
+        "free_axis",
+        "damping_linear",
+        "damping_angular",
+        "position_lagrange",
+        "align_lagrange",
+        "compliance",
+        "force",
+        "align_torque"
+      ],
+      "short_name": "PrismaticJoint",
+      "type": "object",
+      "typeInfo": "Struct"
+    },
+    "avian3d::dynamics::solver::joints::revolute::RevoluteJoint": {
+      "additionalProperties": false,
+      "isComponent": true,
+      "isResource": false,
+      "long_name": "avian3d::dynamics::solver::joints::revolute::RevoluteJoint",
+      "properties": {
+        "align_lagrange": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        },
+        "align_torque": {
+          "type": {
+            "$ref": "#/$defs/glam::Vec3"
+          }
+        },
+        "aligned_axis": {
+          "type": {
+            "$ref": "#/$defs/glam::Vec3"
+          }
+        },
+        "angle_limit": {
+          "type": {
+            "$ref": "#/$defs/core::option::Option<avian3d::dynamics::solver::joints::AngleLimit>"
+          }
+        },
+        "angle_limit_lagrange": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        },
+        "angle_limit_torque": {
+          "type": {
+            "$ref": "#/$defs/glam::Vec3"
+          }
+        },
+        "compliance": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        },
+        "damping_angular": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        },
+        "damping_linear": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        },
+        "entity1": {
+          "type": {
+            "$ref": "#/$defs/bevy_ecs::entity::Entity"
+          }
+        },
+        "entity2": {
+          "type": {
+            "$ref": "#/$defs/bevy_ecs::entity::Entity"
+          }
+        },
+        "force": {
+          "type": {
+            "$ref": "#/$defs/glam::Vec3"
+          }
+        },
+        "local_anchor1": {
+          "type": {
+            "$ref": "#/$defs/glam::Vec3"
+          }
+        },
+        "local_anchor2": {
+          "type": {
+            "$ref": "#/$defs/glam::Vec3"
+          }
+        },
+        "position_lagrange": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        }
+      },
+      "required": [
+        "entity1",
+        "entity2",
+        "local_anchor1",
+        "local_anchor2",
+        "aligned_axis",
+        "damping_linear",
+        "damping_angular",
+        "position_lagrange",
+        "align_lagrange",
+        "angle_limit_lagrange",
+        "compliance",
+        "force",
+        "align_torque",
+        "angle_limit_torque"
+      ],
+      "short_name": "RevoluteJoint",
+      "type": "object",
+      "typeInfo": "Struct"
+    },
+    "avian3d::dynamics::solver::joints::spherical::SphericalJoint": {
+      "additionalProperties": false,
+      "isComponent": true,
+      "isResource": false,
+      "long_name": "avian3d::dynamics::solver::joints::spherical::SphericalJoint",
+      "properties": {
+        "compliance": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        },
+        "damping_angular": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        },
+        "damping_linear": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        },
+        "entity1": {
+          "type": {
+            "$ref": "#/$defs/bevy_ecs::entity::Entity"
+          }
+        },
+        "entity2": {
+          "type": {
+            "$ref": "#/$defs/bevy_ecs::entity::Entity"
+          }
+        },
+        "force": {
+          "type": {
+            "$ref": "#/$defs/glam::Vec3"
+          }
+        },
+        "local_anchor1": {
+          "type": {
+            "$ref": "#/$defs/glam::Vec3"
+          }
+        },
+        "local_anchor2": {
+          "type": {
+            "$ref": "#/$defs/glam::Vec3"
+          }
+        },
+        "position_lagrange": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        },
+        "swing_axis": {
+          "type": {
+            "$ref": "#/$defs/glam::Vec3"
+          }
+        },
+        "swing_lagrange": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        },
+        "swing_limit": {
+          "type": {
+            "$ref": "#/$defs/core::option::Option<avian3d::dynamics::solver::joints::AngleLimit>"
+          }
+        },
+        "swing_torque": {
+          "type": {
+            "$ref": "#/$defs/glam::Vec3"
+          }
+        },
+        "twist_axis": {
+          "type": {
+            "$ref": "#/$defs/glam::Vec3"
+          }
+        },
+        "twist_lagrange": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        },
+        "twist_limit": {
+          "type": {
+            "$ref": "#/$defs/core::option::Option<avian3d::dynamics::solver::joints::AngleLimit>"
+          }
+        },
+        "twist_torque": {
+          "type": {
+            "$ref": "#/$defs/glam::Vec3"
+          }
+        }
+      },
+      "required": [
+        "entity1",
+        "entity2",
+        "local_anchor1",
+        "local_anchor2",
+        "swing_axis",
+        "twist_axis",
+        "damping_linear",
+        "damping_angular",
+        "position_lagrange",
+        "swing_lagrange",
+        "twist_lagrange",
+        "compliance",
+        "force",
+        "swing_torque",
+        "twist_torque"
+      ],
+      "short_name": "SphericalJoint",
+      "type": "object",
+      "typeInfo": "Struct"
+    },
+    "avian3d::position::Position": {
+      "isComponent": true,
+      "isResource": false,
+      "items": false,
+      "long_name": "avian3d::position::Position",
+      "prefixItems": [
+        {
+          "type": {
+            "$ref": "#/$defs/glam::Vec3"
+          }
+        }
+      ],
+      "short_name": "Position",
+      "type": "array",
+      "typeInfo": "TupleStruct"
+    },
+    "avian3d::position::PreSolveAccumulatedTranslation": {
+      "isComponent": true,
+      "isResource": false,
+      "items": false,
+      "long_name": "avian3d::position::PreSolveAccumulatedTranslation",
+      "prefixItems": [
+        {
+          "type": {
+            "$ref": "#/$defs/glam::Vec3"
+          }
+        }
+      ],
+      "short_name": "PreSolveAccumulatedTranslation",
+      "type": "array",
+      "typeInfo": "TupleStruct"
+    },
+    "avian3d::position::PreviousRotation": {
+      "isComponent": true,
+      "isResource": false,
+      "items": false,
+      "long_name": "avian3d::position::PreviousRotation",
+      "prefixItems": [
+        {
+          "type": {
+            "$ref": "#/$defs/avian3d::position::Rotation"
+          }
+        }
+      ],
+      "short_name": "PreviousRotation",
+      "type": "array",
+      "typeInfo": "TupleStruct"
+    },
+    "avian3d::position::Rotation": {
+      "isComponent": true,
+      "isResource": false,
+      "items": false,
+      "long_name": "avian3d::position::Rotation",
+      "prefixItems": [
+        {
+          "type": {
+            "$ref": "#/$defs/glam::Quat"
+          }
+        }
+      ],
+      "short_name": "Rotation",
+      "type": "array",
+      "typeInfo": "TupleStruct"
+    },
+    "avian3d::prepare::PrepareConfig": {
+      "additionalProperties": false,
+      "isComponent": false,
+      "isResource": true,
+      "long_name": "avian3d::prepare::PrepareConfig",
+      "properties": {
+        "position_to_transform": {
+          "type": {
+            "$ref": "#/$defs/bool"
+          }
+        },
+        "transform_to_position": {
+          "type": {
+            "$ref": "#/$defs/bool"
+          }
+        }
+      },
+      "required": [
+        "position_to_transform",
+        "transform_to_position"
+      ],
+      "short_name": "PrepareConfig",
+      "type": "object",
+      "typeInfo": "Struct"
+    },
+    "avian3d::schedule::SubstepCount": {
+      "isComponent": false,
+      "isResource": true,
+      "items": false,
+      "long_name": "avian3d::schedule::SubstepCount",
+      "prefixItems": [
+        {
+          "type": {
+            "$ref": "#/$defs/u32"
+          }
+        }
+      ],
+      "short_name": "SubstepCount",
+      "type": "array",
+      "typeInfo": "TupleStruct"
+    },
+    "avian3d::schedule::time::Physics": {
+      "additionalProperties": false,
+      "isComponent": false,
+      "isResource": false,
+      "long_name": "avian3d::schedule::time::Physics",
+      "properties": {
+        "paused": {
+          "type": {
+            "$ref": "#/$defs/bool"
+          }
+        },
+        "relative_speed": {
+          "type": {
+            "$ref": "#/$defs/f64"
+          }
+        },
+        "timestep_mode": {
+          "type": {
+            "$ref": "#/$defs/avian3d::schedule::time::TimestepMode"
+          }
+        }
+      },
+      "required": [
+        "timestep_mode",
+        "paused",
+        "relative_speed"
+      ],
+      "short_name": "Physics",
+      "type": "object",
+      "typeInfo": "Struct"
+    },
+    "avian3d::schedule::time::Substeps": {
+      "additionalProperties": false,
+      "isComponent": false,
+      "isResource": false,
+      "long_name": "avian3d::schedule::time::Substeps",
+      "properties": {},
+      "required": [],
+      "short_name": "Substeps",
+      "type": "object",
+      "typeInfo": "Struct"
+    },
+    "avian3d::schedule::time::TimestepMode": {
+      "isComponent": false,
+      "isResource": false,
+      "long_name": "avian3d::schedule::time::TimestepMode",
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "long_name": "Fixed",
+          "properties": {
+            "delta": {
+              "long_name": "delta",
+              "type": {
+                "$ref": "#/$defs/bevy_utils::Duration"
+              }
+            },
+            "max_delta_overstep": {
+              "long_name": "max_delta_overstep",
+              "type": {
+                "$ref": "#/$defs/bevy_utils::Duration"
+              }
+            },
+            "overstep": {
+              "long_name": "overstep",
+              "type": {
+                "$ref": "#/$defs/bevy_utils::Duration"
+              }
+            }
+          },
+          "required": [
+            "delta",
+            "overstep",
+            "max_delta_overstep"
+          ],
+          "short_name": "Fixed",
+          "type": "object",
+          "typeInfo": "Struct"
+        },
+        {
+          "additionalProperties": false,
+          "long_name": "FixedOnce",
+          "properties": {
+            "delta": {
+              "long_name": "delta",
+              "type": {
+                "$ref": "#/$defs/bevy_utils::Duration"
+              }
+            }
+          },
+          "required": [
+            "delta"
+          ],
+          "short_name": "FixedOnce",
+          "type": "object",
+          "typeInfo": "Struct"
+        },
+        {
+          "additionalProperties": false,
+          "long_name": "Variable",
+          "properties": {
+            "max_delta": {
+              "long_name": "max_delta",
+              "type": {
+                "$ref": "#/$defs/bevy_utils::Duration"
+              }
+            }
+          },
+          "required": [
+            "max_delta"
+          ],
+          "short_name": "Variable",
+          "type": "object",
+          "typeInfo": "Struct"
+        }
+      ],
+      "short_name": "TimestepMode",
+      "type": "object",
+      "typeInfo": "Enum"
+    },
+    "avian3d::spatial_query::query_filter::SpatialQueryFilter": {
+      "additionalProperties": false,
+      "isComponent": false,
+      "isResource": false,
+      "long_name": "avian3d::spatial_query::query_filter::SpatialQueryFilter",
+      "properties": {
+        "excluded_entities": {
+          "type": {
+            "$ref": "#/$defs/bevy_utils::hashbrown::HashSet<bevy_ecs::entity::Entity, bevy_utils::hashbrown::hash_map::DefaultHashBuilder>"
+          }
+        },
+        "mask": {
+          "type": {
+            "$ref": "#/$defs/avian3d::collision::layers::LayerMask"
+          }
+        }
+      },
+      "required": [
+        "mask",
+        "excluded_entities"
+      ],
+      "short_name": "SpatialQueryFilter",
+      "type": "object",
+      "typeInfo": "Struct"
+    },
+    "avian3d::spatial_query::ray_caster::RayCaster": {
+      "additionalProperties": false,
+      "isComponent": true,
+      "isResource": false,
+      "long_name": "avian3d::spatial_query::ray_caster::RayCaster",
+      "properties": {
+        "direction": {
+          "type": {
+            "$ref": "#/$defs/bevy_math::direction::Dir3"
+          }
+        },
+        "enabled": {
+          "type": {
+            "$ref": "#/$defs/bool"
+          }
+        },
+        "global_direction": {
+          "type": {
+            "$ref": "#/$defs/bevy_math::direction::Dir3"
+          }
+        },
+        "global_origin": {
+          "type": {
+            "$ref": "#/$defs/glam::Vec3"
+          }
+        },
+        "ignore_self": {
+          "type": {
+            "$ref": "#/$defs/bool"
+          }
+        },
+        "max_hits": {
+          "type": {
+            "$ref": "#/$defs/u32"
+          }
+        },
+        "max_time_of_impact": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        },
+        "origin": {
+          "type": {
+            "$ref": "#/$defs/glam::Vec3"
+          }
+        },
+        "query_filter": {
+          "type": {
+            "$ref": "#/$defs/avian3d::spatial_query::query_filter::SpatialQueryFilter"
+          }
+        },
+        "solid": {
+          "type": {
+            "$ref": "#/$defs/bool"
+          }
+        }
+      },
+      "required": [
+        "enabled",
+        "origin",
+        "global_origin",
+        "direction",
+        "global_direction",
+        "max_time_of_impact",
+        "max_hits",
+        "solid",
+        "ignore_self",
+        "query_filter"
+      ],
+      "short_name": "RayCaster",
+      "type": "object",
+      "typeInfo": "Struct"
+    },
+    "avian3d::spatial_query::shape_caster::ShapeCaster": {
+      "additionalProperties": false,
+      "isComponent": true,
+      "isResource": false,
+      "long_name": "avian3d::spatial_query::shape_caster::ShapeCaster",
+      "properties": {
+        "direction": {
+          "type": {
+            "$ref": "#/$defs/bevy_math::direction::Dir3"
+          }
+        },
+        "enabled": {
+          "type": {
+            "$ref": "#/$defs/bool"
+          }
+        },
+        "global_direction": {
+          "type": {
+            "$ref": "#/$defs/bevy_math::direction::Dir3"
+          }
+        },
+        "global_origin": {
+          "type": {
+            "$ref": "#/$defs/glam::Vec3"
+          }
+        },
+        "global_shape_rotation": {
+          "type": {
+            "$ref": "#/$defs/glam::Quat"
+          }
+        },
+        "ignore_origin_penetration": {
+          "type": {
+            "$ref": "#/$defs/bool"
+          }
+        },
+        "ignore_self": {
+          "type": {
+            "$ref": "#/$defs/bool"
+          }
+        },
+        "max_hits": {
+          "type": {
+            "$ref": "#/$defs/u32"
+          }
+        },
+        "max_time_of_impact": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        },
+        "origin": {
+          "type": {
+            "$ref": "#/$defs/glam::Vec3"
+          }
+        },
+        "query_filter": {
+          "type": {
+            "$ref": "#/$defs/avian3d::spatial_query::query_filter::SpatialQueryFilter"
+          }
+        },
+        "shape_rotation": {
+          "type": {
+            "$ref": "#/$defs/glam::Quat"
+          }
+        }
+      },
+      "required": [
+        "enabled",
+        "origin",
+        "global_origin",
+        "shape_rotation",
+        "global_shape_rotation",
+        "direction",
+        "global_direction",
+        "max_time_of_impact",
+        "max_hits",
+        "ignore_origin_penetration",
+        "ignore_self",
+        "query_filter"
+      ],
+      "short_name": "ShapeCaster",
+      "type": "object",
+      "typeInfo": "Struct"
+    },
+    "avian3d::sync::PreviousGlobalTransform": {
+      "isComponent": true,
+      "isResource": false,
+      "items": false,
+      "long_name": "avian3d::sync::PreviousGlobalTransform",
+      "prefixItems": [
+        {
+          "type": {
+            "$ref": "#/$defs/bevy_transform::components::global_transform::GlobalTransform"
+          }
+        }
+      ],
+      "short_name": "PreviousGlobalTransform",
+      "type": "array",
+      "typeInfo": "TupleStruct"
+    },
+    "avian3d::sync::SyncConfig": {
+      "additionalProperties": false,
+      "isComponent": false,
+      "isResource": true,
+      "long_name": "avian3d::sync::SyncConfig",
+      "properties": {
+        "position_to_transform": {
+          "type": {
+            "$ref": "#/$defs/bool"
+          }
+        },
+        "transform_to_position": {
+          "type": {
+            "$ref": "#/$defs/bool"
+          }
+        }
+      },
+      "required": [
+        "position_to_transform",
+        "transform_to_position"
+      ],
+      "short_name": "SyncConfig",
+      "type": "object",
+      "typeInfo": "Struct"
+    },
+    "avian3d::sync::ancestor_marker::AncestorMarker<avian3d::collision::collider::backend::ColliderMarker>": {
+      "additionalProperties": false,
+      "isComponent": true,
+      "isResource": false,
+      "long_name": "avian3d::sync::ancestor_marker::AncestorMarker<avian3d::collision::collider::backend::ColliderMarker>",
+      "properties": {},
+      "required": [],
+      "short_name": "AncestorMarker<ColliderMarker>",
+      "type": "object",
+      "typeInfo": "Struct"
+    },
+    "avian3d::sync::ancestor_marker::AncestorMarker<avian3d::dynamics::rigid_body::RigidBody>": {
+      "additionalProperties": false,
+      "isComponent": true,
+      "isResource": false,
+      "long_name": "avian3d::sync::ancestor_marker::AncestorMarker<avian3d::dynamics::rigid_body::RigidBody>",
+      "properties": {},
+      "required": [],
+      "short_name": "AncestorMarker<RigidBody>",
+      "type": "object",
+      "typeInfo": "Struct"
     },
     "bevy_animation::AnimationClip": {
       "additionalProperties": false,
@@ -6751,6 +9405,22 @@
       "type": "string",
       "typeInfo": "Enum"
     },
+    "bevy_math::direction::Dir3": {
+      "isComponent": false,
+      "isResource": false,
+      "items": false,
+      "long_name": "bevy_math::direction::Dir3",
+      "prefixItems": [
+        {
+          "type": {
+            "$ref": "#/$defs/glam::Vec3"
+          }
+        }
+      ],
+      "short_name": "Dir3",
+      "type": "array",
+      "typeInfo": "TupleStruct"
+    },
     "bevy_math::rects::rect::Rect": {
       "additionalProperties": false,
       "isComponent": false,
@@ -9763,6 +12433,164 @@
       "type": "object",
       "typeInfo": "Struct"
     },
+    "bevy_time::time::Time<avian3d::schedule::time::Physics>": {
+      "additionalProperties": false,
+      "isComponent": false,
+      "isResource": true,
+      "long_name": "bevy_time::time::Time<avian3d::schedule::time::Physics>",
+      "properties": {
+        "context": {
+          "type": {
+            "$ref": "#/$defs/avian3d::schedule::time::Physics"
+          }
+        },
+        "delta": {
+          "type": {
+            "$ref": "#/$defs/bevy_utils::Duration"
+          }
+        },
+        "delta_seconds": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        },
+        "delta_seconds_f64": {
+          "type": {
+            "$ref": "#/$defs/f64"
+          }
+        },
+        "elapsed": {
+          "type": {
+            "$ref": "#/$defs/bevy_utils::Duration"
+          }
+        },
+        "elapsed_seconds": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        },
+        "elapsed_seconds_f64": {
+          "type": {
+            "$ref": "#/$defs/f64"
+          }
+        },
+        "elapsed_seconds_wrapped": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        },
+        "elapsed_seconds_wrapped_f64": {
+          "type": {
+            "$ref": "#/$defs/f64"
+          }
+        },
+        "elapsed_wrapped": {
+          "type": {
+            "$ref": "#/$defs/bevy_utils::Duration"
+          }
+        },
+        "wrap_period": {
+          "type": {
+            "$ref": "#/$defs/bevy_utils::Duration"
+          }
+        }
+      },
+      "required": [
+        "context",
+        "wrap_period",
+        "delta",
+        "delta_seconds",
+        "delta_seconds_f64",
+        "elapsed",
+        "elapsed_seconds",
+        "elapsed_seconds_f64",
+        "elapsed_wrapped",
+        "elapsed_seconds_wrapped",
+        "elapsed_seconds_wrapped_f64"
+      ],
+      "short_name": "Time<Physics>",
+      "type": "object",
+      "typeInfo": "Struct"
+    },
+    "bevy_time::time::Time<avian3d::schedule::time::Substeps>": {
+      "additionalProperties": false,
+      "isComponent": false,
+      "isResource": true,
+      "long_name": "bevy_time::time::Time<avian3d::schedule::time::Substeps>",
+      "properties": {
+        "context": {
+          "type": {
+            "$ref": "#/$defs/avian3d::schedule::time::Substeps"
+          }
+        },
+        "delta": {
+          "type": {
+            "$ref": "#/$defs/bevy_utils::Duration"
+          }
+        },
+        "delta_seconds": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        },
+        "delta_seconds_f64": {
+          "type": {
+            "$ref": "#/$defs/f64"
+          }
+        },
+        "elapsed": {
+          "type": {
+            "$ref": "#/$defs/bevy_utils::Duration"
+          }
+        },
+        "elapsed_seconds": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        },
+        "elapsed_seconds_f64": {
+          "type": {
+            "$ref": "#/$defs/f64"
+          }
+        },
+        "elapsed_seconds_wrapped": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        },
+        "elapsed_seconds_wrapped_f64": {
+          "type": {
+            "$ref": "#/$defs/f64"
+          }
+        },
+        "elapsed_wrapped": {
+          "type": {
+            "$ref": "#/$defs/bevy_utils::Duration"
+          }
+        },
+        "wrap_period": {
+          "type": {
+            "$ref": "#/$defs/bevy_utils::Duration"
+          }
+        }
+      },
+      "required": [
+        "context",
+        "wrap_period",
+        "delta",
+        "delta_seconds",
+        "delta_seconds_f64",
+        "elapsed",
+        "elapsed_seconds",
+        "elapsed_seconds_f64",
+        "elapsed_wrapped",
+        "elapsed_seconds_wrapped",
+        "elapsed_seconds_wrapped_f64"
+      ],
+      "short_name": "Time<Substeps>",
+      "type": "object",
+      "typeInfo": "Struct"
+    },
     "bevy_time::time::Time<bevy_time::fixed::Fixed>": {
       "additionalProperties": false,
       "isComponent": false,
@@ -9997,164 +12825,6 @@
         "elapsed_seconds_wrapped_f64"
       ],
       "short_name": "Time<Virtual>",
-      "type": "object",
-      "typeInfo": "Struct"
-    },
-    "bevy_time::time::Time<bevy_xpbd_3d::plugins::setup::time::Physics>": {
-      "additionalProperties": false,
-      "isComponent": false,
-      "isResource": true,
-      "long_name": "bevy_time::time::Time<bevy_xpbd_3d::plugins::setup::time::Physics>",
-      "properties": {
-        "context": {
-          "type": {
-            "$ref": "#/$defs/bevy_xpbd_3d::plugins::setup::time::Physics"
-          }
-        },
-        "delta": {
-          "type": {
-            "$ref": "#/$defs/bevy_utils::Duration"
-          }
-        },
-        "delta_seconds": {
-          "type": {
-            "$ref": "#/$defs/f32"
-          }
-        },
-        "delta_seconds_f64": {
-          "type": {
-            "$ref": "#/$defs/f64"
-          }
-        },
-        "elapsed": {
-          "type": {
-            "$ref": "#/$defs/bevy_utils::Duration"
-          }
-        },
-        "elapsed_seconds": {
-          "type": {
-            "$ref": "#/$defs/f32"
-          }
-        },
-        "elapsed_seconds_f64": {
-          "type": {
-            "$ref": "#/$defs/f64"
-          }
-        },
-        "elapsed_seconds_wrapped": {
-          "type": {
-            "$ref": "#/$defs/f32"
-          }
-        },
-        "elapsed_seconds_wrapped_f64": {
-          "type": {
-            "$ref": "#/$defs/f64"
-          }
-        },
-        "elapsed_wrapped": {
-          "type": {
-            "$ref": "#/$defs/bevy_utils::Duration"
-          }
-        },
-        "wrap_period": {
-          "type": {
-            "$ref": "#/$defs/bevy_utils::Duration"
-          }
-        }
-      },
-      "required": [
-        "context",
-        "wrap_period",
-        "delta",
-        "delta_seconds",
-        "delta_seconds_f64",
-        "elapsed",
-        "elapsed_seconds",
-        "elapsed_seconds_f64",
-        "elapsed_wrapped",
-        "elapsed_seconds_wrapped",
-        "elapsed_seconds_wrapped_f64"
-      ],
-      "short_name": "Time<Physics>",
-      "type": "object",
-      "typeInfo": "Struct"
-    },
-    "bevy_time::time::Time<bevy_xpbd_3d::plugins::setup::time::Substeps>": {
-      "additionalProperties": false,
-      "isComponent": false,
-      "isResource": true,
-      "long_name": "bevy_time::time::Time<bevy_xpbd_3d::plugins::setup::time::Substeps>",
-      "properties": {
-        "context": {
-          "type": {
-            "$ref": "#/$defs/bevy_xpbd_3d::plugins::setup::time::Substeps"
-          }
-        },
-        "delta": {
-          "type": {
-            "$ref": "#/$defs/bevy_utils::Duration"
-          }
-        },
-        "delta_seconds": {
-          "type": {
-            "$ref": "#/$defs/f32"
-          }
-        },
-        "delta_seconds_f64": {
-          "type": {
-            "$ref": "#/$defs/f64"
-          }
-        },
-        "elapsed": {
-          "type": {
-            "$ref": "#/$defs/bevy_utils::Duration"
-          }
-        },
-        "elapsed_seconds": {
-          "type": {
-            "$ref": "#/$defs/f32"
-          }
-        },
-        "elapsed_seconds_f64": {
-          "type": {
-            "$ref": "#/$defs/f64"
-          }
-        },
-        "elapsed_seconds_wrapped": {
-          "type": {
-            "$ref": "#/$defs/f32"
-          }
-        },
-        "elapsed_seconds_wrapped_f64": {
-          "type": {
-            "$ref": "#/$defs/f64"
-          }
-        },
-        "elapsed_wrapped": {
-          "type": {
-            "$ref": "#/$defs/bevy_utils::Duration"
-          }
-        },
-        "wrap_period": {
-          "type": {
-            "$ref": "#/$defs/bevy_utils::Duration"
-          }
-        }
-      },
-      "required": [
-        "context",
-        "wrap_period",
-        "delta",
-        "delta_seconds",
-        "delta_seconds_f64",
-        "elapsed",
-        "elapsed_seconds",
-        "elapsed_seconds_f64",
-        "elapsed_wrapped",
-        "elapsed_seconds_wrapped",
-        "elapsed_seconds_wrapped_f64"
-      ],
-      "short_name": "Time<Substeps>",
       "type": "object",
       "typeInfo": "Struct"
     },
@@ -11482,6 +14152,24 @@
       "valueType": {
         "type": {
           "$ref": "#/$defs/bevy_utils::hashbrown::HashMap<u32, alloc::vec::Vec<alloc::string::String>, bevy_utils::hashbrown::hash_map::DefaultHashBuilder>"
+        }
+      }
+    },
+    "bevy_utils::hashbrown::HashMap<alloc::string::String, core::option::Option<avian3d::collision::collider::constructor::ColliderConstructorHierarchyConfig>, bevy_utils::hashbrown::hash_map::DefaultHashBuilder>": {
+      "isComponent": false,
+      "isResource": false,
+      "keyType": {
+        "type": {
+          "$ref": "#/$defs/alloc::string::String"
+        }
+      },
+      "long_name": "bevy_utils::hashbrown::HashMap<alloc::string::String, core::option::Option<avian3d::collision::collider::constructor::ColliderConstructorHierarchyConfig>, bevy_utils::hashbrown::hash_map::DefaultHashBuilder>",
+      "short_name": "HashMap<String, Option<ColliderConstructorHierarchyConfig>, DefaultHashBuilder>",
+      "type": "object",
+      "typeInfo": "Map",
+      "valueType": {
+        "type": {
+          "$ref": "#/$defs/core::option::Option<avian3d::collision::collider::constructor::ColliderConstructorHierarchyConfig>"
         }
       }
     },
@@ -12892,1130 +15580,6 @@
       "type": "string",
       "typeInfo": "Enum"
     },
-    "bevy_xpbd_3d::components::AccumulatedTranslation": {
-      "isComponent": true,
-      "isResource": false,
-      "items": false,
-      "long_name": "bevy_xpbd_3d::components::AccumulatedTranslation",
-      "prefixItems": [
-        {
-          "type": {
-            "$ref": "#/$defs/glam::Vec3"
-          }
-        }
-      ],
-      "short_name": "AccumulatedTranslation",
-      "type": "array",
-      "typeInfo": "TupleStruct"
-    },
-    "bevy_xpbd_3d::components::AngularDamping": {
-      "isComponent": true,
-      "isResource": false,
-      "items": false,
-      "long_name": "bevy_xpbd_3d::components::AngularDamping",
-      "prefixItems": [
-        {
-          "type": {
-            "$ref": "#/$defs/f32"
-          }
-        }
-      ],
-      "short_name": "AngularDamping",
-      "type": "array",
-      "typeInfo": "TupleStruct"
-    },
-    "bevy_xpbd_3d::components::AngularVelocity": {
-      "isComponent": true,
-      "isResource": false,
-      "items": false,
-      "long_name": "bevy_xpbd_3d::components::AngularVelocity",
-      "prefixItems": [
-        {
-          "type": {
-            "$ref": "#/$defs/glam::Vec3"
-          }
-        }
-      ],
-      "short_name": "AngularVelocity",
-      "type": "array",
-      "typeInfo": "TupleStruct"
-    },
-    "bevy_xpbd_3d::components::CoefficientCombine": {
-      "isComponent": false,
-      "isResource": false,
-      "long_name": "bevy_xpbd_3d::components::CoefficientCombine",
-      "oneOf": [
-        "Average",
-        "Min",
-        "Multiply",
-        "Max"
-      ],
-      "short_name": "CoefficientCombine",
-      "type": "string",
-      "typeInfo": "Enum"
-    },
-    "bevy_xpbd_3d::components::Dominance": {
-      "isComponent": true,
-      "isResource": false,
-      "items": false,
-      "long_name": "bevy_xpbd_3d::components::Dominance",
-      "prefixItems": [
-        {
-          "type": {
-            "$ref": "#/$defs/i8"
-          }
-        }
-      ],
-      "short_name": "Dominance",
-      "type": "array",
-      "typeInfo": "TupleStruct"
-    },
-    "bevy_xpbd_3d::components::Friction": {
-      "additionalProperties": false,
-      "isComponent": true,
-      "isResource": false,
-      "long_name": "bevy_xpbd_3d::components::Friction",
-      "properties": {
-        "combine_rule": {
-          "type": {
-            "$ref": "#/$defs/bevy_xpbd_3d::components::CoefficientCombine"
-          }
-        },
-        "dynamic_coefficient": {
-          "type": {
-            "$ref": "#/$defs/f32"
-          }
-        },
-        "static_coefficient": {
-          "type": {
-            "$ref": "#/$defs/f32"
-          }
-        }
-      },
-      "required": [
-        "dynamic_coefficient",
-        "static_coefficient",
-        "combine_rule"
-      ],
-      "short_name": "Friction",
-      "type": "object",
-      "typeInfo": "Struct"
-    },
-    "bevy_xpbd_3d::components::GravityScale": {
-      "isComponent": true,
-      "isResource": false,
-      "items": false,
-      "long_name": "bevy_xpbd_3d::components::GravityScale",
-      "prefixItems": [
-        {
-          "type": {
-            "$ref": "#/$defs/f32"
-          }
-        }
-      ],
-      "short_name": "GravityScale",
-      "type": "array",
-      "typeInfo": "TupleStruct"
-    },
-    "bevy_xpbd_3d::components::LinearDamping": {
-      "isComponent": true,
-      "isResource": false,
-      "items": false,
-      "long_name": "bevy_xpbd_3d::components::LinearDamping",
-      "prefixItems": [
-        {
-          "type": {
-            "$ref": "#/$defs/f32"
-          }
-        }
-      ],
-      "short_name": "LinearDamping",
-      "type": "array",
-      "typeInfo": "TupleStruct"
-    },
-    "bevy_xpbd_3d::components::LinearVelocity": {
-      "isComponent": true,
-      "isResource": false,
-      "items": false,
-      "long_name": "bevy_xpbd_3d::components::LinearVelocity",
-      "prefixItems": [
-        {
-          "type": {
-            "$ref": "#/$defs/glam::Vec3"
-          }
-        }
-      ],
-      "short_name": "LinearVelocity",
-      "type": "array",
-      "typeInfo": "TupleStruct"
-    },
-    "bevy_xpbd_3d::components::Position": {
-      "isComponent": true,
-      "isResource": false,
-      "items": false,
-      "long_name": "bevy_xpbd_3d::components::Position",
-      "prefixItems": [
-        {
-          "type": {
-            "$ref": "#/$defs/glam::Vec3"
-          }
-        }
-      ],
-      "short_name": "Position",
-      "type": "array",
-      "typeInfo": "TupleStruct"
-    },
-    "bevy_xpbd_3d::components::PreSolveAngularVelocity": {
-      "isComponent": true,
-      "isResource": false,
-      "items": false,
-      "long_name": "bevy_xpbd_3d::components::PreSolveAngularVelocity",
-      "prefixItems": [
-        {
-          "type": {
-            "$ref": "#/$defs/glam::Vec3"
-          }
-        }
-      ],
-      "short_name": "PreSolveAngularVelocity",
-      "type": "array",
-      "typeInfo": "TupleStruct"
-    },
-    "bevy_xpbd_3d::components::PreSolveLinearVelocity": {
-      "isComponent": true,
-      "isResource": false,
-      "items": false,
-      "long_name": "bevy_xpbd_3d::components::PreSolveLinearVelocity",
-      "prefixItems": [
-        {
-          "type": {
-            "$ref": "#/$defs/glam::Vec3"
-          }
-        }
-      ],
-      "short_name": "PreSolveLinearVelocity",
-      "type": "array",
-      "typeInfo": "TupleStruct"
-    },
-    "bevy_xpbd_3d::components::PreviousPosition": {
-      "isComponent": true,
-      "isResource": false,
-      "items": false,
-      "long_name": "bevy_xpbd_3d::components::PreviousPosition",
-      "prefixItems": [
-        {
-          "type": {
-            "$ref": "#/$defs/glam::Vec3"
-          }
-        }
-      ],
-      "short_name": "PreviousPosition",
-      "type": "array",
-      "typeInfo": "TupleStruct"
-    },
-    "bevy_xpbd_3d::components::Restitution": {
-      "additionalProperties": false,
-      "isComponent": true,
-      "isResource": false,
-      "long_name": "bevy_xpbd_3d::components::Restitution",
-      "properties": {
-        "coefficient": {
-          "type": {
-            "$ref": "#/$defs/f32"
-          }
-        },
-        "combine_rule": {
-          "type": {
-            "$ref": "#/$defs/bevy_xpbd_3d::components::CoefficientCombine"
-          }
-        }
-      },
-      "required": [
-        "coefficient",
-        "combine_rule"
-      ],
-      "short_name": "Restitution",
-      "type": "object",
-      "typeInfo": "Struct"
-    },
-    "bevy_xpbd_3d::components::RigidBody": {
-      "isComponent": true,
-      "isResource": false,
-      "long_name": "bevy_xpbd_3d::components::RigidBody",
-      "oneOf": [
-        "Dynamic",
-        "Static",
-        "Kinematic"
-      ],
-      "short_name": "RigidBody",
-      "type": "string",
-      "typeInfo": "Enum"
-    },
-    "bevy_xpbd_3d::components::Sleeping": {
-      "additionalProperties": false,
-      "isComponent": true,
-      "isResource": false,
-      "long_name": "bevy_xpbd_3d::components::Sleeping",
-      "properties": {},
-      "required": [],
-      "short_name": "Sleeping",
-      "type": "object",
-      "typeInfo": "Struct"
-    },
-    "bevy_xpbd_3d::components::SleepingDisabled": {
-      "additionalProperties": false,
-      "isComponent": true,
-      "isResource": false,
-      "long_name": "bevy_xpbd_3d::components::SleepingDisabled",
-      "properties": {},
-      "required": [],
-      "short_name": "SleepingDisabled",
-      "type": "object",
-      "typeInfo": "Struct"
-    },
-    "bevy_xpbd_3d::components::TimeSleeping": {
-      "isComponent": true,
-      "isResource": false,
-      "items": false,
-      "long_name": "bevy_xpbd_3d::components::TimeSleeping",
-      "prefixItems": [
-        {
-          "type": {
-            "$ref": "#/$defs/f32"
-          }
-        }
-      ],
-      "short_name": "TimeSleeping",
-      "type": "array",
-      "typeInfo": "TupleStruct"
-    },
-    "bevy_xpbd_3d::components::forces::ExternalAngularImpulse": {
-      "additionalProperties": false,
-      "isComponent": true,
-      "isResource": false,
-      "long_name": "bevy_xpbd_3d::components::forces::ExternalAngularImpulse",
-      "properties": {
-        "impulse": {
-          "type": {
-            "$ref": "#/$defs/glam::Vec3"
-          }
-        },
-        "persistent": {
-          "type": {
-            "$ref": "#/$defs/bool"
-          }
-        }
-      },
-      "required": [
-        "impulse",
-        "persistent"
-      ],
-      "short_name": "ExternalAngularImpulse",
-      "type": "object",
-      "typeInfo": "Struct"
-    },
-    "bevy_xpbd_3d::components::forces::ExternalForce": {
-      "additionalProperties": false,
-      "isComponent": true,
-      "isResource": false,
-      "long_name": "bevy_xpbd_3d::components::forces::ExternalForce",
-      "properties": {
-        "force": {
-          "type": {
-            "$ref": "#/$defs/glam::Vec3"
-          }
-        },
-        "persistent": {
-          "type": {
-            "$ref": "#/$defs/bool"
-          }
-        },
-        "torque": {
-          "type": {
-            "$ref": "#/$defs/glam::Vec3"
-          }
-        }
-      },
-      "required": [
-        "force",
-        "persistent",
-        "torque"
-      ],
-      "short_name": "ExternalForce",
-      "type": "object",
-      "typeInfo": "Struct"
-    },
-    "bevy_xpbd_3d::components::forces::ExternalImpulse": {
-      "additionalProperties": false,
-      "isComponent": true,
-      "isResource": false,
-      "long_name": "bevy_xpbd_3d::components::forces::ExternalImpulse",
-      "properties": {
-        "angular_impulse": {
-          "type": {
-            "$ref": "#/$defs/glam::Vec3"
-          }
-        },
-        "impulse": {
-          "type": {
-            "$ref": "#/$defs/glam::Vec3"
-          }
-        },
-        "persistent": {
-          "type": {
-            "$ref": "#/$defs/bool"
-          }
-        }
-      },
-      "required": [
-        "impulse",
-        "persistent",
-        "angular_impulse"
-      ],
-      "short_name": "ExternalImpulse",
-      "type": "object",
-      "typeInfo": "Struct"
-    },
-    "bevy_xpbd_3d::components::forces::ExternalTorque": {
-      "additionalProperties": false,
-      "isComponent": true,
-      "isResource": false,
-      "long_name": "bevy_xpbd_3d::components::forces::ExternalTorque",
-      "properties": {
-        "persistent": {
-          "type": {
-            "$ref": "#/$defs/bool"
-          }
-        },
-        "torque": {
-          "type": {
-            "$ref": "#/$defs/glam::Vec3"
-          }
-        }
-      },
-      "required": [
-        "torque",
-        "persistent"
-      ],
-      "short_name": "ExternalTorque",
-      "type": "object",
-      "typeInfo": "Struct"
-    },
-    "bevy_xpbd_3d::components::layers::CollisionLayers": {
-      "additionalProperties": false,
-      "isComponent": true,
-      "isResource": false,
-      "long_name": "bevy_xpbd_3d::components::layers::CollisionLayers",
-      "properties": {
-        "filters": {
-          "type": {
-            "$ref": "#/$defs/bevy_xpbd_3d::components::layers::LayerMask"
-          }
-        },
-        "memberships": {
-          "type": {
-            "$ref": "#/$defs/bevy_xpbd_3d::components::layers::LayerMask"
-          }
-        }
-      },
-      "required": [
-        "memberships",
-        "filters"
-      ],
-      "short_name": "CollisionLayers",
-      "type": "object",
-      "typeInfo": "Struct"
-    },
-    "bevy_xpbd_3d::components::layers::LayerMask": {
-      "isComponent": false,
-      "isResource": false,
-      "items": false,
-      "long_name": "bevy_xpbd_3d::components::layers::LayerMask",
-      "prefixItems": [
-        {
-          "type": {
-            "$ref": "#/$defs/u32"
-          }
-        }
-      ],
-      "short_name": "LayerMask",
-      "type": "array",
-      "typeInfo": "TupleStruct"
-    },
-    "bevy_xpbd_3d::components::locked_axes::LockedAxes": {
-      "isComponent": true,
-      "isResource": false,
-      "items": false,
-      "long_name": "bevy_xpbd_3d::components::locked_axes::LockedAxes",
-      "prefixItems": [
-        {
-          "type": {
-            "$ref": "#/$defs/u8"
-          }
-        }
-      ],
-      "short_name": "LockedAxes",
-      "type": "array",
-      "typeInfo": "TupleStruct"
-    },
-    "bevy_xpbd_3d::components::mass_properties::CenterOfMass": {
-      "isComponent": true,
-      "isResource": false,
-      "items": false,
-      "long_name": "bevy_xpbd_3d::components::mass_properties::CenterOfMass",
-      "prefixItems": [
-        {
-          "type": {
-            "$ref": "#/$defs/glam::Vec3"
-          }
-        }
-      ],
-      "short_name": "CenterOfMass",
-      "type": "array",
-      "typeInfo": "TupleStruct"
-    },
-    "bevy_xpbd_3d::components::mass_properties::ColliderDensity": {
-      "isComponent": true,
-      "isResource": false,
-      "items": false,
-      "long_name": "bevy_xpbd_3d::components::mass_properties::ColliderDensity",
-      "prefixItems": [
-        {
-          "type": {
-            "$ref": "#/$defs/f32"
-          }
-        }
-      ],
-      "short_name": "ColliderDensity",
-      "type": "array",
-      "typeInfo": "TupleStruct"
-    },
-    "bevy_xpbd_3d::components::mass_properties::ColliderMassProperties": {
-      "additionalProperties": false,
-      "isComponent": true,
-      "isResource": false,
-      "long_name": "bevy_xpbd_3d::components::mass_properties::ColliderMassProperties",
-      "properties": {
-        "center_of_mass": {
-          "type": {
-            "$ref": "#/$defs/bevy_xpbd_3d::components::mass_properties::CenterOfMass"
-          }
-        },
-        "inertia": {
-          "type": {
-            "$ref": "#/$defs/bevy_xpbd_3d::components::mass_properties::Inertia"
-          }
-        },
-        "inverse_inertia": {
-          "type": {
-            "$ref": "#/$defs/bevy_xpbd_3d::components::mass_properties::InverseInertia"
-          }
-        },
-        "inverse_mass": {
-          "type": {
-            "$ref": "#/$defs/bevy_xpbd_3d::components::mass_properties::InverseMass"
-          }
-        },
-        "mass": {
-          "type": {
-            "$ref": "#/$defs/bevy_xpbd_3d::components::mass_properties::Mass"
-          }
-        }
-      },
-      "required": [
-        "mass",
-        "inverse_mass",
-        "inertia",
-        "inverse_inertia",
-        "center_of_mass"
-      ],
-      "short_name": "ColliderMassProperties",
-      "type": "object",
-      "typeInfo": "Struct"
-    },
-    "bevy_xpbd_3d::components::mass_properties::Inertia": {
-      "isComponent": true,
-      "isResource": false,
-      "items": false,
-      "long_name": "bevy_xpbd_3d::components::mass_properties::Inertia",
-      "prefixItems": [
-        {
-          "type": {
-            "$ref": "#/$defs/glam::Mat3"
-          }
-        }
-      ],
-      "short_name": "Inertia",
-      "type": "array",
-      "typeInfo": "TupleStruct"
-    },
-    "bevy_xpbd_3d::components::mass_properties::InverseInertia": {
-      "isComponent": true,
-      "isResource": false,
-      "items": false,
-      "long_name": "bevy_xpbd_3d::components::mass_properties::InverseInertia",
-      "prefixItems": [
-        {
-          "type": {
-            "$ref": "#/$defs/glam::Mat3"
-          }
-        }
-      ],
-      "short_name": "InverseInertia",
-      "type": "array",
-      "typeInfo": "TupleStruct"
-    },
-    "bevy_xpbd_3d::components::mass_properties::InverseMass": {
-      "isComponent": true,
-      "isResource": false,
-      "items": false,
-      "long_name": "bevy_xpbd_3d::components::mass_properties::InverseMass",
-      "prefixItems": [
-        {
-          "type": {
-            "$ref": "#/$defs/f32"
-          }
-        }
-      ],
-      "short_name": "InverseMass",
-      "type": "array",
-      "typeInfo": "TupleStruct"
-    },
-    "bevy_xpbd_3d::components::mass_properties::Mass": {
-      "isComponent": true,
-      "isResource": false,
-      "items": false,
-      "long_name": "bevy_xpbd_3d::components::mass_properties::Mass",
-      "prefixItems": [
-        {
-          "type": {
-            "$ref": "#/$defs/f32"
-          }
-        }
-      ],
-      "short_name": "Mass",
-      "type": "array",
-      "typeInfo": "TupleStruct"
-    },
-    "bevy_xpbd_3d::components::rotation::PreviousRotation": {
-      "isComponent": true,
-      "isResource": false,
-      "items": false,
-      "long_name": "bevy_xpbd_3d::components::rotation::PreviousRotation",
-      "prefixItems": [
-        {
-          "type": {
-            "$ref": "#/$defs/bevy_xpbd_3d::components::rotation::Rotation"
-          }
-        }
-      ],
-      "short_name": "PreviousRotation",
-      "type": "array",
-      "typeInfo": "TupleStruct"
-    },
-    "bevy_xpbd_3d::components::rotation::Rotation": {
-      "isComponent": true,
-      "isResource": false,
-      "items": false,
-      "long_name": "bevy_xpbd_3d::components::rotation::Rotation",
-      "prefixItems": [
-        {
-          "type": {
-            "$ref": "#/$defs/glam::Quat"
-          }
-        }
-      ],
-      "short_name": "Rotation",
-      "type": "array",
-      "typeInfo": "TupleStruct"
-    },
-    "bevy_xpbd_3d::constraints::joints::DistanceLimit": {
-      "additionalProperties": false,
-      "isComponent": false,
-      "isResource": false,
-      "long_name": "bevy_xpbd_3d::constraints::joints::DistanceLimit",
-      "properties": {
-        "max": {
-          "type": {
-            "$ref": "#/$defs/f32"
-          }
-        },
-        "min": {
-          "type": {
-            "$ref": "#/$defs/f32"
-          }
-        }
-      },
-      "required": [
-        "min",
-        "max"
-      ],
-      "short_name": "DistanceLimit",
-      "type": "object",
-      "typeInfo": "Struct"
-    },
-    "bevy_xpbd_3d::constraints::joints::distance::DistanceJoint": {
-      "additionalProperties": false,
-      "isComponent": false,
-      "isResource": false,
-      "long_name": "bevy_xpbd_3d::constraints::joints::distance::DistanceJoint",
-      "properties": {
-        "compliance": {
-          "type": {
-            "$ref": "#/$defs/f32"
-          }
-        },
-        "damping_angular": {
-          "type": {
-            "$ref": "#/$defs/f32"
-          }
-        },
-        "damping_linear": {
-          "type": {
-            "$ref": "#/$defs/f32"
-          }
-        },
-        "entity1": {
-          "type": {
-            "$ref": "#/$defs/bevy_ecs::entity::Entity"
-          }
-        },
-        "entity2": {
-          "type": {
-            "$ref": "#/$defs/bevy_ecs::entity::Entity"
-          }
-        },
-        "force": {
-          "type": {
-            "$ref": "#/$defs/glam::Vec3"
-          }
-        },
-        "lagrange": {
-          "type": {
-            "$ref": "#/$defs/f32"
-          }
-        },
-        "length_limits": {
-          "type": {
-            "$ref": "#/$defs/core::option::Option<bevy_xpbd_3d::constraints::joints::DistanceLimit>"
-          }
-        },
-        "local_anchor1": {
-          "type": {
-            "$ref": "#/$defs/glam::Vec3"
-          }
-        },
-        "local_anchor2": {
-          "type": {
-            "$ref": "#/$defs/glam::Vec3"
-          }
-        },
-        "rest_length": {
-          "type": {
-            "$ref": "#/$defs/f32"
-          }
-        }
-      },
-      "required": [
-        "entity1",
-        "entity2",
-        "local_anchor1",
-        "local_anchor2",
-        "rest_length",
-        "damping_linear",
-        "damping_angular",
-        "lagrange",
-        "compliance",
-        "force"
-      ],
-      "short_name": "DistanceJoint",
-      "type": "object",
-      "typeInfo": "Struct"
-    },
-    "bevy_xpbd_3d::plugins::collision::broad_phase::BroadCollisionPairs": {
-      "isComponent": false,
-      "isResource": true,
-      "items": false,
-      "long_name": "bevy_xpbd_3d::plugins::collision::broad_phase::BroadCollisionPairs",
-      "prefixItems": [
-        {
-          "type": {
-            "$ref": "#/$defs/alloc::vec::Vec<(bevy_ecs::entity::Entity, bevy_ecs::entity::Entity)>"
-          }
-        }
-      ],
-      "short_name": "BroadCollisionPairs",
-      "type": "array",
-      "typeInfo": "TupleStruct"
-    },
-    "bevy_xpbd_3d::plugins::collision::collider::ColliderParent": {
-      "isComponent": false,
-      "isResource": false,
-      "items": false,
-      "long_name": "bevy_xpbd_3d::plugins::collision::collider::ColliderParent",
-      "prefixItems": [
-        {
-          "type": {
-            "$ref": "#/$defs/bevy_ecs::entity::Entity"
-          }
-        }
-      ],
-      "short_name": "ColliderParent",
-      "type": "array",
-      "typeInfo": "TupleStruct"
-    },
-    "bevy_xpbd_3d::plugins::collision::collider::ColliderTransform": {
-      "additionalProperties": false,
-      "isComponent": false,
-      "isResource": false,
-      "long_name": "bevy_xpbd_3d::plugins::collision::collider::ColliderTransform",
-      "properties": {
-        "rotation": {
-          "type": {
-            "$ref": "#/$defs/bevy_xpbd_3d::components::rotation::Rotation"
-          }
-        },
-        "scale": {
-          "type": {
-            "$ref": "#/$defs/glam::Vec3"
-          }
-        },
-        "translation": {
-          "type": {
-            "$ref": "#/$defs/glam::Vec3"
-          }
-        }
-      },
-      "required": [
-        "translation",
-        "rotation",
-        "scale"
-      ],
-      "short_name": "ColliderTransform",
-      "type": "object",
-      "typeInfo": "Struct"
-    },
-    "bevy_xpbd_3d::plugins::collision::collider::CollidingEntities": {
-      "isComponent": true,
-      "isResource": false,
-      "items": false,
-      "long_name": "bevy_xpbd_3d::plugins::collision::collider::CollidingEntities",
-      "prefixItems": [
-        {
-          "type": {
-            "$ref": "#/$defs/bevy_utils::hashbrown::HashSet<bevy_ecs::entity::Entity, bevy_utils::hashbrown::hash_map::DefaultHashBuilder>"
-          }
-        }
-      ],
-      "short_name": "CollidingEntities",
-      "type": "array",
-      "typeInfo": "TupleStruct"
-    },
-    "bevy_xpbd_3d::plugins::collision::collider::Sensor": {
-      "additionalProperties": false,
-      "isComponent": true,
-      "isResource": false,
-      "long_name": "bevy_xpbd_3d::plugins::collision::collider::Sensor",
-      "properties": {},
-      "required": [],
-      "short_name": "Sensor",
-      "type": "object",
-      "typeInfo": "Struct"
-    },
-    "bevy_xpbd_3d::plugins::collision::collider::hierarchy::PreviousColliderTransform": {
-      "isComponent": true,
-      "isResource": false,
-      "items": false,
-      "long_name": "bevy_xpbd_3d::plugins::collision::collider::hierarchy::PreviousColliderTransform",
-      "prefixItems": [
-        {
-          "type": {
-            "$ref": "#/$defs/bevy_xpbd_3d::plugins::collision::collider::ColliderTransform"
-          }
-        }
-      ],
-      "short_name": "PreviousColliderTransform",
-      "type": "array",
-      "typeInfo": "TupleStruct"
-    },
-    "bevy_xpbd_3d::plugins::collision::narrow_phase::NarrowPhaseConfig": {
-      "additionalProperties": false,
-      "isComponent": false,
-      "isResource": true,
-      "long_name": "bevy_xpbd_3d::plugins::collision::narrow_phase::NarrowPhaseConfig",
-      "properties": {
-        "prediction_distance": {
-          "type": {
-            "$ref": "#/$defs/f32"
-          }
-        }
-      },
-      "required": [
-        "prediction_distance"
-      ],
-      "short_name": "NarrowPhaseConfig",
-      "type": "object",
-      "typeInfo": "Struct"
-    },
-    "bevy_xpbd_3d::plugins::prepare::PrepareConfig": {
-      "additionalProperties": false,
-      "isComponent": false,
-      "isResource": true,
-      "long_name": "bevy_xpbd_3d::plugins::prepare::PrepareConfig",
-      "properties": {
-        "position_to_transform": {
-          "type": {
-            "$ref": "#/$defs/bool"
-          }
-        },
-        "transform_to_position": {
-          "type": {
-            "$ref": "#/$defs/bool"
-          }
-        }
-      },
-      "required": [
-        "position_to_transform",
-        "transform_to_position"
-      ],
-      "short_name": "PrepareConfig",
-      "type": "object",
-      "typeInfo": "Struct"
-    },
-    "bevy_xpbd_3d::plugins::setup::time::Physics": {
-      "additionalProperties": false,
-      "isComponent": false,
-      "isResource": false,
-      "long_name": "bevy_xpbd_3d::plugins::setup::time::Physics",
-      "properties": {
-        "paused": {
-          "type": {
-            "$ref": "#/$defs/bool"
-          }
-        },
-        "relative_speed": {
-          "type": {
-            "$ref": "#/$defs/f64"
-          }
-        },
-        "timestep_mode": {
-          "type": {
-            "$ref": "#/$defs/bevy_xpbd_3d::plugins::setup::time::TimestepMode"
-          }
-        }
-      },
-      "required": [
-        "timestep_mode",
-        "paused",
-        "relative_speed"
-      ],
-      "short_name": "Physics",
-      "type": "object",
-      "typeInfo": "Struct"
-    },
-    "bevy_xpbd_3d::plugins::setup::time::Substeps": {
-      "additionalProperties": false,
-      "isComponent": false,
-      "isResource": false,
-      "long_name": "bevy_xpbd_3d::plugins::setup::time::Substeps",
-      "properties": {},
-      "required": [],
-      "short_name": "Substeps",
-      "type": "object",
-      "typeInfo": "Struct"
-    },
-    "bevy_xpbd_3d::plugins::setup::time::TimestepMode": {
-      "isComponent": false,
-      "isResource": false,
-      "long_name": "bevy_xpbd_3d::plugins::setup::time::TimestepMode",
-      "oneOf": [
-        {
-          "additionalProperties": false,
-          "long_name": "Fixed",
-          "properties": {
-            "delta": {
-              "long_name": "delta",
-              "type": {
-                "$ref": "#/$defs/bevy_utils::Duration"
-              }
-            },
-            "max_delta_overstep": {
-              "long_name": "max_delta_overstep",
-              "type": {
-                "$ref": "#/$defs/bevy_utils::Duration"
-              }
-            },
-            "overstep": {
-              "long_name": "overstep",
-              "type": {
-                "$ref": "#/$defs/bevy_utils::Duration"
-              }
-            }
-          },
-          "required": [
-            "delta",
-            "overstep",
-            "max_delta_overstep"
-          ],
-          "short_name": "Fixed",
-          "type": "object",
-          "typeInfo": "Struct"
-        },
-        {
-          "additionalProperties": false,
-          "long_name": "FixedOnce",
-          "properties": {
-            "delta": {
-              "long_name": "delta",
-              "type": {
-                "$ref": "#/$defs/bevy_utils::Duration"
-              }
-            }
-          },
-          "required": [
-            "delta"
-          ],
-          "short_name": "FixedOnce",
-          "type": "object",
-          "typeInfo": "Struct"
-        },
-        {
-          "additionalProperties": false,
-          "long_name": "Variable",
-          "properties": {
-            "max_delta": {
-              "long_name": "max_delta",
-              "type": {
-                "$ref": "#/$defs/bevy_utils::Duration"
-              }
-            }
-          },
-          "required": [
-            "max_delta"
-          ],
-          "short_name": "Variable",
-          "type": "object",
-          "typeInfo": "Struct"
-        }
-      ],
-      "short_name": "TimestepMode",
-      "type": "object",
-      "typeInfo": "Enum"
-    },
-    "bevy_xpbd_3d::plugins::sync::PreviousGlobalTransform": {
-      "isComponent": true,
-      "isResource": false,
-      "items": false,
-      "long_name": "bevy_xpbd_3d::plugins::sync::PreviousGlobalTransform",
-      "prefixItems": [
-        {
-          "type": {
-            "$ref": "#/$defs/bevy_transform::components::global_transform::GlobalTransform"
-          }
-        }
-      ],
-      "short_name": "PreviousGlobalTransform",
-      "type": "array",
-      "typeInfo": "TupleStruct"
-    },
-    "bevy_xpbd_3d::plugins::sync::SyncConfig": {
-      "additionalProperties": false,
-      "isComponent": false,
-      "isResource": true,
-      "long_name": "bevy_xpbd_3d::plugins::sync::SyncConfig",
-      "properties": {
-        "position_to_transform": {
-          "type": {
-            "$ref": "#/$defs/bool"
-          }
-        },
-        "transform_to_position": {
-          "type": {
-            "$ref": "#/$defs/bool"
-          }
-        }
-      },
-      "required": [
-        "position_to_transform",
-        "transform_to_position"
-      ],
-      "short_name": "SyncConfig",
-      "type": "object",
-      "typeInfo": "Struct"
-    },
-    "bevy_xpbd_3d::resources::DeactivationTime": {
-      "isComponent": false,
-      "isResource": true,
-      "items": false,
-      "long_name": "bevy_xpbd_3d::resources::DeactivationTime",
-      "prefixItems": [
-        {
-          "type": {
-            "$ref": "#/$defs/f32"
-          }
-        }
-      ],
-      "short_name": "DeactivationTime",
-      "type": "array",
-      "typeInfo": "TupleStruct"
-    },
-    "bevy_xpbd_3d::resources::Gravity": {
-      "isComponent": false,
-      "isResource": true,
-      "items": false,
-      "long_name": "bevy_xpbd_3d::resources::Gravity",
-      "prefixItems": [
-        {
-          "type": {
-            "$ref": "#/$defs/glam::Vec3"
-          }
-        }
-      ],
-      "short_name": "Gravity",
-      "type": "array",
-      "typeInfo": "TupleStruct"
-    },
-    "bevy_xpbd_3d::resources::SleepingThreshold": {
-      "additionalProperties": false,
-      "isComponent": false,
-      "isResource": true,
-      "long_name": "bevy_xpbd_3d::resources::SleepingThreshold",
-      "properties": {
-        "angular": {
-          "type": {
-            "$ref": "#/$defs/f32"
-          }
-        },
-        "linear": {
-          "type": {
-            "$ref": "#/$defs/f32"
-          }
-        }
-      },
-      "required": [
-        "linear",
-        "angular"
-      ],
-      "short_name": "SleepingThreshold",
-      "type": "object",
-      "typeInfo": "Struct"
-    },
-    "bevy_xpbd_3d::resources::SubstepCount": {
-      "isComponent": false,
-      "isResource": true,
-      "items": false,
-      "long_name": "bevy_xpbd_3d::resources::SubstepCount",
-      "prefixItems": [
-        {
-          "type": {
-            "$ref": "#/$defs/u32"
-          }
-        }
-      ],
-      "short_name": "SubstepCount",
-      "type": "array",
-      "typeInfo": "TupleStruct"
-    },
     "blenvy::blueprints::animation::AnimationInfo": {
       "additionalProperties": false,
       "isComponent": false,
@@ -14784,6 +16348,33 @@
       "type": "object",
       "typeInfo": "Enum"
     },
+    "core::option::Option<alloc::vec::Vec<[u32; 2]>>": {
+      "isComponent": false,
+      "isResource": false,
+      "long_name": "core::option::Option<alloc::vec::Vec<[u32; 2]>>",
+      "oneOf": [
+        {
+          "long_name": "None"
+        },
+        {
+          "items": false,
+          "long_name": "Some",
+          "prefixItems": [
+            {
+              "type": {
+                "$ref": "#/$defs/alloc::vec::Vec<[u32; 2]>"
+              }
+            }
+          ],
+          "short_name": "Some",
+          "type": "array",
+          "typeInfo": "Tuple"
+        }
+      ],
+      "short_name": "Option<Vec<[u32; 2]>>",
+      "type": "object",
+      "typeInfo": "Enum"
+    },
     "core::option::Option<alloc::vec::Vec<alloc::string::String>>": {
       "isComponent": false,
       "isResource": false,
@@ -14808,6 +16399,168 @@
         }
       ],
       "short_name": "Option<Vec<String>>",
+      "type": "object",
+      "typeInfo": "Enum"
+    },
+    "core::option::Option<avian3d::collision::collider::constructor::ColliderConstructor>": {
+      "isComponent": false,
+      "isResource": false,
+      "long_name": "core::option::Option<avian3d::collision::collider::constructor::ColliderConstructor>",
+      "oneOf": [
+        {
+          "long_name": "None"
+        },
+        {
+          "items": false,
+          "long_name": "Some",
+          "prefixItems": [
+            {
+              "type": {
+                "$ref": "#/$defs/avian3d::collision::collider::constructor::ColliderConstructor"
+              }
+            }
+          ],
+          "short_name": "Some",
+          "type": "array",
+          "typeInfo": "Tuple"
+        }
+      ],
+      "short_name": "Option<ColliderConstructor>",
+      "type": "object",
+      "typeInfo": "Enum"
+    },
+    "core::option::Option<avian3d::collision::collider::constructor::ColliderConstructorHierarchyConfig>": {
+      "isComponent": false,
+      "isResource": false,
+      "long_name": "core::option::Option<avian3d::collision::collider::constructor::ColliderConstructorHierarchyConfig>",
+      "oneOf": [
+        {
+          "long_name": "None"
+        },
+        {
+          "items": false,
+          "long_name": "Some",
+          "prefixItems": [
+            {
+              "type": {
+                "$ref": "#/$defs/avian3d::collision::collider::constructor::ColliderConstructorHierarchyConfig"
+              }
+            }
+          ],
+          "short_name": "Some",
+          "type": "array",
+          "typeInfo": "Tuple"
+        }
+      ],
+      "short_name": "Option<ColliderConstructorHierarchyConfig>",
+      "type": "object",
+      "typeInfo": "Enum"
+    },
+    "core::option::Option<avian3d::collision::layers::CollisionLayers>": {
+      "isComponent": false,
+      "isResource": false,
+      "long_name": "core::option::Option<avian3d::collision::layers::CollisionLayers>",
+      "oneOf": [
+        {
+          "long_name": "None"
+        },
+        {
+          "items": false,
+          "long_name": "Some",
+          "prefixItems": [
+            {
+              "type": {
+                "$ref": "#/$defs/avian3d::collision::layers::CollisionLayers"
+              }
+            }
+          ],
+          "short_name": "Some",
+          "type": "array",
+          "typeInfo": "Tuple"
+        }
+      ],
+      "short_name": "Option<CollisionLayers>",
+      "type": "object",
+      "typeInfo": "Enum"
+    },
+    "core::option::Option<avian3d::dynamics::rigid_body::mass_properties::ColliderDensity>": {
+      "isComponent": false,
+      "isResource": false,
+      "long_name": "core::option::Option<avian3d::dynamics::rigid_body::mass_properties::ColliderDensity>",
+      "oneOf": [
+        {
+          "long_name": "None"
+        },
+        {
+          "items": false,
+          "long_name": "Some",
+          "prefixItems": [
+            {
+              "type": {
+                "$ref": "#/$defs/avian3d::dynamics::rigid_body::mass_properties::ColliderDensity"
+              }
+            }
+          ],
+          "short_name": "Some",
+          "type": "array",
+          "typeInfo": "Tuple"
+        }
+      ],
+      "short_name": "Option<ColliderDensity>",
+      "type": "object",
+      "typeInfo": "Enum"
+    },
+    "core::option::Option<avian3d::dynamics::solver::joints::AngleLimit>": {
+      "isComponent": false,
+      "isResource": false,
+      "long_name": "core::option::Option<avian3d::dynamics::solver::joints::AngleLimit>",
+      "oneOf": [
+        {
+          "long_name": "None"
+        },
+        {
+          "items": false,
+          "long_name": "Some",
+          "prefixItems": [
+            {
+              "type": {
+                "$ref": "#/$defs/avian3d::dynamics::solver::joints::AngleLimit"
+              }
+            }
+          ],
+          "short_name": "Some",
+          "type": "array",
+          "typeInfo": "Tuple"
+        }
+      ],
+      "short_name": "Option<AngleLimit>",
+      "type": "object",
+      "typeInfo": "Enum"
+    },
+    "core::option::Option<avian3d::dynamics::solver::joints::DistanceLimit>": {
+      "isComponent": false,
+      "isResource": false,
+      "long_name": "core::option::Option<avian3d::dynamics::solver::joints::DistanceLimit>",
+      "oneOf": [
+        {
+          "long_name": "None"
+        },
+        {
+          "items": false,
+          "long_name": "Some",
+          "prefixItems": [
+            {
+              "type": {
+                "$ref": "#/$defs/avian3d::dynamics::solver::joints::DistanceLimit"
+              }
+            }
+          ],
+          "short_name": "Some",
+          "type": "array",
+          "typeInfo": "Tuple"
+        }
+      ],
+      "short_name": "Option<DistanceLimit>",
       "type": "object",
       "typeInfo": "Enum"
     },
@@ -15132,33 +16885,6 @@
         }
       ],
       "short_name": "Option<WindowTheme>",
-      "type": "object",
-      "typeInfo": "Enum"
-    },
-    "core::option::Option<bevy_xpbd_3d::constraints::joints::DistanceLimit>": {
-      "isComponent": false,
-      "isResource": false,
-      "long_name": "core::option::Option<bevy_xpbd_3d::constraints::joints::DistanceLimit>",
-      "oneOf": [
-        {
-          "long_name": "None"
-        },
-        {
-          "items": false,
-          "long_name": "Some",
-          "prefixItems": [
-            {
-              "type": {
-                "$ref": "#/$defs/bevy_xpbd_3d::constraints::joints::DistanceLimit"
-              }
-            }
-          ],
-          "short_name": "Some",
-          "type": "array",
-          "typeInfo": "Tuple"
-        }
-      ],
-      "short_name": "Option<DistanceLimit>",
       "type": "object",
       "typeInfo": "Enum"
     },

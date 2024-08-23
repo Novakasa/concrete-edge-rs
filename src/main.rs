@@ -1,5 +1,6 @@
 use std::{env, fmt::Debug};
 
+use avian3d::prelude::*;
 use bevy::{
     pbr::{ExtendedMaterial, MaterialExtension},
     prelude::*,
@@ -7,7 +8,6 @@ use bevy::{
     window::{CursorGrabMode, PrimaryWindow},
 };
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
-use bevy_xpbd_3d::prelude::*;
 use blenvy::{BlenvyPlugin, BlueprintInfo, GameWorldTag, HideUntilReady, SpawnBlueprint};
 use leafwing_input_manager::prelude::*;
 use player::{DebugState, Player};
@@ -172,7 +172,9 @@ fn setup_platforms(
             .insert(Name::new(format!("Platform{}", entity.index())))
             .insert(RigidBody::Static);
         for child in children.iter() {
-            commands.entity(*child).insert(AsyncCollider::default());
+            commands
+                .entity(*child)
+                .insert(ColliderConstructor::default());
         }
     }
 }
@@ -198,7 +200,6 @@ fn main() {
         .add_plugins(DefaultPlugins)
         .add_plugins(PhysicsPlugins::default())
         .add_plugins(bevy_framepace::FramepacePlugin)
-        // .add_plugins(PhysicsDebugPlugin::default())
         .add_plugins(BlenvyPlugin::default())
         .add_plugins(player::PlayerPlugin)
         .add_plugins(WorldInspectorPlugin::new())
