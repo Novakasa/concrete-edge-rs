@@ -12,7 +12,7 @@ use camera::{CameraAnchor1stPerson, CameraAnchor3rdPerson};
 use dynamics::integrator::IntegrationSet;
 use leafwing_input_manager::prelude::*;
 use physics::{
-    PhysicsDebugInfo, PlayerAngularSpring, PlayerGroundSpring, PlayerMoveState, CAPSULE_HEIGHT,
+    PhysicsDebugInfo, PhysicsState, PlayerAngularSpring, PlayerGroundSpring, CAPSULE_HEIGHT,
     CAPSULE_RADIUS, CAST_RADIUS,
 };
 use rig::{FootState, ProceduralRigState};
@@ -116,7 +116,7 @@ fn spawn_player(
                 ground_spring.clone(),
                 angular_spring.clone(),
                 InputManagerBundle::<PlayerAction>::with_map(PlayerAction::default_input_map()),
-                physics::PlayerMoveState::new(),
+                physics::PhysicsState::new(),
                 physics::PhysicsDebugInfo::default(),
             ))
             .insert(MaterialMeshBundle {
@@ -153,7 +153,7 @@ fn player_controls(
     mut query: Query<
         (
             &ActionState<PlayerAction>,
-            &mut physics::PlayerMoveState,
+            &mut physics::PhysicsState,
             &mut physics::PlayerGroundSpring,
             &mut physics::PlayerAngularSpring,
         ),
@@ -213,7 +213,7 @@ fn draw_debug_gizmos(
             &PhysicsDebugInfo,
             &Position,
             &Rotation,
-            &PlayerMoveState,
+            &PhysicsState,
             &ProceduralRigState,
         ),
         With<Player>,

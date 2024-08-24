@@ -77,7 +77,7 @@ pub struct PlayerGroundSpring {
 }
 
 impl PlayerGroundSpring {
-    fn force(&mut self, length: f32, vel: f32, normal: Vec3, dt: f32) -> f32 {
+    fn force(&mut self, length: f32, vel: f32, normal: Vec3, _dt: f32) -> f32 {
         let damping = self
             .max_damping
             .lerp(self.min_damping, normal.dot(Vec3::Y).abs());
@@ -117,7 +117,7 @@ pub struct PhysicsDebugInfo {
 }
 
 #[derive(Component, Reflect, Debug, Default)]
-pub struct PlayerMoveState {
+pub struct PhysicsState {
     pub acc_dir: Vec3,
     pub spring_height: f32,
     prev_vel: Vec3,
@@ -132,7 +132,7 @@ pub struct PlayerMoveState {
     pub forward_dir: Vec3,
 }
 
-impl PlayerMoveState {
+impl PhysicsState {
     pub fn new() -> Self {
         Self {
             neg_cast_vec: Vec3::Y,
@@ -151,7 +151,7 @@ pub fn update_ground_force(
         &AngularVelocity,
         &mut PlayerGroundSpring,
         &PlayerAngularSpring,
-        &mut PlayerMoveState,
+        &mut PhysicsState,
         &mut PhysicsDebugInfo,
     )>,
     shape_cast: SpatialQuery,

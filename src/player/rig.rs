@@ -2,7 +2,7 @@ use avian3d::prelude::*;
 use bevy::prelude::*;
 
 use super::{
-    physics::{PlayerMoveState, CAPSULE_HEIGHT, CAPSULE_RADIUS},
+    physics::{PhysicsState, CAPSULE_HEIGHT, CAPSULE_RADIUS},
     Player,
 };
 
@@ -57,7 +57,7 @@ pub fn update_procedural_steps(
             &Position,
             &Rotation,
             &mut ProceduralRigState,
-            &PlayerMoveState,
+            &PhysicsState,
             &Mass,
             &LinearVelocity,
         ),
@@ -103,7 +103,7 @@ pub fn update_procedural_steps(
             };
             // println!("{:?}", slip_vel);
 
-            let (i_unlock, i_lock) = match (&rig_state.foot_states[0], &rig_state.foot_states[1]) {
+            let (_i_unlock, i_lock) = match (&rig_state.foot_states[0], &rig_state.foot_states[1]) {
                 (FootState::Locked(pos0), FootState::Locked(pos1)) => {
                     if (window_pos_ahead - *pos0).length() > (window_pos_ahead - *pos1).length() {
                         (0, 1)
