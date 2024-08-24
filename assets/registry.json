@@ -16106,11 +16106,30 @@
       "type": "string",
       "typeInfo": "Enum"
     },
-    "conrete_edge_rs::player::PlayerAngularSpring": {
+    "conrete_edge_rs::player::PlayerSpawn": {
+      "additionalProperties": false,
+      "isComponent": true,
+      "isResource": false,
+      "long_name": "conrete_edge_rs::player::PlayerSpawn",
+      "properties": {
+        "test": {
+          "type": {
+            "$ref": "#/$defs/i32"
+          }
+        }
+      },
+      "required": [
+        "test"
+      ],
+      "short_name": "PlayerSpawn",
+      "type": "object",
+      "typeInfo": "Struct"
+    },
+    "conrete_edge_rs::player::physics::PlayerAngularSpring": {
       "additionalProperties": false,
       "isComponent": true,
       "isResource": true,
-      "long_name": "conrete_edge_rs::player::PlayerAngularSpring",
+      "long_name": "conrete_edge_rs::player::physics::PlayerAngularSpring",
       "properties": {
         "damping": {
           "type": {
@@ -16137,11 +16156,11 @@
       "type": "object",
       "typeInfo": "Struct"
     },
-    "conrete_edge_rs::player::PlayerGroundSpring": {
+    "conrete_edge_rs::player::physics::PlayerGroundSpring": {
       "additionalProperties": false,
       "isComponent": true,
       "isResource": true,
-      "long_name": "conrete_edge_rs::player::PlayerGroundSpring",
+      "long_name": "conrete_edge_rs::player::physics::PlayerGroundSpring",
       "properties": {
         "max_damping": {
           "type": {
@@ -16168,11 +16187,6 @@
             "$ref": "#/$defs/f32"
           }
         },
-        "smoothing_spring": {
-          "type": {
-            "$ref": "#/$defs/conrete_edge_rs::player::SpringValue"
-          }
-        },
         "stiffness": {
           "type": {
             "$ref": "#/$defs/f32"
@@ -16185,72 +16199,9 @@
         "min_damping",
         "max_damping",
         "max_force",
-        "min_force",
-        "smoothing_spring"
+        "min_force"
       ],
       "short_name": "PlayerGroundSpring",
-      "type": "object",
-      "typeInfo": "Struct"
-    },
-    "conrete_edge_rs::player::PlayerSpawn": {
-      "additionalProperties": false,
-      "isComponent": true,
-      "isResource": false,
-      "long_name": "conrete_edge_rs::player::PlayerSpawn",
-      "properties": {
-        "test": {
-          "type": {
-            "$ref": "#/$defs/i32"
-          }
-        }
-      },
-      "required": [
-        "test"
-      ],
-      "short_name": "PlayerSpawn",
-      "type": "object",
-      "typeInfo": "Struct"
-    },
-    "conrete_edge_rs::player::SpringValue": {
-      "additionalProperties": false,
-      "isComponent": false,
-      "isResource": false,
-      "long_name": "conrete_edge_rs::player::SpringValue",
-      "properties": {
-        "f": {
-          "type": {
-            "$ref": "#/$defs/f32"
-          }
-        },
-        "m": {
-          "type": {
-            "$ref": "#/$defs/f32"
-          }
-        },
-        "value": {
-          "type": {
-            "$ref": "#/$defs/f32"
-          }
-        },
-        "velocity": {
-          "type": {
-            "$ref": "#/$defs/f32"
-          }
-        },
-        "zeta": {
-          "type": {
-            "$ref": "#/$defs/f32"
-          }
-        }
-      },
-      "required": [
-        "f",
-        "zeta",
-        "m",
-        "velocity",
-        "value"
-      ],
-      "short_name": "SpringValue",
       "type": "object",
       "typeInfo": "Struct"
     },
