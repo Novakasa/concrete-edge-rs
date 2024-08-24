@@ -283,7 +283,7 @@ fn spawn_player(
                 visibility,
                 ..Default::default()
             })
-            .insert((Restitution::new(0.0), Friction::new(GLOBAL_FRICTION)))
+            .insert((Restitution::new(0.0), Friction::new(0.0)))
             .insert((ProceduralRigState::default(), Name::new("PlayerBody")))
             .id();
     }
@@ -459,7 +459,7 @@ fn player_controls(
                 angular_spring.stiffness = 0.3;
             } else {
                 spring.rest_length = CAPSULE_HEIGHT * 0.7 + CAPSULE_RADIUS;
-                spring.min_damping = 2.0;
+                spring.min_damping = 1.5;
                 spring.stiffness = 15.0;
                 angular_spring.stiffness = 0.5;
                 angular_spring.damping = 0.2;
@@ -506,8 +506,8 @@ fn update_ground_force(
         let ext_dir = external_forces.normalize_or_zero();
         let filter = SpatialQueryFilter::from_mask(Layer::Platform);
         let cast_dir = -move_state.neg_cast_vec;
-        let from_up = *quat * Vec3::Y;
-        let from_right = *quat * Vec3::X;
+        let capsule_up = *quat * Vec3::Y;
+        let capsule_right = *quat * Vec3::X;
         move_state.forward_dir = *quat * Vec3::NEG_Z;
         if let Some(coll) = shape_cast.cast_shape(
             &Collider::sphere(CAST_RADIUS),
@@ -604,15 +604,15 @@ fn update_ground_force(
             let target_spring_dir = (target_force + normal_force).normalize_or_zero();
 
             let raw_neg_cast_vec = (move_state.neg_cast_vec
-                + 15.0 * (target_spring_dir - spring_dir) * dt.delta_seconds())
+                + 10.0 * (target_spring_dir - spring_dir) * dt.delta_seconds())
             .normalize_or_zero();
 
-            let quat = Quat::from_rotation_arc(from_up, raw_neg_cast_vec);
-            let angle = from_up.angle_between(raw_neg_cast_vec);
+            let quat = Quat::from_rotation_arc(capsule_up, raw_neg_cast_vec);
+            let angle = capsule_up.angle_between(raw_neg_cast_vec);
             move_state.neg_cast_vec = if angle < 0.0001 {
                 raw_neg_cast_vec
             } else {
-                Quat::IDENTITY.slerp(quat, angle.min(0.3 * PI) / angle) * from_up
+                Quat::IDENTITY.slerp(quat, angle.min(0.3 * PI) / angle) * capsule_up
             };
 
             let target_up = move_state.neg_cast_vec;
@@ -623,13 +623,13 @@ fn update_ground_force(
                     .try_normalize()
                     .unwrap(),
             );
-            let delta_quat = Quat::from_rotation_arc(from_up, target_up);
+            let delta_quat = Quat::from_rotation_arc(capsule_up, target_up);
 
             debug.delta_quat = delta_quat;
             let angular_spring_torque = angular_spring.stiffness
-                * Quat::from_rotation_arc(from_up, target_up).to_scaled_axis()
+                * Quat::from_rotation_arc(capsule_up, target_up).to_scaled_axis()
                 + (angular_spring.turn_stiffness
-                    * Quat::from_rotation_arc(from_right, target_right).to_scaled_axis())
+                    * Quat::from_rotation_arc(capsule_right, target_right).to_scaled_axis())
                 - angular_spring.damping * angular_vel.clone();
 
             debug.spring_torque = angular_spring_torque;
@@ -652,7 +652,7 @@ fn update_ground_force(
             torque.apply_torque(angular_spring_torque - contact_point.cross(angle_force));
         } else {
             debug.grounded = false;
-            move_state.neg_cast_vec = from_up.try_normalize().unwrap_or(Vec3::Y);
+            move_state.neg_cast_vec = capsule_up.try_normalize().unwrap_or(Vec3::Y);
             move_state.contact_point = None;
             force.clear();
             torque.clear();
