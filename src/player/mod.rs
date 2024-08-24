@@ -6,17 +6,20 @@ use bevy::{
         css::{BLUE, GRAY, GREEN, ORANGE, PINK, RED, YELLOW},
         tailwind::CYAN_100,
     },
-    ecs::system::SystemParam,
     prelude::*,
 };
+use camera::{CameraAnchor1stPerson, CameraAnchor3rdPerson};
 use dynamics::integrator::IntegrationSet;
 use leafwing_input_manager::prelude::*;
 use physics::{
     PhysicsDebugInfo, PlayerAngularSpring, PlayerGroundSpring, PlayerMoveState, CAPSULE_HEIGHT,
     CAPSULE_RADIUS, CAST_RADIUS,
 };
+use rig::{FootState, ProceduralRigState};
 
+mod camera;
 mod physics;
+mod rig;
 
 #[derive(States, Debug, Clone, PartialEq, Eq, Hash)]
 pub enum DebugState {
@@ -58,12 +61,6 @@ impl PlayerAction {
     }
 }
 
-#[derive(PhysicsLayer)]
-pub enum Layer {
-    Player,
-    Platform,
-}
-
 #[derive(Component, Reflect, Debug)]
 #[reflect(Component)]
 pub struct PlayerSpawn {
@@ -78,51 +75,6 @@ struct PlayerFeet;
 
 #[derive(Component, Reflect, Debug)]
 pub struct Player;
-
-#[derive(Debug, Default)]
-struct FootTravelInfo {
-    time: f32,
-    pos: Vec3,
-    pos0: Vec3,
-    duration: f32,
-    target: Option<Vec3>,
-}
-
-impl FootTravelInfo {
-    fn unlocked(pos: Vec3, duration: f32) -> Self {
-        Self {
-            time: 0.0,
-            pos,
-            pos0: pos,
-            duration,
-            target: None,
-        }
-    }
-}
-
-#[derive(Debug)]
-enum FootState {
-    Locked(Vec3),
-    Unlocked(FootTravelInfo),
-}
-
-impl FootState {
-    fn is_unlocked(&self) -> bool {
-        matches!(self, Self::Unlocked(_))
-    }
-}
-
-impl Default for FootState {
-    fn default() -> Self {
-        Self::Unlocked(FootTravelInfo::default())
-    }
-}
-
-#[derive(Component, Debug, Default)]
-struct ProceduralRigState {
-    hip_pos: Vec3,
-    foot_states: [FootState; 2],
-}
 
 fn spawn_player(
     mut commands: Commands,
@@ -153,7 +105,7 @@ fn spawn_player(
                     physics::CAPSULE_HEIGHT - 2.0 * physics::CAPSULE_RADIUS,
                 ),
                 ColliderDensity(1.5),
-                CollisionLayers::new(Layer::Player, Layer::Platform),
+                CollisionLayers::new(physics::Layer::Player, physics::Layer::Platform),
                 RigidBody::default(),
                 Position::from(transform.translation()),
                 Transform::from_translation(transform.translation()),
@@ -174,122 +126,8 @@ fn spawn_player(
                 ..Default::default()
             })
             .insert((Restitution::new(0.0), Friction::new(0.0)))
-            .insert((ProceduralRigState::default(), Name::new("PlayerBody")))
+            .insert((rig::ProceduralRigState::default(), Name::new("PlayerBody")))
             .id();
-    }
-}
-
-#[derive(Component, Reflect, Debug, Default)]
-struct CameraAnchor3rdPerson {
-    yaw: f32,
-    pitch: f32,
-}
-
-#[derive(Component, Reflect, Debug, Default)]
-struct CameraAnchor1stPerson {
-    yaw: f32,
-    pitch: f32,
-}
-
-fn spawn_camera_3rd_person(mut commands: Commands) {
-    let camera_arm = 0.15 * Vec3::new(0.0, 8.0, 25.0);
-    let transform =
-        Transform::from_translation(camera_arm).looking_to(-camera_arm.normalize(), Vec3::Y);
-    commands
-        .spawn((
-            TransformBundle::default(),
-            Name::new("CameraAnchor"),
-            CameraAnchor3rdPerson::default(),
-        ))
-        .with_children(|builder| {
-            builder
-                .spawn(Camera3dBundle {
-                    projection: Projection::Perspective(PerspectiveProjection {
-                        fov: PI / 3.0,
-                        ..Default::default()
-                    }),
-                    camera: Camera {
-                        is_active: true,
-                        ..Default::default()
-                    },
-                    transform: transform,
-                    ..Default::default()
-                })
-                .insert(Name::new("PlayerCamera"));
-        });
-}
-
-fn spawn_camera_1st_person(mut commands: Commands) {
-    let camera_arm = Vec3::new(0.0, 0.2 * physics::CAPSULE_HEIGHT, 0.0);
-    let transform = Transform::from_translation(camera_arm);
-    commands
-        .spawn((
-            TransformBundle::default(),
-            Name::new("CameraAnchor"),
-            CameraAnchor1stPerson::default(),
-        ))
-        .with_children(|builder| {
-            builder
-                .spawn(Camera3dBundle {
-                    projection: Projection::Perspective(PerspectiveProjection {
-                        fov: PI / 3.0,
-                        ..Default::default()
-                    }),
-                    camera: Camera {
-                        is_active: false,
-                        ..Default::default()
-                    },
-                    transform: transform,
-                    ..Default::default()
-                })
-                .insert(Name::new("PlayerCamera"));
-        });
-}
-
-fn toggle_active_view(
-    anchor1: Query<(&CameraAnchor1stPerson, &Children)>,
-    anchor3: Query<(&CameraAnchor3rdPerson, &Children)>,
-    mut cams: Query<&mut Camera>,
-    input_query: Query<&ActionState<PlayerAction>>,
-) {
-    for input in input_query.iter() {
-        if input.just_pressed(&PlayerAction::ViewMode) {
-            let mut cam1 = cams
-                .get_mut(*anchor1.get_single().unwrap().1.iter().next().unwrap())
-                .unwrap();
-            cam1.is_active = !cam1.is_active;
-            let mut cam3 = cams
-                .get_mut(*anchor3.get_single().unwrap().1.iter().next().unwrap())
-                .unwrap();
-            cam3.is_active = !cam3.is_active;
-        }
-    }
-}
-
-fn track_camera_3rd_person(
-    query: Query<&Position, With<Player>>,
-    mut camera_query: Query<(&mut Transform, &CameraAnchor3rdPerson)>,
-) {
-    for Position(pos) in query.iter() {
-        for (mut transform, anchor3) in camera_query.iter_mut() {
-            transform.translation = pos.clone();
-            transform.rotation = Quat::from_euler(EulerRot::YXZ, anchor3.yaw, anchor3.pitch, 0.0);
-        }
-    }
-}
-
-fn track_camera_1st_person(
-    query: Query<(&Position, &Rotation), With<Player>>,
-    mut camera_query: Query<(&mut Transform, &CameraAnchor1stPerson)>,
-) {
-    for (Position(pos), Rotation(quat)) in query.iter() {
-        let up_dir = *quat * Vec3::Y;
-        let pos = pos.clone() + up_dir * physics::CAPSULE_HEIGHT * 0.3;
-        for (mut transform, cam1) in camera_query.iter_mut() {
-            let view_unrolled = Quat::from_euler(EulerRot::YXZ, cam1.yaw, cam1.pitch, 0.0);
-            let forward = view_unrolled * Vec3::NEG_Z;
-            *transform = transform.with_translation(pos).looking_to(forward, up_dir);
-        }
     }
 }
 
@@ -357,161 +195,6 @@ fn player_controls(
             }
         }
     }
-}
-
-#[derive(SystemParam)]
-struct ProceduralRig<'w, 's> {
-    query: Query<
-        'w,
-        's,
-        (
-            &'static Position,
-            &'static Rotation,
-            &'static mut ProceduralRigState,
-            &'static PlayerMoveState,
-            &'static Mass,
-            &'static LinearVelocity,
-        ),
-        With<Player>,
-    >,
-}
-
-impl<'w, 's> ProceduralRig<'w, 's> {}
-
-fn update_procedural_steps(
-    mut query: Query<
-        (
-            &Position,
-            &Rotation,
-            &mut ProceduralRigState,
-            &PlayerMoveState,
-            &Mass,
-            &LinearVelocity,
-        ),
-        With<Player>,
-    >,
-    _spatial_query: SpatialQuery,
-    dt_physics: Res<Time<Physics>>,
-    dt_real: Res<Time>,
-) {
-    let dt = dt_real.delta_seconds() * dt_physics.relative_speed();
-    for (
-        Position(position),
-        Rotation(quat),
-        mut rig_state,
-        move_state,
-        mass,
-        LinearVelocity(velocity),
-    ) in query.iter_mut()
-    {
-        let up_dir = *quat * Vec3::Y;
-        let right_dir = *quat * Vec3::X;
-        let _hip_pos = *position - up_dir * CAPSULE_HEIGHT * 0.5;
-        if let Some(contact_point) = move_state.contact_point {
-            let contact = contact_point + *position;
-            let normal = move_state.contact_normal.unwrap();
-
-            let right_tangent = (right_dir - right_dir.dot(normal) * normal).normalize_or_zero();
-            let tangential_vel = *velocity - velocity.dot(normal) * normal;
-            let acceleration = (move_state.current_force + move_state.ext_force) / mass.0;
-            let lock_duration = 0.06;
-            let travel_duration = lock_duration * 2.0;
-            let window_pos_ahead = contact
-                + 0.5 * (acceleration * 0.5 * lock_duration + tangential_vel) * lock_duration;
-            let window_pos_behind = contact
-                + 0.5 * (acceleration * 0.5 * lock_duration - tangential_vel) * lock_duration;
-            let min_step_size = CAPSULE_RADIUS * 0.5;
-            let window_travel_dist = (window_pos_ahead - window_pos_behind).length();
-            let ahead_to_contact = (window_pos_ahead - contact).length();
-            let slip_vel = if move_state.slipping {
-                -0.5 * move_state.current_force / mass.0
-            } else {
-                Vec3::ZERO
-            };
-            // println!("{:?}", slip_vel);
-
-            let (i_unlock, i_lock) = match (&rig_state.foot_states[0], &rig_state.foot_states[1]) {
-                (FootState::Locked(pos0), FootState::Locked(pos1)) => {
-                    if (window_pos_ahead - *pos0).length() > (window_pos_ahead - *pos1).length() {
-                        (0, 1)
-                    } else {
-                        (1, 0)
-                    }
-                }
-                (FootState::Locked(_), FootState::Unlocked(_)) => (0, 1),
-                (FootState::Unlocked(_), FootState::Locked(_)) => (1, 0),
-                (FootState::Unlocked(info0), FootState::Unlocked(info1)) => {
-                    match (info0.target, info1.target) {
-                        (Some(_), None) => (1, 0),
-                        (None, Some(_)) => (0, 1),
-                        (Some(target0), Some(target1)) => {
-                            if (info0.pos - target0).length() > (info1.pos - target1).length() {
-                                (0, 1)
-                            } else {
-                                (1, 0)
-                            }
-                        }
-                        _ => (0, 1),
-                    }
-                }
-            };
-
-            let offset_length = 0.3 * CAPSULE_RADIUS;
-
-            for (i, state) in rig_state.foot_states.iter_mut().enumerate() {
-                let lr = if i == 0 { -1.0 } else { 1.0 };
-                let foot_offset = right_tangent * lr * offset_length;
-                match state {
-                    FootState::Locked(pos) => {
-                        *pos += slip_vel * dt;
-                        let next_lock_pos = contact
-                            + (acceleration * (travel_duration + 0.5 * lock_duration)
-                                + tangential_vel)
-                                * (travel_duration + 0.5 * lock_duration)
-                            + foot_offset;
-                        let _local_travel_dist = (window_pos_ahead - *pos).length();
-                        let pos_to_next = (*pos - next_lock_pos).length();
-                        let pos_to_contact = (*pos - contact).length();
-                        if pos_to_next > min_step_size
-                            && pos_to_contact > window_travel_dist * 0.5
-                            && pos_to_contact > 1.3 * ahead_to_contact
-                        {
-                            *state = FootState::Unlocked(FootTravelInfo::unlocked(
-                                *pos,
-                                travel_duration,
-                            ));
-                        }
-                    }
-                    FootState::Unlocked(info) => {
-                        if i != i_lock {
-                            info.duration += dt;
-                        }
-                        info.time += dt;
-                        if info.time > info.duration {
-                            *state = FootState::Locked(window_pos_ahead + foot_offset);
-                        } else {
-                            let t = info.time / info.duration;
-                            let lock_time = info.duration - info.time + 0.5 * lock_duration;
-                            let target = contact
-                                + (acceleration * lock_time + tangential_vel) * lock_time
-                                + foot_offset;
-                            info.target = Some(target);
-                            let floor_pos = info.pos0.lerp(target, smoothstep(t));
-                            let lift = up_dir
-                                * 0.1
-                                * (target - info.pos0).length()
-                                * smoothstep(smoothstep(1.0 - 2.0 * (t - 0.5).abs()));
-                            info.pos = floor_pos + lift;
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-fn smoothstep(t: f32) -> f32 {
-    3.0 * t.powi(2) - 2.0 * t.powi(3)
 }
 
 fn set_visible<const VAL: bool>(mut query: Query<&mut Visibility, With<Player>>) {
@@ -687,17 +370,26 @@ impl Plugin for PlayerPlugin {
             damping: 0.0,
             turn_stiffness: 0.0,
         });
-        app.add_systems(Startup, (spawn_camera_3rd_person, spawn_camera_1st_person));
+        app.add_systems(
+            Startup,
+            (
+                camera::spawn_camera_3rd_person,
+                camera::spawn_camera_1st_person,
+            ),
+        );
         app.add_systems(
             Update,
             (
                 spawn_player,
                 player_controls,
                 respawn_player,
-                toggle_active_view,
+                camera::toggle_active_view,
                 draw_debug_gizmos.run_if(not(in_state(DebugState::None))),
-                update_procedural_steps.after(PhysicsSet::Sync),
-                (track_camera_3rd_person, track_camera_1st_person)
+                rig::update_procedural_steps.after(PhysicsSet::Sync),
+                (
+                    camera::track_camera_3rd_person,
+                    camera::track_camera_1st_person,
+                )
                     .chain()
                     .after(PhysicsSet::Sync)
                     .run_if(not(in_state(DebugState::None))),
@@ -706,7 +398,10 @@ impl Plugin for PlayerPlugin {
         app.add_systems(
             SubstepSchedule,
             ((
-                (track_camera_3rd_person, track_camera_1st_person)
+                (
+                    camera::track_camera_3rd_person,
+                    camera::track_camera_1st_person,
+                )
                     .chain()
                     .run_if(in_state(DebugState::None)),
                 physics::update_ground_force,

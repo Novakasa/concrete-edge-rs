@@ -19,6 +19,12 @@ fn add_results_in_length(dir: Vec3, rhs: Vec3, combined_length: f32) -> Option<V
     Some((-dot + discriminant.sqrt()) * dir)
 }
 
+#[derive(PhysicsLayer)]
+pub enum Layer {
+    Player,
+    Platform,
+}
+
 #[derive(Clone)]
 enum SpringParams {
     Physical { stiffness: f32, damping: f32 },
@@ -167,7 +173,7 @@ pub fn update_ground_force(
     {
         let external_forces = gravity.0;
         let ext_dir = external_forces.normalize_or_zero();
-        let filter = SpatialQueryFilter::from_mask(super::Layer::Platform);
+        let filter = SpatialQueryFilter::from_mask(Layer::Platform);
         let cast_dir = -move_state.neg_cast_vec;
         let capsule_up = *quat * Vec3::Y;
         let capsule_right = *quat * Vec3::X;
