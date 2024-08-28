@@ -223,15 +223,15 @@ fn draw_debug_gizmos(
 ) {
     for (debug, Position(position), Rotation(quat), move_state, steps) in query.iter_mut() {
         if debug.grounded {
-            for (i, state) in steps.foot_states.iter().enumerate() {
+            for (i, state) in steps.ground_state.foot_states.iter().enumerate() {
                 let color = if i == 0 {
                     Color::from(RED)
                 } else {
                     Color::from(GREEN)
                 };
                 match state {
-                    FootState::Locked(pos) => {
-                        gizmos.sphere(*pos, Quat::IDENTITY, 0.5 * CAPSULE_RADIUS, color);
+                    FootState::Locked(info) => {
+                        gizmos.sphere(info.pos, Quat::IDENTITY, 0.5 * CAPSULE_RADIUS, color);
                     }
                     FootState::Unlocked(info) => {
                         gizmos.sphere(
