@@ -76,13 +76,13 @@ impl CycleState {
         match self {
             CycleState::Locked(_) => {
                 if !is_any_locked {
-                    println!("setting to unlocked");
+                    debug!("setting to unlocked");
                     *self = CycleState::Unlocked(0.0);
                 }
             }
             CycleState::Unlocked(_) => {
                 if is_any_locked {
-                    println!("setting to locked");
+                    debug!("setting to locked");
                     *self = CycleState::Locked(0.0);
                 }
             }
@@ -234,7 +234,7 @@ impl RigGroundState {
                     } else {
                         if !is_any_locked {
                             if info.duration - info.time + unlocked_time > max_unlock {
-                                info.duration = info.time - unlocked_time + max_unlock;
+                                info.duration -= dt;
                             }
                         }
                     }
