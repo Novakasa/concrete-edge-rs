@@ -65,21 +65,51 @@ impl Default for FootState {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum CycleState {
     Locked(f32),
     Unlocked(f32),
 }
 
 impl CycleState {
+    fn ensure_locked(&mut self, is_any_locked: bool) {
+        match self {
+            CycleState::Locked(_) => {
+                if !is_any_locked {
+                    println!("setting to unlocked");
+                    *self = CycleState::Unlocked(0.0);
+                }
+            }
+            CycleState::Unlocked(_) => {
+                if is_any_locked {
+                    println!("setting to locked");
+                    *self = CycleState::Locked(0.0);
+                }
+            }
+        }
+    }
+
     fn increment(&mut self, dt: f32) {
         match self {
             Self::Locked(time) => {
-                *self = Self::Unlocked(*time + dt);
+                *time += dt;
             }
             Self::Unlocked(time) => {
-                *self = Self::Locked(*time + dt);
+                *time += dt;
             }
+        }
+    }
+
+    fn get_unlocked_time(&self) -> f32 {
+        match self {
+            Self::Locked(_) => 0.0,
+            Self::Unlocked(time) => *time,
+        }
+    }
+    fn get_locked_time(&self) -> f32 {
+        match self {
+            Self::Locked(time) => *time,
+            Self::Unlocked(_) => 0.0,
         }
     }
 }
@@ -97,8 +127,12 @@ pub struct RigGroundState {
 }
 
 impl RigGroundState {
-    fn is_locked(&self) -> bool {
-        !self.foot_states.iter().all(|state| state.is_unlocked())
+    fn is_any_locked(&self) -> bool {
+        self.foot_states.iter().any(|state| !state.is_unlocked())
+    }
+
+    fn is_both_locked(&self) -> bool {
+        self.foot_states.iter().all(|state| !state.is_unlocked())
     }
 
     fn get_lock_candidate(&mut self, window_pos_ahead: Vec3) -> usize {
@@ -129,7 +163,7 @@ impl RigGroundState {
             }
         }
     }
-    fn update_ground_state(
+    fn update(
         &mut self,
         contact_point: Vec3,
         position: &Vec3,
@@ -140,6 +174,7 @@ impl RigGroundState {
         dt: f32,
         up_dir: Vec3,
     ) {
+        self.cycle_state.increment(dt);
         let contact = contact_point + *position;
         let normal = move_state.contact_normal.unwrap();
 
@@ -148,6 +183,8 @@ impl RigGroundState {
         let acceleration = (move_state.current_force + move_state.ext_force) / mass.0;
         let lock_duration = 0.06;
         let travel_duration = lock_duration * 2.0;
+        let min_lock = 0.03;
+        let max_unlock = 0.2;
         let window_pos_ahead =
             contact + 0.5 * (acceleration * 0.5 * lock_duration + tangential_vel) * lock_duration;
         let window_pos_behind =
@@ -165,6 +202,9 @@ impl RigGroundState {
         let i_lock = self.get_lock_candidate(window_pos_ahead);
 
         let offset_length = 0.3 * CAPSULE_RADIUS;
+        let is_both_locked = self.is_both_locked();
+        let is_any_locked = self.is_any_locked();
+        let unlocked_time = self.cycle_state.get_unlocked_time();
 
         for (i, state) in self.foot_states.iter_mut().enumerate() {
             let lr = if i == 0 { -1.0 } else { 1.0 };
@@ -182,15 +222,22 @@ impl RigGroundState {
                     if pos_to_next > min_step_size
                         && pos_to_contact > window_travel_dist * 0.5
                         && pos_to_contact > 1.3 * ahead_to_contact
+                        && (self.cycle_state.get_locked_time() > min_lock || is_both_locked)
                     {
                         *state = FootState::unlocked(info.pos, travel_duration);
                     }
                 }
                 FootState::Unlocked(info) => {
+                    info.time += dt;
                     if i != i_lock {
                         info.duration += dt;
+                    } else {
+                        if !is_any_locked {
+                            if info.duration - info.time + unlocked_time > max_unlock {
+                                info.duration = info.time - unlocked_time + max_unlock;
+                            }
+                        }
                     }
-                    info.time += dt;
                     if info.time > info.duration {
                         *state = FootState::locked(window_pos_ahead + foot_offset);
                     } else {
@@ -210,6 +257,9 @@ impl RigGroundState {
                 }
             }
         }
+
+        let is_any_locked = self.is_any_locked();
+        self.cycle_state.ensure_locked(is_any_locked);
     }
 }
 
@@ -255,7 +305,7 @@ pub fn update_procedural_steps(
         let right_dir = *quat * Vec3::X;
         let _hip_pos = *position - up_dir * CAPSULE_HEIGHT * 0.5;
         if let Some(contact_point) = move_state.contact_point {
-            rig_state.ground_state.update_ground_state(
+            rig_state.ground_state.update(
                 contact_point,
                 position,
                 move_state,
