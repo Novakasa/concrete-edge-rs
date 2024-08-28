@@ -136,6 +136,7 @@ impl PhysicsState {
     pub fn new() -> Self {
         Self {
             neg_cast_vec: Vec3::Y,
+            forward_dir: Vec3::NEG_Z,
             ..Default::default()
         }
     }
@@ -182,7 +183,7 @@ pub fn update_ground_force(
             &Collider::sphere(CAST_RADIUS),
             position.clone(),
             Quat::IDENTITY,
-            Dir3::new_unchecked(cast_dir.normalize_or_zero()),
+            Dir3::new_unchecked(cast_dir.try_normalize().unwrap()),
             MAX_TOI,
             false,
             filter.clone(),
@@ -210,6 +211,8 @@ pub fn update_ground_force(
             let grounded = spring_force.length() > 0.0001;
             debug.grounded = grounded;
             if !grounded {
+                move_state.neg_cast_vec = capsule_up;
+                move_state.contact_point = None;
                 force.clear();
                 torque.clear();
                 continue;
@@ -233,7 +236,6 @@ pub fn update_ground_force(
             let tangent_x = -tangent_z.cross(normal);
             let acc_tangent = move_state.acc_dir.x * tangent_x + move_state.acc_dir.z * tangent_z;
             let tangent_vel = *velocity - velocity.dot(normal) * normal;
-            let prev_tangent_vel = move_state.prev_vel - move_state.prev_vel.dot(normal) * normal;
 
             debug.tangent_vel = tangent_vel;
 
@@ -267,14 +269,16 @@ pub fn update_ground_force(
 
             let raw_neg_cast_vec = (move_state.neg_cast_vec
                 + 10.0 * (target_spring_dir - spring_dir) * dt.delta_seconds())
-            .normalize_or_zero();
+            .try_normalize()
+            .unwrap();
 
-            let quat = Quat::from_rotation_arc(capsule_up, raw_neg_cast_vec);
+            let cast_quat = Quat::from_rotation_arc(capsule_up, raw_neg_cast_vec);
             let angle = capsule_up.angle_between(raw_neg_cast_vec);
+            // println!("{:?}", (angle, capsule_up, raw_neg_cast_vec, quat));
             move_state.neg_cast_vec = if angle < 0.0001 {
                 raw_neg_cast_vec
             } else {
-                Quat::IDENTITY.slerp(quat, angle.min(0.3 * PI) / angle) * capsule_up
+                Quat::IDENTITY.slerp(cast_quat, angle.min(0.3 * PI) / angle) * capsule_up
             };
 
             let target_up = move_state.neg_cast_vec;
@@ -314,7 +318,7 @@ pub fn update_ground_force(
             torque.apply_torque(angular_spring_torque - contact_point.cross(angle_force));
         } else {
             debug.grounded = false;
-            move_state.neg_cast_vec = capsule_up.try_normalize().unwrap_or(Vec3::Y);
+            move_state.neg_cast_vec = capsule_up;
             move_state.contact_point = None;
             force.clear();
             torque.clear();
