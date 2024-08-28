@@ -250,13 +250,6 @@ pub fn update_ground_force(
             // let slope_force = external_forces - normal.dot(external_forces) * normal;
 
             let mut target_force = 0.3 * (target_vel - tangent_vel);
-            if friction_force > 0.0 {
-                target_force = (target_force.length() / friction_force).powi(1)
-                    * friction_force
-                    * target_force.normalize_or_zero()
-            }
-            target_force -= 0.0 * (tangent_vel - prev_tangent_vel) / dt.delta_seconds();
-
             if target_force.length() > friction_force * FRICTION_MARGIN {
                 target_force = add_results_in_length(
                     target_force.normalize_or_zero(),

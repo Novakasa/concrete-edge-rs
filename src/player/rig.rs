@@ -47,8 +47,40 @@ impl Default for FootState {
 
 #[derive(Component, Debug, Default)]
 pub struct ProceduralRigState {
+    pub center_of_mass: Vec3,
+    pub velocity: Vec3,
     pub hip_pos: Vec3,
     pub foot_states: [FootState; 2],
+}
+
+impl ProceduralRigState {
+    fn get_lock_candidate(&mut self, window_pos_ahead: Vec3) -> usize {
+        match (&self.foot_states[0], &self.foot_states[1]) {
+            (FootState::Locked(pos0), FootState::Locked(pos1)) => {
+                if (window_pos_ahead - *pos0).length() > (window_pos_ahead - *pos1).length() {
+                    1
+                } else {
+                    0
+                }
+            }
+            (FootState::Locked(_), FootState::Unlocked(_)) => 1,
+            (FootState::Unlocked(_), FootState::Locked(_)) => 0,
+            (FootState::Unlocked(info0), FootState::Unlocked(info1)) => {
+                match (info0.target, info1.target) {
+                    (Some(_), None) => 0,
+                    (None, Some(_)) => 1,
+                    (Some(target0), Some(target1)) => {
+                        if (info0.pos - target0).length() > (info1.pos - target1).length() {
+                            1
+                        } else {
+                            0
+                        }
+                    }
+                    _ => 1,
+                }
+            }
+        }
+    }
 }
 
 pub fn update_procedural_steps(
@@ -103,31 +135,7 @@ pub fn update_procedural_steps(
             };
             // println!("{:?}", slip_vel);
 
-            let (_i_unlock, i_lock) = match (&rig_state.foot_states[0], &rig_state.foot_states[1]) {
-                (FootState::Locked(pos0), FootState::Locked(pos1)) => {
-                    if (window_pos_ahead - *pos0).length() > (window_pos_ahead - *pos1).length() {
-                        (0, 1)
-                    } else {
-                        (1, 0)
-                    }
-                }
-                (FootState::Locked(_), FootState::Unlocked(_)) => (0, 1),
-                (FootState::Unlocked(_), FootState::Locked(_)) => (1, 0),
-                (FootState::Unlocked(info0), FootState::Unlocked(info1)) => {
-                    match (info0.target, info1.target) {
-                        (Some(_), None) => (1, 0),
-                        (None, Some(_)) => (0, 1),
-                        (Some(target0), Some(target1)) => {
-                            if (info0.pos - target0).length() > (info1.pos - target1).length() {
-                                (0, 1)
-                            } else {
-                                (1, 0)
-                            }
-                        }
-                        _ => (0, 1),
-                    }
-                }
-            };
+            let i_lock = rig_state.get_lock_candidate(window_pos_ahead);
 
             let offset_length = 0.3 * CAPSULE_RADIUS;
 
