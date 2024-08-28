@@ -6,7 +6,7 @@ use super::{
     Player,
 };
 
-#[derive(Debug, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct FootTravelInfo {
     time: f32,
     pub pos: Vec3,
@@ -16,7 +16,7 @@ pub struct FootTravelInfo {
 }
 
 impl FootTravelInfo {
-    fn unlocked(pos: Vec3, duration: f32) -> Self {
+    fn new(pos: Vec3, duration: f32) -> Self {
         Self {
             time: 0.0,
             pos,
@@ -27,13 +27,33 @@ impl FootTravelInfo {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct FootLockInfo {
+    time: f32,
+    pos: Vec3,
+}
+
+impl FootLockInfo {
+    fn new(pos: Vec3) -> Self {
+        Self { time: 0.0, pos }
+    }
+}
+
 #[derive(Debug)]
 pub enum FootState {
-    Locked(Vec3),
+    Locked(FootLockInfo),
     Unlocked(FootTravelInfo),
 }
 
 impl FootState {
+    fn locked(pos: Vec3) -> Self {
+        Self::Locked(FootLockInfo::new(pos))
+    }
+
+    fn unlocked(pos: Vec3, duration: f32) -> Self {
+        Self::Unlocked(FootTravelInfo::new(pos, duration))
+    }
+
     fn is_unlocked(&self) -> bool {
         matches!(self, Self::Unlocked(_))
     }
@@ -56,8 +76,9 @@ pub struct ProceduralRigState {
 impl ProceduralRigState {
     fn get_lock_candidate(&mut self, window_pos_ahead: Vec3) -> usize {
         match (&self.foot_states[0], &self.foot_states[1]) {
-            (FootState::Locked(pos0), FootState::Locked(pos1)) => {
-                if (window_pos_ahead - *pos0).length() > (window_pos_ahead - *pos1).length() {
+            (FootState::Locked(info0), FootState::Locked(info1)) => {
+                if (window_pos_ahead - info0.pos).length() > (window_pos_ahead - info1.pos).length()
+                {
                     1
                 } else {
                     0
@@ -143,24 +164,21 @@ pub fn update_procedural_steps(
                 let lr = if i == 0 { -1.0 } else { 1.0 };
                 let foot_offset = right_tangent * lr * offset_length;
                 match state {
-                    FootState::Locked(pos) => {
-                        *pos += slip_vel * dt;
+                    FootState::Locked(info) => {
+                        info.pos += slip_vel * dt;
                         let next_lock_pos = contact
                             + (acceleration * (travel_duration + 0.5 * lock_duration)
                                 + tangential_vel)
                                 * (travel_duration + 0.5 * lock_duration)
                             + foot_offset;
-                        let _local_travel_dist = (window_pos_ahead - *pos).length();
-                        let pos_to_next = (*pos - next_lock_pos).length();
-                        let pos_to_contact = (*pos - contact).length();
+                        let _local_travel_dist = (window_pos_ahead - info.pos).length();
+                        let pos_to_next = (info.pos - next_lock_pos).length();
+                        let pos_to_contact = (info.pos - contact).length();
                         if pos_to_next > min_step_size
                             && pos_to_contact > window_travel_dist * 0.5
                             && pos_to_contact > 1.3 * ahead_to_contact
                         {
-                            *state = FootState::Unlocked(FootTravelInfo::unlocked(
-                                *pos,
-                                travel_duration,
-                            ));
+                            *state = FootState::unlocked(info.pos, travel_duration);
                         }
                     }
                     FootState::Unlocked(info) => {
@@ -169,7 +187,7 @@ pub fn update_procedural_steps(
                         }
                         info.time += dt;
                         if info.time > info.duration {
-                            *state = FootState::Locked(window_pos_ahead + foot_offset);
+                            *state = FootState::locked(window_pos_ahead + foot_offset);
                         } else {
                             let t = info.time / info.duration;
                             let lock_time = info.duration - info.time + 0.5 * lock_duration;
