@@ -17,6 +17,8 @@ use physics::{
     CAPSULE_RADIUS, CAST_RADIUS,
 };
 
+use crate::util::ik2_positions;
+
 mod animation;
 mod camera;
 mod physics;
@@ -232,9 +234,10 @@ fn draw_debug_gizmos(
                 } else {
                     Color::from(GREEN)
                 };
-                match state {
+                let pos = match state {
                     FootState::Locked(info) => {
                         gizmos.sphere(info.pos, Quat::IDENTITY, 0.5 * CAPSULE_RADIUS, color);
+                        info.pos
                     }
                     FootState::Unlocked(info) => {
                         gizmos.sphere(
@@ -243,8 +246,18 @@ fn draw_debug_gizmos(
                             0.5 * CAPSULE_RADIUS,
                             color.with_luminance(0.2),
                         );
+                        info.pos
                     }
-                }
+                };
+
+                let (pos1, pos2) = ik2_positions(
+                    CAPSULE_HEIGHT * 0.5,
+                    CAPSULE_HEIGHT * 0.5,
+                    pos - *position,
+                    move_state.forward_dir,
+                );
+                gizmos.arrow(*position, *position + pos1, Color::WHITE);
+                gizmos.arrow(*position + pos1, *position + pos2, Color::WHITE);
             }
 
             if debug_state.get() == &DebugState::Torque {

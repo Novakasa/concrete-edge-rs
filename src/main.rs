@@ -13,6 +13,7 @@ use leafwing_input_manager::prelude::*;
 use player::{DebugState, Player};
 
 mod player;
+mod util;
 
 #[derive(Actionlike, PartialEq, Eq, Hash, Clone, Debug, Reflect)]
 pub enum GlobalAction {
