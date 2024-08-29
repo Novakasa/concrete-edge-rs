@@ -211,7 +211,6 @@ pub fn update_ground_force(
             let grounded = spring_force.length() > 0.0001;
             debug.grounded = grounded;
             if !grounded {
-                move_state.neg_cast_vec = capsule_up;
                 move_state.contact_point = None;
                 force.clear();
                 torque.clear();
@@ -284,7 +283,7 @@ pub fn update_ground_force(
                 Quat::IDENTITY.slerp(cast_quat, angle.min(0.3 * PI) / angle) * capsule_up
             };
 
-            let target_up = move_state.neg_cast_vec;
+            let target_up = spring_dir;
             let target_right = target_vel.cross(target_up).try_normalize().unwrap_or(
                 move_state
                     .forward_dir

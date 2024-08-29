@@ -1,5 +1,6 @@
 use std::f32::consts::PI;
 
+use animation::{FootState, ProceduralRigState};
 use avian3d::prelude::*;
 use bevy::{
     color::palettes::{
@@ -15,11 +16,10 @@ use physics::{
     PhysicsDebugInfo, PhysicsState, PlayerAngularSpring, PlayerGroundSpring, CAPSULE_HEIGHT,
     CAPSULE_RADIUS, CAST_RADIUS,
 };
-use rig::{FootState, ProceduralRigState};
 
+mod animation;
 mod camera;
 mod physics;
-mod rig;
 
 #[derive(States, Debug, Clone, PartialEq, Eq, Hash)]
 pub enum DebugState {
@@ -126,7 +126,10 @@ fn spawn_player(
                 ..Default::default()
             })
             .insert((Restitution::new(0.0), Friction::new(0.0)))
-            .insert((rig::ProceduralRigState::default(), Name::new("PlayerBody")))
+            .insert((
+                animation::ProceduralRigState::default(),
+                Name::new("PlayerBody"),
+            ))
             .id();
     }
 }
@@ -190,7 +193,7 @@ fn player_controls(
                 spring.min_damping = 1.5;
                 spring.stiffness = 15.0;
                 angular_spring.stiffness = 0.5;
-                angular_spring.damping = 0.2;
+                angular_spring.damping = 0.15;
                 angular_spring.turn_stiffness = 0.4;
             }
         }
@@ -385,7 +388,7 @@ impl Plugin for PlayerPlugin {
                 respawn_player,
                 camera::toggle_active_view,
                 draw_debug_gizmos.run_if(not(in_state(DebugState::None))),
-                rig::update_procedural_steps.after(PhysicsSet::Sync),
+                animation::update_procedural_steps.after(PhysicsSet::Sync),
                 (
                     camera::track_camera_3rd_person,
                     camera::track_camera_1st_person,
