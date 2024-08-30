@@ -218,6 +218,7 @@ fn draw_debug_gizmos(
             &PhysicsDebugInfo,
             &Position,
             &Rotation,
+            &LinearVelocity,
             &PhysicsState,
             &ProceduralRigState,
         ),
@@ -226,7 +227,9 @@ fn draw_debug_gizmos(
     mut gizmos: Gizmos,
     debug_state: Res<State<DebugState>>,
 ) {
-    for (debug, Position(position), Rotation(quat), move_state, steps) in query.iter_mut() {
+    for (debug, Position(position), Rotation(quat), LinearVelocity(_vel), move_state, steps) in
+        query.iter_mut()
+    {
         if debug.grounded {
             for (i, state) in steps.ground_state.foot_states.iter().enumerate() {
                 let color = if i == 0 {
@@ -250,14 +253,15 @@ fn draw_debug_gizmos(
                     }
                 };
 
+                let hip_pos = steps.hip_pos;
                 let (pos1, pos2) = ik2_positions(
-                    CAPSULE_HEIGHT * 0.5,
-                    CAPSULE_HEIGHT * 0.5,
-                    pos - *position,
+                    CAPSULE_HEIGHT * 0.4,
+                    CAPSULE_HEIGHT * 0.4,
+                    pos - hip_pos,
                     move_state.forward_dir,
                 );
-                gizmos.arrow(*position, *position + pos1, Color::WHITE);
-                gizmos.arrow(*position + pos1, *position + pos2, Color::WHITE);
+                gizmos.arrow(hip_pos, hip_pos + pos1, Color::WHITE);
+                gizmos.arrow(hip_pos + pos1, hip_pos + pos2, Color::WHITE);
             }
 
             if debug_state.get() == &DebugState::Torque {

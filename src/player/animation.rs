@@ -182,7 +182,7 @@ impl RigGroundState {
         let tangential_vel = *velocity - velocity.dot(normal) * normal;
         let acceleration = (move_state.current_force + move_state.ext_force) / mass.0;
         let lock_duration = 0.06;
-        let travel_duration = lock_duration * 2.0;
+        let travel_duration = lock_duration * 2.5;
         let min_lock = 0.03;
         let max_unlock = 0.2;
         let window_pos_ahead =
@@ -251,7 +251,9 @@ impl RigGroundState {
                         let lift = up_dir
                             * 0.1
                             * (target - info.pos0).length()
-                            * smoothstep(smoothstep(1.0 - 2.0 * (t - 0.5).abs()));
+                            * smoothstep(smoothstep(1.0 - 2.0 * (t - 0.5).abs()))
+                            * 0.12
+                            / travel_duration;
                         info.pos = floor_pos + lift;
                     }
                 }
@@ -303,7 +305,7 @@ pub fn update_procedural_steps(
     {
         let up_dir = *quat * Vec3::Y;
         let right_dir = *quat * Vec3::X;
-        let _hip_pos = *position - up_dir * CAPSULE_HEIGHT * 0.5;
+        rig_state.hip_pos = *position - up_dir * CAPSULE_HEIGHT * 0.15;
         if let Some(contact_point) = move_state.contact_point {
             rig_state.ground_state.update(
                 contact_point,
@@ -321,4 +323,8 @@ pub fn update_procedural_steps(
 
 fn smoothstep(t: f32) -> f32 {
     3.0 * t.powi(2) - 2.0 * t.powi(3)
+}
+
+fn smoothstart(t: f32) -> f32 {
+    t.powi(2)
 }
