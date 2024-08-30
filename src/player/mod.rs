@@ -404,7 +404,9 @@ impl Plugin for PlayerPlugin {
                 player_controls,
                 respawn_player,
                 camera::toggle_active_view,
-                draw_debug_gizmos.run_if(not(in_state(DebugState::None))),
+                draw_debug_gizmos
+                    .run_if(not(in_state(DebugState::None)))
+                    .after(animation::update_procedural_steps),
                 animation::update_procedural_steps.after(PhysicsSet::Sync),
                 (
                     camera::track_camera_3rd_person,
