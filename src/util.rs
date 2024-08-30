@@ -7,7 +7,11 @@ pub fn cosc_from_sides(a: f32, b: f32, c: f32) -> f32 {
 
 pub fn ik2_positions(len1: f32, len2: f32, target: Vec3, bend_dir: Vec3) -> (Vec3, Vec3) {
     let target_dir = target.try_normalize().unwrap();
-    let bend_orth = target_dir.cross(bend_dir).cross(target_dir);
+    let bend_orth = target_dir
+        .cross(bend_dir)
+        .cross(target_dir)
+        .try_normalize()
+        .unwrap();
     let min_range = len1.max(len2) - len1.min(len2);
     let max_range = len1 + len2;
     let target_dir = target.normalize();
@@ -22,7 +26,7 @@ pub fn ik2_positions(len1: f32, len2: f32, target: Vec3, bend_dir: Vec3) -> (Vec
         };
     }
     let cos_a1 = cosc_from_sides(len1, target.length(), len2);
-    let sin_a1 = (1.0 - cos_a1 * cos_a1).sqrt() * bend_dir;
+    let sin_a1 = (1.0 - cos_a1 * cos_a1).sqrt();
     let local_pos2 = target_dir * cos_a1 * len1 + bend_orth * sin_a1 * len1;
     (local_pos2, target)
 }
