@@ -254,7 +254,7 @@ pub fn update_ground_force(
             if target_vel.length() < 0.1 && tangent_vel.length() < 1.0 {
                 target_force = 0.2 * (target_vel - tangent_vel);
             }
-            if target_force.length() > friction_force * FRICTION_MARGIN {
+            if (target_force - slope_force).length() > friction_force * FRICTION_MARGIN {
                 target_force = add_results_in_length(
                     target_force.normalize_or_zero(),
                     -slope_force,
