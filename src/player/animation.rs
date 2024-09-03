@@ -307,11 +307,10 @@ pub fn update_procedural_steps(
     {
         let up_dir = *quat * Dir3::Y;
         let right_dir = *quat * Dir3::X;
-        rig_state.hip_pos = *position
-            - up_dir.slerp(Dir3::new(move_state.neg_cast_vec).unwrap(), 0.5)
-                * CAPSULE_HEIGHT
-                * 0.15;
+
         if let Some(contact_point) = move_state.contact_point {
+            rig_state.hip_pos = *position
+                - up_dir.slerp(Dir3::new(-contact_point).unwrap(), 0.5) * CAPSULE_HEIGHT * 0.15;
             rig_state.ground_state.update(
                 contact_point,
                 position,
