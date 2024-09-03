@@ -168,17 +168,18 @@ impl RigGroundState {
         contact_point: Vec3,
         position: &Vec3,
         move_state: &PhysicsState,
-        right_dir: Vec3,
+        right_dir: Dir3,
         velocity: &Vec3,
         mass: &Mass,
         dt: f32,
-        up_dir: Vec3,
+        up_dir: Dir3,
     ) {
         self.cycle_state.increment(dt);
         let contact = contact_point + *position;
         let normal = move_state.contact_normal.unwrap();
 
-        let right_tangent = (right_dir - right_dir.dot(normal) * normal).normalize_or_zero();
+        let right_tangent =
+            (right_dir.as_vec3() - right_dir.dot(normal) * normal).normalize_or_zero();
         let tangential_vel = *velocity - velocity.dot(normal) * normal;
         let acceleration = (move_state.current_force + move_state.ext_force) / mass.0;
         let lock_duration = 0.06;
@@ -273,6 +274,7 @@ pub struct ProceduralRigState {
     pub center_of_mass: Vec3,
     pub velocity: Vec3,
     pub hip_pos: Vec3,
+    pub neck_pos: Vec3,
     pub ground_state: RigGroundState,
     pub air_state: RigAirState,
 }
@@ -303,9 +305,12 @@ pub fn update_procedural_steps(
         LinearVelocity(velocity),
     ) in query.iter_mut()
     {
-        let up_dir = *quat * Vec3::Y;
-        let right_dir = *quat * Vec3::X;
-        rig_state.hip_pos = *position - up_dir * CAPSULE_HEIGHT * 0.15;
+        let up_dir = *quat * Dir3::Y;
+        let right_dir = *quat * Dir3::X;
+        rig_state.hip_pos = *position
+            - up_dir.slerp(Dir3::new(move_state.neg_cast_vec).unwrap(), 0.5)
+                * CAPSULE_HEIGHT
+                * 0.15;
         if let Some(contact_point) = move_state.contact_point {
             rig_state.ground_state.update(
                 contact_point,

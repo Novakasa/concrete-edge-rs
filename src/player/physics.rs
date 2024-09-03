@@ -7,7 +7,7 @@ pub const CAPSULE_RADIUS: f32 = 0.2;
 pub const CAPSULE_HEIGHT: f32 = 4.0 * CAPSULE_RADIUS;
 pub const CAST_RADIUS: f32 = 1.0 * CAPSULE_RADIUS;
 pub const MAX_TOI: f32 = CAPSULE_HEIGHT * 1.0;
-pub const FRICTION_MARGIN: f32 = 0.9;
+pub const FRICTION_MARGIN: f32 = 0.98;
 pub const GLOBAL_FRICTION: f32 = 1.0;
 
 fn add_results_in_length(dir: Vec3, rhs: Vec3, combined_length: f32) -> Option<Vec3> {
@@ -123,7 +123,7 @@ pub struct PhysicsState {
     prev_vel: Vec3,
     prev_angular_force: Vec3,
     prev_target_force: Vec3,
-    neg_cast_vec: Vec3,
+    pub neg_cast_vec: Vec3,
     pub slipping: bool,
     pub contact_point: Option<Vec3>,
     pub contact_normal: Option<Vec3>,
@@ -150,6 +150,7 @@ pub fn update_ground_force(
         &Rotation,
         &LinearVelocity,
         &AngularVelocity,
+        &Mass,
         &mut PlayerGroundSpring,
         &PlayerAngularSpring,
         &mut PhysicsState,
@@ -166,6 +167,7 @@ pub fn update_ground_force(
         Rotation(quat),
         LinearVelocity(velocity),
         AngularVelocity(angular_vel),
+        Mass(mass),
         mut spring,
         angular_spring,
         mut move_state,
@@ -251,9 +253,22 @@ pub fn update_ground_force(
             // let slope_force = external_forces - normal.dot(external_forces) * normal;
 
             let mut target_force = 0.3 * (target_vel - tangent_vel);
-            if target_vel.length() < 0.1 && tangent_vel.length() < 1.0 {
-                target_force = 0.2 * (target_vel - tangent_vel);
+            let tangent_contact = contact_point - contact_point.dot(normal) * normal;
+            if target_vel.length() < 0.0001 && false {
+                let max_stopping_force =
+                    0.5 * mass * tangent_vel.length_squared() / tangent_contact.length();
+                target_force = target_force.clamp_length_max(1.0 * max_stopping_force);
             }
+
+            /*
+            let goal_pos = if tangent_vel.length() < 0.0001 {
+                tangent_contact
+            } else {
+                *position + target_vel
+            };
+            let mut target_force = 2.5 * (goal_pos - *position) - 4.5 * tangent_vel;
+            */
+
             if (target_force - slope_force).length() > friction_force * FRICTION_MARGIN {
                 target_force = add_results_in_length(
                     target_force.normalize_or_zero(),
