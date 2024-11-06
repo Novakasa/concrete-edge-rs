@@ -419,6 +419,19 @@
       "type": "array",
       "typeInfo": "List"
     },
+    "alloc::vec::Vec<std::boxed::Box<dyn leafwing_input_manager::user_input::trait_reflection::tripleaxislike::TripleAxislike>>": {
+      "isComponent": false,
+      "isResource": false,
+      "items": {
+        "type": {
+          "$ref": "#/$defs/std::boxed::Box<dyn leafwing_input_manager::user_input::trait_reflection::tripleaxislike::TripleAxislike>"
+        }
+      },
+      "long_name": "alloc::vec::Vec<std::boxed::Box<dyn leafwing_input_manager::user_input::trait_reflection::tripleaxislike::TripleAxislike>>",
+      "short_name": "Vec<Box<dyn TripleAxislike>>",
+      "type": "array",
+      "typeInfo": "List"
+    },
     "alloc::vec::Vec<u16>": {
       "isComponent": false,
       "isResource": false,
@@ -13545,6 +13558,11 @@
       "isResource": false,
       "long_name": "bevy_ui::ui_node::Node",
       "properties": {
+        "border_radius": {
+          "type": {
+            "$ref": "#/$defs/bevy_ui::ui_node::ResolvedBorderRadius"
+          }
+        },
         "calculated_size": {
           "type": {
             "$ref": "#/$defs/glam::Vec2"
@@ -13576,7 +13594,8 @@
         "calculated_size",
         "outline_width",
         "outline_offset",
-        "unrounded_size"
+        "unrounded_size",
+        "border_radius"
       ],
       "short_name": "Node",
       "type": "object",
@@ -13685,6 +13704,43 @@
         "tracks"
       ],
       "short_name": "RepeatedGridTrack",
+      "type": "object",
+      "typeInfo": "Struct"
+    },
+    "bevy_ui::ui_node::ResolvedBorderRadius": {
+      "additionalProperties": false,
+      "isComponent": false,
+      "isResource": false,
+      "long_name": "bevy_ui::ui_node::ResolvedBorderRadius",
+      "properties": {
+        "bottom_left": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        },
+        "bottom_right": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        },
+        "top_left": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        },
+        "top_right": {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        }
+      },
+      "required": [
+        "top_left",
+        "top_right",
+        "bottom_left",
+        "bottom_right"
+      ],
+      "short_name": "ResolvedBorderRadius",
       "type": "object",
       "typeInfo": "Struct"
     },
@@ -14353,6 +14409,24 @@
         }
       }
     },
+    "bevy_utils::hashbrown::HashMap<conrete_edge_rs::GlobalAction, alloc::vec::Vec<std::boxed::Box<dyn leafwing_input_manager::user_input::trait_reflection::tripleaxislike::TripleAxislike>>, bevy_utils::hashbrown::hash_map::DefaultHashBuilder>": {
+      "isComponent": false,
+      "isResource": false,
+      "keyType": {
+        "type": {
+          "$ref": "#/$defs/conrete_edge_rs::GlobalAction"
+        }
+      },
+      "long_name": "bevy_utils::hashbrown::HashMap<conrete_edge_rs::GlobalAction, alloc::vec::Vec<std::boxed::Box<dyn leafwing_input_manager::user_input::trait_reflection::tripleaxislike::TripleAxislike>>, bevy_utils::hashbrown::hash_map::DefaultHashBuilder>",
+      "short_name": "HashMap<GlobalAction, Vec<Box<dyn TripleAxislike>>, DefaultHashBuilder>",
+      "type": "object",
+      "typeInfo": "Map",
+      "valueType": {
+        "type": {
+          "$ref": "#/$defs/alloc::vec::Vec<std::boxed::Box<dyn leafwing_input_manager::user_input::trait_reflection::tripleaxislike::TripleAxislike>>"
+        }
+      }
+    },
     "bevy_utils::hashbrown::HashMap<conrete_edge_rs::GlobalAction, leafwing_input_manager::action_state::action_data::ActionData, bevy_utils::hashbrown::hash_map::DefaultHashBuilder>": {
       "isComponent": false,
       "isResource": false,
@@ -14422,6 +14496,24 @@
       "valueType": {
         "type": {
           "$ref": "#/$defs/alloc::vec::Vec<std::boxed::Box<dyn leafwing_input_manager::user_input::trait_reflection::dualaxislike::DualAxislike>>"
+        }
+      }
+    },
+    "bevy_utils::hashbrown::HashMap<conrete_edge_rs::player::PlayerAction, alloc::vec::Vec<std::boxed::Box<dyn leafwing_input_manager::user_input::trait_reflection::tripleaxislike::TripleAxislike>>, bevy_utils::hashbrown::hash_map::DefaultHashBuilder>": {
+      "isComponent": false,
+      "isResource": false,
+      "keyType": {
+        "type": {
+          "$ref": "#/$defs/conrete_edge_rs::player::PlayerAction"
+        }
+      },
+      "long_name": "bevy_utils::hashbrown::HashMap<conrete_edge_rs::player::PlayerAction, alloc::vec::Vec<std::boxed::Box<dyn leafwing_input_manager::user_input::trait_reflection::tripleaxislike::TripleAxislike>>, bevy_utils::hashbrown::hash_map::DefaultHashBuilder>",
+      "short_name": "HashMap<PlayerAction, Vec<Box<dyn TripleAxislike>>, DefaultHashBuilder>",
+      "type": "object",
+      "typeInfo": "Map",
+      "valueType": {
+        "type": {
+          "$ref": "#/$defs/alloc::vec::Vec<std::boxed::Box<dyn leafwing_input_manager::user_input::trait_reflection::tripleaxislike::TripleAxislike>>"
         }
       }
     },
@@ -14530,6 +14622,24 @@
       "valueType": {
         "type": {
           "$ref": "#/$defs/glam::Vec2"
+        }
+      }
+    },
+    "bevy_utils::hashbrown::HashMap<std::boxed::Box<dyn leafwing_input_manager::user_input::trait_reflection::tripleaxislike::TripleAxislike>, glam::Vec3, bevy_utils::hashbrown::hash_map::DefaultHashBuilder>": {
+      "isComponent": false,
+      "isResource": false,
+      "keyType": {
+        "type": {
+          "$ref": "#/$defs/std::boxed::Box<dyn leafwing_input_manager::user_input::trait_reflection::tripleaxislike::TripleAxislike>"
+        }
+      },
+      "long_name": "bevy_utils::hashbrown::HashMap<std::boxed::Box<dyn leafwing_input_manager::user_input::trait_reflection::tripleaxislike::TripleAxislike>, glam::Vec3, bevy_utils::hashbrown::hash_map::DefaultHashBuilder>",
+      "short_name": "HashMap<Box<dyn TripleAxislike>, Vec3, DefaultHashBuilder>",
+      "type": "object",
+      "typeInfo": "Map",
+      "valueType": {
+        "type": {
+          "$ref": "#/$defs/glam::Vec3"
         }
       }
     },
@@ -18078,8 +18188,8 @@
     },
     "leafwing_input_manager::action_state::ActionState<conrete_edge_rs::GlobalAction>": {
       "additionalProperties": false,
-      "isComponent": false,
-      "isResource": false,
+      "isComponent": true,
+      "isResource": true,
       "long_name": "leafwing_input_manager::action_state::ActionState<conrete_edge_rs::GlobalAction>",
       "properties": {
         "action_data": {
@@ -18103,8 +18213,8 @@
     },
     "leafwing_input_manager::action_state::ActionState<conrete_edge_rs::player::PlayerAction>": {
       "additionalProperties": false,
-      "isComponent": false,
-      "isResource": false,
+      "isComponent": true,
+      "isResource": true,
       "long_name": "leafwing_input_manager::action_state::ActionState<conrete_edge_rs::player::PlayerAction>",
       "properties": {
         "action_data": {
@@ -18195,6 +18305,20 @@
             }
           ],
           "short_name": "DualAxis",
+          "type": "array",
+          "typeInfo": "Tuple"
+        },
+        {
+          "items": false,
+          "long_name": "TripleAxis",
+          "prefixItems": [
+            {
+              "type": {
+                "$ref": "#/$defs/leafwing_input_manager::action_state::action_data::TripleAxisData"
+              }
+            }
+          ],
+          "short_name": "TripleAxis",
           "type": "array",
           "typeInfo": "Tuple"
         }
@@ -18296,6 +18420,37 @@
       "type": "object",
       "typeInfo": "Struct"
     },
+    "leafwing_input_manager::action_state::action_data::TripleAxisData": {
+      "additionalProperties": false,
+      "isComponent": false,
+      "isResource": false,
+      "long_name": "leafwing_input_manager::action_state::action_data::TripleAxisData",
+      "properties": {
+        "fixed_update_triple": {
+          "type": {
+            "$ref": "#/$defs/glam::Vec3"
+          }
+        },
+        "triple": {
+          "type": {
+            "$ref": "#/$defs/glam::Vec3"
+          }
+        },
+        "update_triple": {
+          "type": {
+            "$ref": "#/$defs/glam::Vec3"
+          }
+        }
+      },
+      "required": [
+        "triple",
+        "update_triple",
+        "fixed_update_triple"
+      ],
+      "short_name": "TripleAxisData",
+      "type": "object",
+      "typeInfo": "Struct"
+    },
     "leafwing_input_manager::axislike::AxisDirection": {
       "isComponent": false,
       "isResource": false,
@@ -18350,8 +18505,8 @@
     },
     "leafwing_input_manager::input_map::InputMap<conrete_edge_rs::GlobalAction>": {
       "additionalProperties": false,
-      "isComponent": false,
-      "isResource": false,
+      "isComponent": true,
+      "isResource": true,
       "long_name": "leafwing_input_manager::input_map::InputMap<conrete_edge_rs::GlobalAction>",
       "properties": {
         "associated_gamepad": {
@@ -18373,12 +18528,18 @@
           "type": {
             "$ref": "#/$defs/bevy_utils::hashbrown::HashMap<conrete_edge_rs::GlobalAction, alloc::vec::Vec<std::boxed::Box<dyn leafwing_input_manager::user_input::trait_reflection::dualaxislike::DualAxislike>>, bevy_utils::hashbrown::hash_map::DefaultHashBuilder>"
           }
+        },
+        "triple_axislike_map": {
+          "type": {
+            "$ref": "#/$defs/bevy_utils::hashbrown::HashMap<conrete_edge_rs::GlobalAction, alloc::vec::Vec<std::boxed::Box<dyn leafwing_input_manager::user_input::trait_reflection::tripleaxislike::TripleAxislike>>, bevy_utils::hashbrown::hash_map::DefaultHashBuilder>"
+          }
         }
       },
       "required": [
         "buttonlike_map",
         "axislike_map",
-        "dual_axislike_map"
+        "dual_axislike_map",
+        "triple_axislike_map"
       ],
       "short_name": "InputMap<GlobalAction>",
       "type": "object",
@@ -18386,8 +18547,8 @@
     },
     "leafwing_input_manager::input_map::InputMap<conrete_edge_rs::player::PlayerAction>": {
       "additionalProperties": false,
-      "isComponent": false,
-      "isResource": false,
+      "isComponent": true,
+      "isResource": true,
       "long_name": "leafwing_input_manager::input_map::InputMap<conrete_edge_rs::player::PlayerAction>",
       "properties": {
         "associated_gamepad": {
@@ -18409,12 +18570,18 @@
           "type": {
             "$ref": "#/$defs/bevy_utils::hashbrown::HashMap<conrete_edge_rs::player::PlayerAction, alloc::vec::Vec<std::boxed::Box<dyn leafwing_input_manager::user_input::trait_reflection::dualaxislike::DualAxislike>>, bevy_utils::hashbrown::hash_map::DefaultHashBuilder>"
           }
+        },
+        "triple_axislike_map": {
+          "type": {
+            "$ref": "#/$defs/bevy_utils::hashbrown::HashMap<conrete_edge_rs::player::PlayerAction, alloc::vec::Vec<std::boxed::Box<dyn leafwing_input_manager::user_input::trait_reflection::tripleaxislike::TripleAxislike>>, bevy_utils::hashbrown::hash_map::DefaultHashBuilder>"
+          }
         }
       },
       "required": [
         "buttonlike_map",
         "axislike_map",
-        "dual_axislike_map"
+        "dual_axislike_map",
+        "triple_axislike_map"
       ],
       "short_name": "InputMap<PlayerAction>",
       "type": "object",
@@ -18896,6 +19063,97 @@
       "type": "object",
       "typeInfo": "Struct"
     },
+    "leafwing_input_manager::user_input::chord::AxislikeChord": {
+      "additionalProperties": false,
+      "isComponent": false,
+      "isResource": false,
+      "long_name": "leafwing_input_manager::user_input::chord::AxislikeChord",
+      "properties": {
+        "axis": {
+          "type": {
+            "$ref": "#/$defs/std::boxed::Box<dyn leafwing_input_manager::user_input::trait_reflection::axislike::Axislike>"
+          }
+        },
+        "button": {
+          "type": {
+            "$ref": "#/$defs/std::boxed::Box<dyn leafwing_input_manager::user_input::trait_reflection::buttonlike::Buttonlike>"
+          }
+        }
+      },
+      "required": [
+        "button",
+        "axis"
+      ],
+      "short_name": "AxislikeChord",
+      "type": "object",
+      "typeInfo": "Struct"
+    },
+    "leafwing_input_manager::user_input::chord::ButtonlikeChord": {
+      "isComponent": false,
+      "isResource": false,
+      "items": false,
+      "long_name": "leafwing_input_manager::user_input::chord::ButtonlikeChord",
+      "prefixItems": [
+        {
+          "type": {
+            "$ref": "#/$defs/alloc::vec::Vec<std::boxed::Box<dyn leafwing_input_manager::user_input::trait_reflection::buttonlike::Buttonlike>>"
+          }
+        }
+      ],
+      "short_name": "ButtonlikeChord",
+      "type": "array",
+      "typeInfo": "TupleStruct"
+    },
+    "leafwing_input_manager::user_input::chord::DualAxislikeChord": {
+      "additionalProperties": false,
+      "isComponent": false,
+      "isResource": false,
+      "long_name": "leafwing_input_manager::user_input::chord::DualAxislikeChord",
+      "properties": {
+        "button": {
+          "type": {
+            "$ref": "#/$defs/std::boxed::Box<dyn leafwing_input_manager::user_input::trait_reflection::buttonlike::Buttonlike>"
+          }
+        },
+        "dual_axis": {
+          "type": {
+            "$ref": "#/$defs/std::boxed::Box<dyn leafwing_input_manager::user_input::trait_reflection::dualaxislike::DualAxislike>"
+          }
+        }
+      },
+      "required": [
+        "button",
+        "dual_axis"
+      ],
+      "short_name": "DualAxislikeChord",
+      "type": "object",
+      "typeInfo": "Struct"
+    },
+    "leafwing_input_manager::user_input::chord::TripleAxislikeChord": {
+      "additionalProperties": false,
+      "isComponent": false,
+      "isResource": false,
+      "long_name": "leafwing_input_manager::user_input::chord::TripleAxislikeChord",
+      "properties": {
+        "button": {
+          "type": {
+            "$ref": "#/$defs/std::boxed::Box<dyn leafwing_input_manager::user_input::trait_reflection::buttonlike::Buttonlike>"
+          }
+        },
+        "triple_axis": {
+          "type": {
+            "$ref": "#/$defs/std::boxed::Box<dyn leafwing_input_manager::user_input::trait_reflection::tripleaxislike::TripleAxislike>"
+          }
+        }
+      },
+      "required": [
+        "button",
+        "triple_axis"
+      ],
+      "short_name": "TripleAxislikeChord",
+      "type": "object",
+      "typeInfo": "Struct"
+    },
     "leafwing_input_manager::user_input::gamepad::GamepadControlAxis": {
       "additionalProperties": false,
       "isComponent": false,
@@ -19122,6 +19380,55 @@
         "processors"
       ],
       "short_name": "KeyboardVirtualDPad",
+      "type": "object",
+      "typeInfo": "Struct"
+    },
+    "leafwing_input_manager::user_input::keyboard::KeyboardVirtualDPad3D": {
+      "additionalProperties": false,
+      "isComponent": false,
+      "isResource": false,
+      "long_name": "leafwing_input_manager::user_input::keyboard::KeyboardVirtualDPad3D",
+      "properties": {
+        "backward": {
+          "type": {
+            "$ref": "#/$defs/bevy_input::keyboard::KeyCode"
+          }
+        },
+        "down": {
+          "type": {
+            "$ref": "#/$defs/bevy_input::keyboard::KeyCode"
+          }
+        },
+        "forward": {
+          "type": {
+            "$ref": "#/$defs/bevy_input::keyboard::KeyCode"
+          }
+        },
+        "left": {
+          "type": {
+            "$ref": "#/$defs/bevy_input::keyboard::KeyCode"
+          }
+        },
+        "right": {
+          "type": {
+            "$ref": "#/$defs/bevy_input::keyboard::KeyCode"
+          }
+        },
+        "up": {
+          "type": {
+            "$ref": "#/$defs/bevy_input::keyboard::KeyCode"
+          }
+        }
+      },
+      "required": [
+        "up",
+        "down",
+        "left",
+        "right",
+        "forward",
+        "backward"
+      ],
+      "short_name": "KeyboardVirtualDPad3D",
       "type": "object",
       "typeInfo": "Struct"
     },
@@ -19362,6 +19669,20 @@
           "short_name": "Dualaxislike",
           "type": "array",
           "typeInfo": "Tuple"
+        },
+        {
+          "items": false,
+          "long_name": "Tripleaxislike",
+          "prefixItems": [
+            {
+              "type": {
+                "$ref": "#/$defs/bevy_utils::hashbrown::HashMap<std::boxed::Box<dyn leafwing_input_manager::user_input::trait_reflection::tripleaxislike::TripleAxislike>, glam::Vec3, bevy_utils::hashbrown::hash_map::DefaultHashBuilder>"
+              }
+            }
+          ],
+          "short_name": "Tripleaxislike",
+          "type": "array",
+          "typeInfo": "Tuple"
         }
       ],
       "short_name": "UpdatedValues",
@@ -19476,6 +19797,14 @@
       "isResource": false,
       "long_name": "std::boxed::Box<dyn leafwing_input_manager::user_input::trait_reflection::dualaxislike::DualAxislike>",
       "short_name": "Box<dyn DualAxislike>",
+      "type": "object",
+      "typeInfo": "Value"
+    },
+    "std::boxed::Box<dyn leafwing_input_manager::user_input::trait_reflection::tripleaxislike::TripleAxislike>": {
+      "isComponent": false,
+      "isResource": false,
+      "long_name": "std::boxed::Box<dyn leafwing_input_manager::user_input::trait_reflection::tripleaxislike::TripleAxislike>",
+      "short_name": "Box<dyn TripleAxislike>",
       "type": "object",
       "typeInfo": "Value"
     },
