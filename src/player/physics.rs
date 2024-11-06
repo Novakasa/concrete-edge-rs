@@ -118,7 +118,7 @@ pub struct PhysicsDebugInfo {
 
 #[derive(Component, Reflect, Debug, Default)]
 pub struct PhysicsState {
-    pub acc_dir: Vec3,
+    pub input_dir: Vec3,
     pub spring_height: f32,
     prev_vel: Vec3,
     prev_angular_force: Vec3,
@@ -235,12 +235,13 @@ pub fn update_ground_force(
                 Vec3::X.cross(normal).normalize_or_zero()
             };
             let tangent_x = -tangent_z.cross(normal);
-            let acc_tangent = move_state.acc_dir.x * tangent_x + move_state.acc_dir.z * tangent_z;
+            let input_tangent =
+                move_state.input_dir.x * tangent_x + move_state.input_dir.z * tangent_z;
             let tangent_vel = *velocity - velocity.dot(normal) * normal;
 
             debug.tangent_vel = tangent_vel;
 
-            let target_vel = acc_tangent * 7.0;
+            let target_vel = input_tangent * 7.0;
             debug.target_vel = target_vel;
             let denominator = 1.0 - tangent_slope.dot(ext_dir).powi(2);
             let slope_force = if denominator == 0.0 {
