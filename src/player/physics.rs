@@ -124,6 +124,7 @@ pub struct PhysicsState {
     pub input_dir: Vec2,
     prev_substep_vel: Vec3,
     pub ground_state: PhysicsGroundState,
+    pub air_state: PhysicsAirState,
 }
 
 #[derive(Debug, Reflect, Default)]
@@ -136,12 +137,14 @@ pub struct PhysicsGroundState {
     pub slope_force: Vec3,
 }
 
+#[derive(Debug, Reflect, Default)]
 pub struct PredictedContact {
     pub contact_point: Vec3,
     pub contact_normal: Vec3,
     pub toi: f32,
 }
 
+#[derive(Debug, Reflect, Default)]
 pub struct PhysicsAirState {
     pub predicted_contact: Option<PredictedContact>,
 }
@@ -165,7 +168,59 @@ impl PhysicsState {
     }
 }
 
-pub fn predict_contact() {}
+pub fn predict_contact(
+    mut q_player: Query<(&mut PhysicsState, &Position, &LinearVelocity)>,
+    spatial_query: SpatialQuery,
+    mut gizmos: Gizmos,
+) {
+    for (mut physics, Position(position), LinearVelocity(velocity)) in q_player.iter_mut() {
+        if physics.ground_state.contact_point.is_some() {
+            continue;
+        }
+        let filter = SpatialQueryFilter::from_mask(Layer::Platform);
+        let mut test_time = 0.0;
+        while test_time < 2.0 {
+            let origin = position.clone()
+                + *velocity * test_time
+                + physics.external_force * 0.5 * test_time.powi(2);
+            let target_time = test_time + 0.1;
+            let target = position.clone()
+                + *velocity * target_time
+                + physics.external_force * 0.5 * target_time.powi(2);
+            let cast_dir = Dir3::new(target - origin).unwrap();
+            gizmos.line(origin, target, Color::WHITE);
+            let test_vel = *velocity + physics.external_force * (test_time + 0.05);
+            let max_toi = (target - origin).length();
+            let result = spatial_query.cast_shape(
+                &Collider::sphere(MAX_TOI + CAPSULE_RADIUS),
+                origin,
+                Quat::IDENTITY,
+                cast_dir,
+                max_toi,
+                true,
+                filter.clone(),
+            );
+            if let Some(coll) = result {
+                gizmos.sphere(
+                    origin + cast_dir * coll.time_of_impact,
+                    Quat::IDENTITY,
+                    MAX_TOI + CAPSULE_RADIUS,
+                    Color::WHITE,
+                );
+                let contact_toi = test_time + coll.time_of_impact / test_vel.length();
+                physics.air_state.predicted_contact = Some(PredictedContact {
+                    contact_point: coll.point2 + origin + cast_dir * coll.time_of_impact,
+                    contact_normal: coll.normal1,
+                    toi: contact_toi,
+                });
+                println!("coll toi: {:?}", coll.time_of_impact);
+                break;
+            }
+
+            test_time += 0.1;
+        }
+    }
+}
 
 pub fn set_external_force(mut q_physics: Query<&mut PhysicsState>, gravity: Res<Gravity>) {
     for mut physics in q_physics.iter_mut() {
@@ -384,11 +439,11 @@ impl Plugin for PlayerPhysicsPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(
             SubstepSchedule,
-            (update_ground_force).before(IntegrationSet::Velocity),
+            (update_ground_force,).before(IntegrationSet::Velocity),
         );
         app.add_systems(
             PostUpdate,
-            (set_external_force,).before(PhysicsSet::StepSimulation),
+            (predict_contact, set_external_force).before(PhysicsSet::StepSimulation),
         );
     }
 }

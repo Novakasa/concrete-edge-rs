@@ -231,6 +231,9 @@ fn draw_debug_gizmos(
     for (debug, Position(position), Rotation(quat), LinearVelocity(_vel), physics_state, steps) in
         query.iter_mut()
     {
+        if let Some(contact) = &physics_state.air_state.predicted_contact {
+            gizmos.sphere(contact.contact_point, Quat::IDENTITY, 0.1, Color::from(RED));
+        }
         if debug.grounded {
             for (i, state) in steps.ground_state.foot_states.iter().enumerate() {
                 let color = if i == 0 {
