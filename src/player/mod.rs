@@ -227,7 +227,7 @@ fn draw_debug_gizmos(
     mut gizmos: Gizmos,
     debug_state: Res<State<DebugState>>,
 ) {
-    for (debug, Position(position), Rotation(quat), LinearVelocity(_vel), move_state, steps) in
+    for (debug, Position(position), Rotation(quat), LinearVelocity(_vel), physics_state, steps) in
         query.iter_mut()
     {
         if debug.grounded {
@@ -258,7 +258,7 @@ fn draw_debug_gizmos(
                     CAPSULE_HEIGHT * 0.4,
                     CAPSULE_HEIGHT * 0.4,
                     pos - hip_pos,
-                    move_state.forward_dir,
+                    physics_state.forward_dir,
                 );
                 gizmos.arrow(hip_pos, hip_pos + pos1, Color::WHITE);
                 gizmos.arrow(hip_pos + pos1, hip_pos + pos2, Color::WHITE);
@@ -287,7 +287,7 @@ fn draw_debug_gizmos(
             }
 
             if debug_state.get() == &DebugState::Forces {
-                let contact_color = if move_state.slipping {
+                let contact_color = if physics_state.ground_state.slipping {
                     Color::from(RED)
                 } else {
                     Color::from(GREEN)
@@ -355,12 +355,12 @@ fn draw_debug_gizmos(
             .resolution(12);
         gizmos.arrow(
             *position,
-            *position + 0.2 * move_state.forward_dir,
+            *position + 0.2 * physics_state.forward_dir,
             Color::from(BLUE),
         );
         gizmos.arrow(
             *position,
-            *position - 0.2 * move_state.forward_dir,
+            *position - 0.2 * physics_state.forward_dir,
             Color::from(RED),
         );
     }

@@ -169,7 +169,7 @@ impl RigGroundState {
         &mut self,
         contact_point: Vec3,
         position: &Vec3,
-        move_state: &PhysicsState,
+        physics_state: &PhysicsState,
         right_dir: Dir3,
         velocity: &Vec3,
         mass: &Mass,
@@ -178,12 +178,14 @@ impl RigGroundState {
     ) {
         self.cycle_state.increment(dt);
         let contact = contact_point + *position;
-        let normal = move_state.contact_normal.unwrap();
+        let normal = physics_state.ground_state.contact_normal.unwrap();
 
         let right_tangent =
             (right_dir.as_vec3() - right_dir.dot(normal) * normal).normalize_or_zero();
         let tangential_vel = *velocity - velocity.dot(normal) * normal;
-        let acceleration = (move_state.tangential_force + move_state.slope_force) / mass.0;
+        let acceleration = (physics_state.ground_state.tangential_force
+            + physics_state.ground_state.slope_force)
+            / mass.0;
         let lock_duration = 0.06;
         let travel_duration = lock_duration * 2.5;
         let min_lock = 0.03;
@@ -195,8 +197,8 @@ impl RigGroundState {
         let min_step_size = CAPSULE_RADIUS * 0.5;
         let window_travel_dist = (window_pos_ahead - window_pos_behind).length();
         let ahead_to_contact = (window_pos_ahead - contact).length();
-        let slip_vel = if move_state.slipping {
-            -0.5 * move_state.tangential_force / mass.0
+        let slip_vel = if physics_state.ground_state.slipping {
+            -0.5 * physics_state.ground_state.tangential_force / mass.0
         } else {
             Vec3::ZERO
         };
@@ -310,7 +312,7 @@ pub fn update_procedural_steps(
         let up_dir = *quat * Dir3::Y;
         let right_dir = *quat * Dir3::X;
 
-        if let Some(contact_point) = move_state.contact_point {
+        if let Some(contact_point) = move_state.ground_state.contact_point {
             rig_state.hip_pos = *position
                 - up_dir.slerp(Dir3::new(-contact_point).unwrap(), 0.5) * CAPSULE_HEIGHT * 0.15;
             rig_state.ground_state.update(

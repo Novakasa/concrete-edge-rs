@@ -118,22 +118,36 @@ pub struct PhysicsDebugInfo {
 
 #[derive(Component, Reflect, Debug, Default)]
 pub struct PhysicsState {
+    pub forward_dir: Vec3,
     pub input_dir: Vec3,
-    prev_vel: Vec3,
+    prev_substep_vel: Vec3,
+    pub ground_state: PhysicsGroundState,
+}
+
+#[derive(Debug, Reflect, Default)]
+pub struct PhysicsGroundState {
     pub neg_cast_vec: Vec3,
     pub slipping: bool,
     pub contact_point: Option<Vec3>,
     pub contact_normal: Option<Vec3>,
     pub tangential_force: Vec3,
     pub slope_force: Vec3,
-    pub forward_dir: Vec3,
+}
+
+impl PhysicsGroundState {
+    pub fn new() -> Self {
+        Self {
+            neg_cast_vec: Vec3::Y,
+            ..Default::default()
+        }
+    }
 }
 
 impl PhysicsState {
     pub fn new() -> Self {
         Self {
-            neg_cast_vec: Vec3::Y,
             forward_dir: Vec3::NEG_Z,
+            ground_state: PhysicsGroundState::new(),
             ..Default::default()
         }
     }
@@ -167,17 +181,17 @@ pub fn update_ground_force(
         Mass(mass),
         mut spring,
         angular_spring,
-        mut move_state,
+        mut physics_state,
         mut debug,
     ) in query.iter_mut()
     {
         let external_forces = gravity.0;
         let ext_dir = external_forces.normalize_or_zero();
         let filter = SpatialQueryFilter::from_mask(Layer::Platform);
-        let cast_dir = -move_state.neg_cast_vec;
+        let cast_dir = -physics_state.ground_state.neg_cast_vec;
         let capsule_up = *quat * Vec3::Y;
         let capsule_right = *quat * Vec3::X;
-        move_state.forward_dir = *quat * Vec3::NEG_Z;
+        physics_state.forward_dir = *quat * Vec3::NEG_Z;
         if let Some(coll) = shape_cast.cast_shape(
             &Collider::sphere(CAST_RADIUS),
             position.clone(),
@@ -189,10 +203,10 @@ pub fn update_ground_force(
         ) {
             let normal = coll.normal1;
             debug.ground_normal = normal;
-            move_state.contact_normal = Some(normal);
+            physics_state.ground_state.contact_normal = Some(normal);
 
             let contact_point = coll.point2 + cast_dir * coll.time_of_impact;
-            move_state.contact_point = Some(contact_point);
+            physics_state.ground_state.contact_point = Some(contact_point);
             let spring_dir = -contact_point.normalize_or_zero();
             // let spring_dir = from_up;
             debug.contact_point = contact_point;
@@ -210,7 +224,7 @@ pub fn update_ground_force(
             let grounded = spring_force.length() > 0.0001;
             debug.grounded = grounded;
             if !grounded {
-                move_state.contact_point = None;
+                physics_state.ground_state.contact_point = None;
                 force.clear();
                 torque.clear();
                 continue;
@@ -233,7 +247,7 @@ pub fn update_ground_force(
             };
             let tangent_x = -tangent_z.cross(normal);
             let input_tangent =
-                move_state.input_dir.x * tangent_x + move_state.input_dir.z * tangent_z;
+                physics_state.input_dir.x * tangent_x + physics_state.input_dir.z * tangent_z;
             let tangent_vel = *velocity - velocity.dot(normal) * normal;
 
             debug.tangent_vel = tangent_vel;
@@ -276,13 +290,13 @@ pub fn update_ground_force(
                 .unwrap_or(target_force)
             }
             target_force -= slope_force;
-            move_state.prev_vel = velocity.clone();
+            physics_state.prev_substep_vel = velocity.clone();
             debug.target_force = target_force;
             // println!("{:?}, {:?}", target_force, normal_force);
 
             let target_spring_dir = (target_force + normal_force).normalize_or_zero();
 
-            let raw_neg_cast_vec = (move_state.neg_cast_vec
+            let raw_neg_cast_vec = (physics_state.ground_state.neg_cast_vec
                 + 10.0 * (target_spring_dir - spring_dir) * dt.delta_seconds())
             .try_normalize()
             .unwrap();
@@ -290,7 +304,7 @@ pub fn update_ground_force(
             let cast_quat = Quat::from_rotation_arc(capsule_up, raw_neg_cast_vec);
             let angle = capsule_up.angle_between(raw_neg_cast_vec);
             // println!("{:?}", (angle, capsule_up, raw_neg_cast_vec, quat));
-            move_state.neg_cast_vec = if angle < 0.0001 {
+            physics_state.ground_state.neg_cast_vec = if angle < 0.0001 {
                 raw_neg_cast_vec
             } else {
                 Quat::IDENTITY.slerp(cast_quat, angle.min(0.3 * PI) / angle) * capsule_up
@@ -298,7 +312,7 @@ pub fn update_ground_force(
 
             let target_up = spring_dir;
             let target_right = target_vel.cross(target_up).try_normalize().unwrap_or(
-                move_state
+                physics_state
                     .forward_dir
                     .cross(target_up)
                     .try_normalize()
@@ -319,10 +333,10 @@ pub fn update_ground_force(
                 -normal.cross(angular_spring_torque) / (normal.dot(contact_point));
 
             debug.angle_force = tangential_angle_force;
-            move_state.tangential_force =
+            physics_state.ground_state.tangential_force =
                 (tangential_spring_force + tangential_angle_force).clamp_length_max(friction_force);
-            move_state.slope_force = slope_force;
-            move_state.slipping =
+            physics_state.ground_state.slope_force = slope_force;
+            physics_state.ground_state.slipping =
                 (tangential_spring_force + tangential_angle_force).length() > friction_force;
 
             force.clear();
@@ -338,8 +352,8 @@ pub fn update_ground_force(
                 .apply_torque(angular_spring_torque - contact_point.cross(tangential_angle_force));
         } else {
             debug.grounded = false;
-            move_state.neg_cast_vec = capsule_up;
-            move_state.contact_point = None;
+            physics_state.ground_state.neg_cast_vec = capsule_up;
+            physics_state.ground_state.contact_point = None;
             force.clear();
             torque.clear();
         }
