@@ -182,8 +182,9 @@ fn player_controls(
                 cam1.pitch = cam3.pitch;
             }
 
-            move_state.input_dir = Quat::from_euler(EulerRot::YXZ, cam3.yaw, 0.0, 0.0)
-                * Vec3::new(move_input.x, 0.0, -move_input.y);
+            move_state.input_dir = (Quat::from_euler(EulerRot::YXZ, cam3.yaw, 0.0, 0.0)
+                * Vec3::new(move_input.x, 0.0, -move_input.y))
+            .xz();
             // println!("{:?}", move_state.acc_dir);
             if action_state.pressed(&PlayerAction::Jump) {
                 spring.rest_length = CAPSULE_HEIGHT * 1.4 + CAPSULE_RADIUS;
@@ -419,20 +420,18 @@ impl Plugin for PlayerPlugin {
         );
         app.add_systems(
             SubstepSchedule,
-            ((
-                (
-                    camera::track_camera_3rd_person,
-                    camera::track_camera_1st_person,
-                )
-                    .chain()
-                    .run_if(in_state(DebugState::None)),
-                physics::update_ground_force,
+            (((
+                camera::track_camera_3rd_person,
+                camera::track_camera_1st_person,
             )
+                .chain()
+                .run_if(in_state(DebugState::None)),)
                 .chain())
             .before(IntegrationSet::Velocity),
         );
         app.add_systems(OnEnter(DebugState::None), set_visible::<true>);
         app.add_systems(OnExit(DebugState::None), set_visible::<false>);
+        app.add_plugins(physics::PlayerPhysicsPlugin);
         // app.add_plugins(PhysicsDebugPlugin::default());
     }
 }

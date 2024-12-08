@@ -2,6 +2,7 @@ use std::f32::consts::PI;
 
 use avian3d::prelude::*;
 use bevy::prelude::*;
+use dynamics::integrator::IntegrationSet;
 
 pub const CAPSULE_RADIUS: f32 = 0.2;
 pub const CAPSULE_HEIGHT: f32 = 4.0 * CAPSULE_RADIUS;
@@ -118,8 +119,9 @@ pub struct PhysicsDebugInfo {
 
 #[derive(Component, Reflect, Debug, Default)]
 pub struct PhysicsState {
+    pub external_force: Vec3,
     pub forward_dir: Vec3,
-    pub input_dir: Vec3,
+    pub input_dir: Vec2,
     prev_substep_vel: Vec3,
     pub ground_state: PhysicsGroundState,
 }
@@ -132,6 +134,16 @@ pub struct PhysicsGroundState {
     pub contact_normal: Option<Vec3>,
     pub tangential_force: Vec3,
     pub slope_force: Vec3,
+}
+
+pub struct PredictedContact {
+    pub contact_point: Vec3,
+    pub contact_normal: Vec3,
+    pub toi: f32,
+}
+
+pub struct PhysicsAirState {
+    pub predicted_contact: Option<PredictedContact>,
 }
 
 impl PhysicsGroundState {
@@ -153,6 +165,14 @@ impl PhysicsState {
     }
 }
 
+pub fn predict_contact() {}
+
+pub fn set_external_force(mut q_physics: Query<&mut PhysicsState>, gravity: Res<Gravity>) {
+    for mut physics in q_physics.iter_mut() {
+        physics.external_force = gravity.0;
+    }
+}
+
 pub fn update_ground_force(
     mut query: Query<(
         &mut ExternalForce,
@@ -169,7 +189,6 @@ pub fn update_ground_force(
     )>,
     shape_cast: SpatialQuery,
     dt: Res<Time<Substeps>>,
-    gravity: Res<Gravity>,
 ) {
     for (
         mut force,
@@ -185,8 +204,6 @@ pub fn update_ground_force(
         mut debug,
     ) in query.iter_mut()
     {
-        let external_forces = gravity.0;
-        let ext_dir = external_forces.normalize_or_zero();
         let filter = SpatialQueryFilter::from_mask(Layer::Platform);
         let cast_dir = -physics_state.ground_state.neg_cast_vec;
         let capsule_up = *quat * Vec3::Y;
@@ -247,16 +264,17 @@ pub fn update_ground_force(
             };
             let tangent_x = -tangent_z.cross(normal);
             let input_tangent =
-                physics_state.input_dir.x * tangent_x + physics_state.input_dir.z * tangent_z;
+                physics_state.input_dir.x * tangent_x + physics_state.input_dir.y * tangent_z;
             let tangent_vel = *velocity - velocity.dot(normal) * normal;
 
             debug.tangent_vel = tangent_vel;
 
             let target_vel = input_tangent * 7.0;
             debug.target_vel = target_vel;
+            let ext_dir = physics_state.external_force.normalize_or_zero();
             let denominator = 1.0 - tangent_slope.dot(ext_dir).powi(2);
             let slope_force = if denominator == 0.0 {
-                external_forces
+                physics_state.external_force
             } else {
                 -tangent_slope.dot(ext_dir) * normal_force.dot(ext_dir) * tangent_slope
                     / denominator
@@ -357,5 +375,20 @@ pub fn update_ground_force(
             force.clear();
             torque.clear();
         }
+    }
+}
+
+pub struct PlayerPhysicsPlugin;
+
+impl Plugin for PlayerPhysicsPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_systems(
+            SubstepSchedule,
+            (update_ground_force).before(IntegrationSet::Velocity),
+        );
+        app.add_systems(
+            PostUpdate,
+            (set_external_force,).before(PhysicsSet::StepSimulation),
+        );
     }
 }
