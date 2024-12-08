@@ -124,6 +124,8 @@ impl Default for CycleState {
 pub struct RigGroundState {
     pub foot_states: [FootState; 2],
     cycle_state: CycleState,
+    cm_offset: f32,
+    torso_extent: f32,
 }
 
 impl RigGroundState {
@@ -181,7 +183,7 @@ impl RigGroundState {
         let right_tangent =
             (right_dir.as_vec3() - right_dir.dot(normal) * normal).normalize_or_zero();
         let tangential_vel = *velocity - velocity.dot(normal) * normal;
-        let acceleration = (move_state.current_force + move_state.ext_force) / mass.0;
+        let acceleration = (move_state.tangential_force + move_state.slope_force) / mass.0;
         let lock_duration = 0.06;
         let travel_duration = lock_duration * 2.5;
         let min_lock = 0.03;
@@ -194,7 +196,7 @@ impl RigGroundState {
         let window_travel_dist = (window_pos_ahead - window_pos_behind).length();
         let ahead_to_contact = (window_pos_ahead - contact).length();
         let slip_vel = if move_state.slipping {
-            -0.5 * move_state.current_force / mass.0
+            -0.5 * move_state.tangential_force / mass.0
         } else {
             Vec3::ZERO
         };

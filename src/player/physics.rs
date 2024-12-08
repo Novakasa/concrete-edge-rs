@@ -119,16 +119,13 @@ pub struct PhysicsDebugInfo {
 #[derive(Component, Reflect, Debug, Default)]
 pub struct PhysicsState {
     pub input_dir: Vec3,
-    pub spring_height: f32,
     prev_vel: Vec3,
-    prev_angular_force: Vec3,
-    prev_target_force: Vec3,
     pub neg_cast_vec: Vec3,
     pub slipping: bool,
     pub contact_point: Option<Vec3>,
     pub contact_normal: Option<Vec3>,
-    pub current_force: Vec3,
-    pub ext_force: Vec3,
+    pub tangential_force: Vec3,
+    pub slope_force: Vec3,
     pub forward_dir: Vec3,
 }
 
@@ -224,8 +221,8 @@ pub fn update_ground_force(
             let normal_force = spring_force.dot(normal) * normal;
             debug.normal_force = normal_force;
             let friction_force = normal_force.length() * GLOBAL_FRICTION;
-            let tangential_force = spring_force - normal_force;
-            debug.tangential_force = tangential_force;
+            let tangential_spring_force = spring_force - normal_force;
+            debug.tangential_force = tangential_spring_force;
 
             let tangent_plane = normal.cross(Vec3::Y).normalize_or_zero();
             let tangent_slope = normal.cross(tangent_plane).normalize_or_zero();
@@ -318,22 +315,27 @@ pub fn update_ground_force(
 
             debug.spring_torque = angular_spring_torque;
 
-            let angle_force = -normal.cross(angular_spring_torque) / (normal.dot(contact_point));
+            let tangential_angle_force =
+                -normal.cross(angular_spring_torque) / (normal.dot(contact_point));
 
-            debug.angle_force = angle_force;
-            move_state.current_force =
-                (tangential_force + angle_force).clamp_length_max(friction_force);
-            move_state.ext_force = slope_force;
-            move_state.slipping = (tangential_force + angle_force).length() > friction_force;
+            debug.angle_force = tangential_angle_force;
+            move_state.tangential_force =
+                (tangential_spring_force + tangential_angle_force).clamp_length_max(friction_force);
+            move_state.slope_force = slope_force;
+            move_state.slipping =
+                (tangential_spring_force + tangential_angle_force).length() > friction_force;
 
             force.clear();
             force.apply_force_at_point(
-                normal_force + (tangential_force + angle_force).clamp_length_max(friction_force),
+                normal_force
+                    + (tangential_spring_force + tangential_angle_force)
+                        .clamp_length_max(friction_force),
                 contact_point,
                 Vec3::ZERO,
             );
             torque.clear();
-            torque.apply_torque(angular_spring_torque - contact_point.cross(angle_force));
+            torque
+                .apply_torque(angular_spring_torque - contact_point.cross(tangential_angle_force));
         } else {
             debug.grounded = false;
             move_state.neg_cast_vec = capsule_up;
