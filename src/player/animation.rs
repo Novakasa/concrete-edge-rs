@@ -325,6 +325,8 @@ pub fn update_procedural_steps(
                 dt,
                 up_dir,
             );
+        } else {
+            rig_state.ground_state = RigGroundState::default();
         }
     }
 }
