@@ -26,48 +26,42 @@ pub enum Layer {
     Platform,
 }
 
-#[derive(Clone)]
-enum SpringParams {
-    Physical { stiffness: f32, damping: f32 },
-    Effective { f: f32, zeta: f32, m: f32 },
+#[derive(Component, Reflect, Debug, Default)]
+pub struct PlayerSpringParams {
+    pub ground_spring: PlayerGroundSpring,
+    pub ground_spring_jumping: PlayerGroundSpring,
+    pub angular_spring: PlayerAngularSpring,
+    pub angular_spring_jumping: PlayerAngularSpring,
 }
 
-impl SpringParams {
-    fn get_physical(&self) -> Self {
-        match self {
-            Self::Physical {
-                stiffness: _,
-                damping: _,
-            } => self.clone(),
-            Self::Effective { f, zeta, m } => Self::Physical {
-                stiffness: (2.0 * PI * f).powi(2) * m,
-                damping: zeta * f * m / PI,
-            },
+impl PlayerSpringParams {
+    pub fn new() -> Self {
+        Self {
+            ground_spring: PlayerGroundSpring::running(),
+            ground_spring_jumping: PlayerGroundSpring::jumping(),
+            angular_spring: PlayerAngularSpring::running(),
+            angular_spring_jumping: PlayerAngularSpring::jumping(),
+        }
+    }
+
+    pub fn get_ground_spring(&self, jumping: bool) -> &PlayerGroundSpring {
+        if jumping {
+            &self.ground_spring_jumping
+        } else {
+            &self.ground_spring
+        }
+    }
+
+    pub fn get_angular_spring(&self, jumping: bool) -> &PlayerAngularSpring {
+        if jumping {
+            &self.angular_spring_jumping
+        } else {
+            &self.angular_spring
         }
     }
 }
 
-#[derive(Component, Reflect, Debug, Clone, Default)]
-struct SpringValue {
-    f: f32,
-    zeta: f32,
-    m: f32,
-    velocity: f32,
-    value: f32,
-}
-
-impl SpringValue {
-    fn update(&mut self, target: f32, dt: f32) -> f32 {
-        let k = (2.0 * PI * self.f).powi(2) * self.m;
-        let c = self.zeta * self.f * self.m / PI;
-        self.velocity += k * (target - self.value) * dt - c * self.velocity * dt;
-        self.value += self.velocity * dt;
-        self.value
-    }
-}
-
-#[derive(Component, Reflect, Debug, Resource, Clone, Default)]
-#[reflect(Component, Resource)]
+#[derive(Reflect, Debug, Clone, Default)]
 pub struct PlayerGroundSpring {
     pub rest_length: f32,
     pub stiffness: f32,
@@ -78,7 +72,32 @@ pub struct PlayerGroundSpring {
 }
 
 impl PlayerGroundSpring {
-    fn force(&mut self, length: f32, vel: f32, normal: Vec3, _dt: f32) -> f32 {
+    pub fn new() -> Self {
+        Self {
+            max_force: 20.0,
+            ..Default::default()
+        }
+    }
+
+    pub fn running() -> Self {
+        Self {
+            rest_length: CAPSULE_HEIGHT * 0.7 + CAPSULE_RADIUS,
+            min_damping: 1.5,
+            stiffness: 15.0,
+            ..Self::new()
+        }
+    }
+
+    pub fn jumping() -> Self {
+        Self {
+            rest_length: CAPSULE_HEIGHT * 1.4 + CAPSULE_RADIUS,
+            min_damping: 1.0,
+            stiffness: 15.0,
+            ..Self::new()
+        }
+    }
+
+    fn force(&self, length: f32, vel: f32, normal: Vec3, _dt: f32) -> f32 {
         let damping = self
             .max_damping
             .lerp(self.min_damping, normal.dot(Vec3::Y).abs());
@@ -89,12 +108,28 @@ impl PlayerGroundSpring {
     }
 }
 
-#[derive(Component, Reflect, Debug, Resource, Clone, Default)]
-#[reflect(Component, Resource)]
+#[derive(Reflect, Debug, Clone, Default)]
 pub struct PlayerAngularSpring {
     pub stiffness: f32,
     pub damping: f32,
     pub turn_stiffness: f32,
+}
+
+impl PlayerAngularSpring {
+    pub fn running() -> Self {
+        Self {
+            stiffness: 0.5,
+            damping: 0.15,
+            turn_stiffness: 0.4,
+        }
+    }
+
+    pub fn jumping() -> Self {
+        Self {
+            stiffness: 0.3,
+            ..Self::running()
+        }
+    }
 }
 
 #[derive(Component, Reflect, Debug, Default)]
@@ -131,6 +166,7 @@ pub struct PhysicsState {
 pub struct PhysicsGroundState {
     pub neg_cast_vec: Vec3,
     pub slipping: bool,
+    pub jumping: bool,
     pub contact_point: Option<Vec3>,
     pub contact_normal: Option<Vec3>,
     pub tangential_force: Vec3,
@@ -238,8 +274,7 @@ pub fn update_ground_force(
         &LinearVelocity,
         &AngularVelocity,
         &Mass,
-        &mut PlayerGroundSpring,
-        &PlayerAngularSpring,
+        &PlayerSpringParams,
         &mut PhysicsState,
         &mut PhysicsDebugInfo,
     )>,
@@ -254,8 +289,7 @@ pub fn update_ground_force(
         LinearVelocity(velocity),
         AngularVelocity(angular_vel),
         Mass(mass),
-        mut spring,
-        angular_spring,
+        spring_params,
         mut physics_state,
         mut debug,
     ) in query.iter_mut()
@@ -264,6 +298,8 @@ pub fn update_ground_force(
         let cast_dir = -physics_state.ground_state.neg_cast_vec;
         let capsule_up = *quat * Vec3::Y;
         let capsule_right = *quat * Vec3::X;
+        let spring = spring_params.get_ground_spring(physics_state.ground_state.jumping);
+        let angular_spring = spring_params.get_angular_spring(physics_state.ground_state.jumping);
         physics_state.forward_dir = *quat * Vec3::NEG_Z;
         if let Some(coll) = shape_cast.cast_shape(
             &Collider::sphere(CAST_RADIUS),

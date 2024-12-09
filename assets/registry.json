@@ -16237,8 +16237,8 @@
     },
     "conrete_edge_rs::player::physics::PlayerAngularSpring": {
       "additionalProperties": false,
-      "isComponent": true,
-      "isResource": true,
+      "isComponent": false,
+      "isResource": false,
       "long_name": "conrete_edge_rs::player::physics::PlayerAngularSpring",
       "properties": {
         "damping": {
@@ -16268,8 +16268,8 @@
     },
     "conrete_edge_rs::player::physics::PlayerGroundSpring": {
       "additionalProperties": false,
-      "isComponent": true,
-      "isResource": true,
+      "isComponent": false,
+      "isResource": false,
       "long_name": "conrete_edge_rs::player::physics::PlayerGroundSpring",
       "properties": {
         "max_damping": {

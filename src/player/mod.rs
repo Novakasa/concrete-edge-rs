@@ -13,8 +13,8 @@ use camera::{CameraAnchor1stPerson, CameraAnchor3rdPerson};
 use dynamics::integrator::IntegrationSet;
 use leafwing_input_manager::prelude::*;
 use physics::{
-    PhysicsDebugInfo, PhysicsState, PlayerAngularSpring, PlayerGroundSpring, CAPSULE_HEIGHT,
-    CAPSULE_RADIUS, CAST_RADIUS,
+    PhysicsDebugInfo, PhysicsState, PlayerAngularSpring, PlayerGroundSpring, PlayerSpringParams,
+    CAPSULE_HEIGHT, CAPSULE_RADIUS, CAST_RADIUS,
 };
 
 use crate::util::ik2_positions;
@@ -81,8 +81,6 @@ pub struct Player;
 fn spawn_player(
     mut commands: Commands,
     query: Query<(Entity, &GlobalTransform), (With<PlayerSpawn>, Without<PlayerSpawned>)>,
-    ground_spring: Res<physics::PlayerGroundSpring>,
-    angular_spring: Res<physics::PlayerAngularSpring>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     debug_state: Res<State<DebugState>>,
@@ -115,8 +113,7 @@ fn spawn_player(
                 Player,
                 ExternalForce::default().with_persistence(false),
                 ExternalTorque::default().with_persistence(false),
-                ground_spring.clone(),
-                angular_spring.clone(),
+                PlayerSpringParams::new(),
                 InputManagerBundle::<PlayerAction>::with_map(PlayerAction::default_input_map()),
                 physics::PhysicsState::new(),
                 physics::PhysicsDebugInfo::default(),
@@ -155,19 +152,11 @@ fn respawn_player(
 }
 
 fn player_controls(
-    mut query: Query<
-        (
-            &ActionState<PlayerAction>,
-            &mut physics::PhysicsState,
-            &mut physics::PlayerGroundSpring,
-            &mut physics::PlayerAngularSpring,
-        ),
-        With<Player>,
-    >,
+    mut query: Query<(&ActionState<PlayerAction>, &mut physics::PhysicsState), With<Player>>,
     mut q_cam3: Query<&mut CameraAnchor3rdPerson, Without<CameraAnchor1stPerson>>,
     mut q_cam1: Query<&mut CameraAnchor1stPerson, Without<CameraAnchor3rdPerson>>,
 ) {
-    for (action_state, mut move_state, mut spring, mut angular_spring) in query.iter_mut() {
+    for (action_state, mut move_state) in query.iter_mut() {
         let move_input = action_state
             .clamped_axis_pair(&PlayerAction::Move)
             .normalize_or_zero();
@@ -186,19 +175,7 @@ fn player_controls(
                 * Vec3::new(move_input.x, 0.0, -move_input.y))
             .xz();
             // println!("{:?}", move_state.acc_dir);
-            if action_state.pressed(&PlayerAction::Jump) {
-                spring.rest_length = CAPSULE_HEIGHT * 1.4 + CAPSULE_RADIUS;
-                spring.min_damping = 1.0;
-                spring.stiffness = 15.0;
-                angular_spring.stiffness = 0.3;
-            } else {
-                spring.rest_length = CAPSULE_HEIGHT * 0.7 + CAPSULE_RADIUS;
-                spring.min_damping = 1.5;
-                spring.stiffness = 15.0;
-                angular_spring.stiffness = 0.5;
-                angular_spring.damping = 0.15;
-                angular_spring.turn_stiffness = 0.4;
-            }
+            move_state.ground_state.jumping = action_state.pressed(&PlayerAction::Jump);
         }
     }
 }
@@ -381,19 +358,6 @@ impl Plugin for PlayerPlugin {
         app.register_type::<PlayerAngularSpring>();
         app.insert_state(DebugState::None);
         app.insert_resource(SubstepCount(12));
-        app.insert_resource(PlayerGroundSpring {
-            rest_length: 0.0,
-            stiffness: 0.0,
-            min_damping: 0.0,
-            max_damping: 0.0,
-            max_force: 20.0 * 10.0,
-            min_force: 0.0,
-        });
-        app.insert_resource(PlayerAngularSpring {
-            stiffness: 0.,
-            damping: 0.0,
-            turn_stiffness: 0.0,
-        });
         app.add_systems(
             Startup,
             (
