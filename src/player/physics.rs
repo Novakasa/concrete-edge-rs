@@ -142,6 +142,7 @@ pub struct PredictedContact {
     pub contact_point: Vec3,
     pub contact_normal: Vec3,
     pub toi: f32,
+    pub contact_position: Vec3,
 }
 
 #[derive(Debug, Reflect, Default)]
@@ -197,7 +198,7 @@ pub fn predict_contact(
                 Quat::IDENTITY,
                 cast_dir,
                 max_toi,
-                true,
+                false,
                 filter.clone(),
             );
             if let Some(coll) = result {
@@ -205,15 +206,15 @@ pub fn predict_contact(
                     origin + cast_dir * coll.time_of_impact,
                     Quat::IDENTITY,
                     MAX_TOI + CAPSULE_RADIUS,
-                    Color::WHITE,
+                    Color::WHITE.with_alpha(0.1),
                 );
                 let contact_toi = test_time + coll.time_of_impact / test_vel.length();
                 physics.air_state.predicted_contact = Some(PredictedContact {
                     contact_point: coll.point2 + origin + cast_dir * coll.time_of_impact,
                     contact_normal: coll.normal1,
                     toi: contact_toi,
+                    contact_position: origin + cast_dir * coll.time_of_impact,
                 });
-                println!("coll toi: {:?}", coll.time_of_impact);
                 break;
             }
 
@@ -429,6 +430,10 @@ pub fn update_ground_force(
             physics_state.ground_state.contact_point = None;
             force.clear();
             torque.clear();
+            if let Some(contact) = physics_state.air_state.predicted_contact.as_ref() {
+                physics_state.ground_state.neg_cast_vec =
+                    -(contact.contact_point - contact.contact_position).normalize_or_zero();
+            }
         }
     }
 }
