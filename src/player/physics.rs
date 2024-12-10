@@ -216,7 +216,7 @@ pub fn predict_contact(
         }
         let filter = SpatialQueryFilter::from_mask(Layer::Platform);
         let mut test_time = 0.0;
-        while test_time < 2.0 {
+        'raycasts: while test_time < 2.0 {
             let origin = position.clone()
                 + *velocity * test_time
                 + physics.external_force * 0.5 * test_time.powi(2);
@@ -228,30 +228,35 @@ pub fn predict_contact(
             gizmos.line(origin, target, Color::WHITE);
             let test_vel = *velocity + physics.external_force * (test_time + 0.05);
             let max_toi = (target - origin).length();
-            let result = spatial_query.cast_shape(
+            let result = spatial_query.shape_hits(
                 &Collider::sphere(MAX_TOI + CAPSULE_RADIUS),
                 origin,
                 Quat::IDENTITY,
                 cast_dir,
                 max_toi,
+                6,
                 true,
                 filter.clone(),
             );
-            if let Some(coll) = result {
+            for coll in result {
+                let contact_toi = test_time + coll.time_of_impact / test_vel.length();
+                if test_vel.dot(coll.normal1) > 0.0 {
+                    continue;
+                }
+
                 gizmos.sphere(
                     origin + cast_dir * coll.time_of_impact,
                     Quat::IDENTITY,
                     MAX_TOI + CAPSULE_RADIUS,
                     Color::WHITE.with_alpha(0.1),
                 );
-                let contact_toi = test_time + coll.time_of_impact / test_vel.length();
                 physics.air_state.predicted_contact = Some(PredictedContact {
                     contact_point: coll.point2 + origin + cast_dir * coll.time_of_impact,
                     contact_normal: coll.normal1,
                     toi: contact_toi,
                     contact_position: origin + cast_dir * coll.time_of_impact,
                 });
-                break;
+                break 'raycasts;
             }
 
             test_time += 0.1;
@@ -410,6 +415,7 @@ pub fn update_ground_force(
             }
             target_force -= slope_force;
 
+            // ok temporarily don't use the smart clamp, this fixes wallrun contact (because the smart clamp leads to forces inconsistent with normal force)
             target_force = (0.3 * (target_vel - tangent_vel) - slope_force)
                 .clamp_length_max(friction_force * FRICTION_MARGIN);
 
