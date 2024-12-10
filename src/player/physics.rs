@@ -324,12 +324,20 @@ pub fn update_ground_force(
 
             let spring_vel = -velocity.dot(normal) / (-spring_dir.dot(normal));
             // println!("Time {:?}", coll.time_of_impact);
-            let spring_force = spring.force(
+            let mut spring_force = spring.force(
                 contact_point.length(),
                 spring_vel,
                 normal,
                 dt.delta_seconds(),
             ) * spring_dir;
+            if (spring_force + physics_state.external_force).dot(normal) > 0.0
+                && !physics_state.ground_state.jumping
+            {
+                if velocity.dot(normal) > 0.0 {
+                    println!("clamping spring force! {:?}", velocity.dot(normal));
+                    spring_force = spring_force.clamp_length_max(1.0); //this can be much smarter, because this ignores the external force
+                }
+            }
             let grounded = spring_force.length() > 0.0001;
             debug.grounded = grounded;
             if !grounded {
