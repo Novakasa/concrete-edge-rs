@@ -234,7 +234,7 @@ pub fn predict_contact(
                 Quat::IDENTITY,
                 cast_dir,
                 max_toi,
-                false,
+                true,
                 filter.clone(),
             );
             if let Some(coll) = result {
@@ -335,7 +335,8 @@ pub fn update_ground_force(
             {
                 if velocity.dot(normal) > 0.0 {
                     println!("clamping spring force! {:?}", velocity.dot(normal));
-                    spring_force = spring_force.clamp_length_max(1.0); //this can be much smarter, because this ignores the external force
+                    spring_force = spring_force.clamp_length_max(0.5);
+                    //this can be much smarter, because this ignores the external force
                 }
             }
             let grounded = spring_force.length() > 0.0001;
@@ -408,6 +409,10 @@ pub fn update_ground_force(
                 .unwrap_or(target_force)
             }
             target_force -= slope_force;
+
+            target_force = (0.3 * (target_vel - tangent_vel) - slope_force)
+                .clamp_length_max(friction_force * FRICTION_MARGIN);
+
             physics_state.prev_substep_vel = velocity.clone();
             debug.target_force = target_force;
             // println!("{:?}, {:?}", target_force, normal_force);
@@ -472,6 +477,7 @@ pub fn update_ground_force(
             debug.grounded = false;
             physics_state.ground_state.neg_cast_vec = capsule_up;
             physics_state.ground_state.contact_point = None;
+            physics_state.ground_state.jumping = false;
             force.clear();
             torque.clear();
             if let Some(contact) = physics_state.air_state.predicted_contact.as_ref() {

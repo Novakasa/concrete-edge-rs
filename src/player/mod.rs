@@ -14,7 +14,7 @@ use dynamics::integrator::IntegrationSet;
 use leafwing_input_manager::prelude::*;
 use physics::{
     PhysicsDebugInfo, PhysicsState, PlayerAngularSpring, PlayerGroundSpring, PlayerSpringParams,
-    CAPSULE_HEIGHT, CAPSULE_RADIUS, CAST_RADIUS,
+    CAPSULE_HEIGHT, CAPSULE_RADIUS, CAST_RADIUS, MAX_TOI,
 };
 
 use crate::util::ik2_positions;
@@ -175,7 +175,14 @@ fn player_controls(
                 * Vec3::new(move_input.x, 0.0, -move_input.y))
             .xz();
             // println!("{:?}", move_state.acc_dir);
-            move_state.ground_state.jumping = action_state.pressed(&PlayerAction::Jump);
+            if action_state.just_pressed(&PlayerAction::Jump)
+                && move_state.ground_state.contact_point.is_some()
+            {
+                move_state.ground_state.jumping = true;
+            }
+            if !action_state.pressed(&PlayerAction::Jump) {
+                move_state.ground_state.jumping = false;
+            }
         }
     }
 }
@@ -325,6 +332,14 @@ fn draw_debug_gizmos(
                     Color::from(YELLOW),
                 );
             }
+        } else {
+            // draw circle at end of cast
+            gizmos.sphere(
+                position.clone() - MAX_TOI * physics_state.ground_state.neg_cast_vec,
+                Quat::IDENTITY,
+                CAST_RADIUS,
+                Color::BLACK,
+            );
         }
         gizmos
             .primitive_3d(
