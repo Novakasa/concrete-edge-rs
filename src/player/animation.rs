@@ -1,10 +1,16 @@
 use avian3d::prelude::*;
-use bevy::prelude::*;
+use bevy::{
+    color::palettes::css::{BLUE, RED},
+    prelude::*,
+};
 
 use super::{
     physics::{PhysicsState, CAPSULE_HEIGHT, CAPSULE_RADIUS},
     Player,
 };
+
+#[derive(Debug, Reflect, Default, GizmoConfigGroup)]
+pub struct RigGizmos;
 
 #[derive(Debug, Clone, Default)]
 pub struct FootTravelInfo {
@@ -175,6 +181,7 @@ impl RigGroundState {
         mass: &Mass,
         dt: f32,
         up_dir: Dir3,
+        gizmos: &mut Gizmos<RigGizmos>,
     ) {
         self.cycle_state.increment(dt);
         let contact = contact_point + *position;
@@ -192,6 +199,8 @@ impl RigGroundState {
         let max_unlock = 0.2;
         let window_pos_ahead =
             contact + 0.5 * (acceleration * 0.5 * lock_duration + tangential_vel) * lock_duration;
+        // gizmos.sphere(window_pos_ahead, Quat::IDENTITY, 0.1, Color::BLACK);
+        // println!("{:?}", mass.0);
         let window_pos_behind =
             contact + 0.5 * (acceleration * 0.5 * lock_duration - tangential_vel) * lock_duration;
         let min_step_size = CAPSULE_RADIUS * 0.5;
@@ -249,9 +258,13 @@ impl RigGroundState {
                         let t = info.time / info.duration;
                         let lock_time = info.duration - info.time + 0.5 * lock_duration;
                         let target = contact
-                            + (acceleration * lock_time + tangential_vel) * lock_time
+                            + (0.5 * acceleration * lock_time + tangential_vel) * lock_time
                             + foot_offset;
                         info.target = Some(target);
+
+                        // gizmos.sphere(info.target.unwrap(), Quat::IDENTITY, 0.1, Color::WHITE);
+                        // gizmos.arrow(contact, contact + tangential_vel, Color::from(RED));
+                        // gizmos.arrow(contact, contact + acceleration, Color::from(BLUE));
                         let floor_pos = info.pos0.lerp(target, smoothstep(t));
                         let lift = up_dir
                             * 0.1
@@ -298,6 +311,7 @@ pub fn update_procedural_steps(
     _spatial_query: SpatialQuery,
     dt_physics: Res<Time<Physics>>,
     dt_real: Res<Time>,
+    mut gizmos: Gizmos<RigGizmos>,
 ) {
     let dt = dt_real.delta_seconds() * dt_physics.relative_speed();
     for (
@@ -323,7 +337,8 @@ pub fn update_procedural_steps(
                 velocity,
                 mass,
                 dt,
-                up_dir,
+                Dir3::new_unchecked(move_state.ground_state.contact_normal.unwrap()),
+                &mut gizmos,
             );
         } else {
             rig_state.ground_state = RigGroundState::default();
@@ -337,4 +352,12 @@ fn smoothstep(t: f32) -> f32 {
 
 fn smoothstart(t: f32) -> f32 {
     t.powi(2)
+}
+
+pub struct PlayerAnimationPlugin;
+impl Plugin for PlayerAnimationPlugin {
+    fn build(&self, app: &mut App) {
+        app.init_gizmo_group::<RigGizmos>();
+        app.add_systems(Update, update_procedural_steps);
+    }
 }

@@ -206,27 +206,27 @@ impl PhysicsState {
 }
 
 pub fn predict_contact(
-    mut q_player: Query<(&mut PhysicsState, &Position, &LinearVelocity)>,
+    mut q_player: Query<(&mut PhysicsState, &Position, &LinearVelocity, &InverseMass)>,
     spatial_query: SpatialQuery,
     mut gizmos: Gizmos,
 ) {
-    for (mut physics, Position(position), LinearVelocity(velocity)) in q_player.iter_mut() {
+    for (mut physics, Position(position), LinearVelocity(velocity), inv_mass) in q_player.iter_mut()
+    {
         if physics.ground_state.contact_point.is_some() {
             continue;
         }
         let filter = SpatialQueryFilter::from_mask(Layer::Platform);
         let mut test_time = 0.0;
+        let ext_acc = physics.external_force * inv_mass.0;
         'raycasts: while test_time < 2.0 {
-            let origin = position.clone()
-                + *velocity * test_time
-                + physics.external_force * 0.5 * test_time.powi(2);
+            let origin =
+                position.clone() + *velocity * test_time + ext_acc * 0.5 * test_time.powi(2);
             let target_time = test_time + 0.1;
-            let target = position.clone()
-                + *velocity * target_time
-                + physics.external_force * 0.5 * target_time.powi(2);
-            let cast_dir = Dir3::new(target - origin).unwrap();
+            let target =
+                position.clone() + *velocity * target_time + ext_acc * 0.5 * target_time.powi(2);
+            let cast_dir = Dir3::new(target - origin).unwrap_or(Dir3::Z);
             gizmos.line(origin, target, Color::WHITE);
-            let test_vel = *velocity + physics.external_force * (test_time + 0.05);
+            let test_vel = *velocity + ext_acc * (test_time + 0.05);
             let max_toi = (target - origin).length();
             let result = spatial_query.shape_hits(
                 &Collider::sphere(MAX_TOI + CAPSULE_RADIUS),
@@ -264,9 +264,9 @@ pub fn predict_contact(
     }
 }
 
-pub fn set_external_force(mut q_physics: Query<&mut PhysicsState>, gravity: Res<Gravity>) {
-    for mut physics in q_physics.iter_mut() {
-        physics.external_force = gravity.0;
+pub fn set_external_force(mut q_physics: Query<(&mut PhysicsState, &Mass)>, gravity: Res<Gravity>) {
+    for (mut physics, mass) in q_physics.iter_mut() {
+        physics.external_force = gravity.0 * mass.0;
     }
 }
 
@@ -339,8 +339,9 @@ pub fn update_ground_force(
                 && !physics_state.ground_state.jumping
             {
                 if velocity.dot(normal) > 0.0 {
-                    println!("clamping spring force! {:?}", velocity.dot(normal));
-                    spring_force = spring_force.clamp_length_max(0.5);
+                    let max_force = physics_state.external_force.length()
+                        * 0.8.lerp(5.0, physics_state.external_force.normalize().dot(normal));
+                    spring_force = spring_force.clamp_length_max(max_force);
                     //this can be much smarter, because this ignores the external force
                 }
             }

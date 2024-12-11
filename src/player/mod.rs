@@ -390,7 +390,6 @@ impl Plugin for PlayerPlugin {
                 draw_debug_gizmos
                     .run_if(not(in_state(DebugState::None)))
                     .after(animation::update_procedural_steps),
-                animation::update_procedural_steps.after(PhysicsSet::Sync),
                 (
                     camera::track_camera_3rd_person,
                     camera::track_camera_1st_person,
@@ -414,6 +413,7 @@ impl Plugin for PlayerPlugin {
         app.add_systems(OnEnter(DebugState::None), set_visible::<true>);
         app.add_systems(OnExit(DebugState::None), set_visible::<false>);
         app.add_plugins(physics::PlayerPhysicsPlugin);
+        app.add_plugins(animation::PlayerAnimationPlugin);
         // app.add_plugins(PhysicsDebugPlugin::default());
     }
 }
