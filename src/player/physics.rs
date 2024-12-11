@@ -11,6 +11,9 @@ pub const MAX_TOI: f32 = CAPSULE_HEIGHT * 1.0;
 pub const FRICTION_MARGIN: f32 = 0.98;
 pub const GLOBAL_FRICTION: f32 = 1.0;
 
+#[derive(Reflect, Debug, Default, GizmoConfigGroup)]
+pub struct PhysicsGizmos;
+
 fn add_results_in_length(dir: Vec3, rhs: Vec3, combined_length: f32) -> Option<Vec3> {
     let dot = dir.dot(rhs);
     let discriminant = dot.powi(2) - rhs.dot(rhs) + combined_length.powi(2);
@@ -208,7 +211,7 @@ impl PhysicsState {
 pub fn predict_contact(
     mut q_player: Query<(&mut PhysicsState, &Position, &LinearVelocity, &InverseMass)>,
     spatial_query: SpatialQuery,
-    mut gizmos: Gizmos,
+    mut gizmos: Gizmos<PhysicsGizmos>,
 ) {
     for (mut physics, Position(position), LinearVelocity(velocity), inv_mass) in q_player.iter_mut()
     {
@@ -340,7 +343,14 @@ pub fn update_ground_force(
             {
                 if velocity.dot(normal) > 0.0 {
                     let max_force = physics_state.external_force.length()
-                        * 0.8.lerp(5.0, physics_state.external_force.normalize().dot(normal));
+                        * 0.8.lerp(
+                            5.0,
+                            physics_state
+                                .external_force
+                                .normalize()
+                                .dot(normal)
+                                .powf(1.0),
+                        );
                     spring_force = spring_force.clamp_length_max(max_force);
                     //this can be much smarter, because this ignores the external force
                 }
@@ -499,6 +509,7 @@ pub struct PlayerPhysicsPlugin;
 
 impl Plugin for PlayerPhysicsPlugin {
     fn build(&self, app: &mut App) {
+        app.init_gizmo_group::<PhysicsGizmos>();
         app.add_systems(
             SubstepSchedule,
             (update_ground_force,).before(IntegrationSet::Velocity),
