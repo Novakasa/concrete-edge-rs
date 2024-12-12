@@ -176,12 +176,13 @@ pub struct PhysicsGroundState {
     pub slope_force: Vec3,
 }
 
-#[derive(Debug, Reflect, Default)]
+#[derive(Debug, Reflect, Default, Clone)]
 pub struct PredictedContact {
     pub contact_point: Vec3,
     pub contact_normal: Vec3,
     pub toi: f32,
     pub contact_position: Vec3,
+    pub contact_velocity: Vec3,
 }
 
 #[derive(Debug, Reflect, Default)]
@@ -243,7 +244,8 @@ pub fn predict_contact(
             );
             for coll in result {
                 let contact_toi = test_time + coll.time_of_impact / test_vel.length();
-                if test_vel.dot(coll.normal1) > 0.0 {
+                let contact_vel = test_vel + ext_acc * coll.time_of_impact;
+                if contact_vel.dot(coll.normal1) > 0.0 {
                     continue;
                 }
 
@@ -258,11 +260,25 @@ pub fn predict_contact(
                     contact_normal: coll.normal1,
                     toi: contact_toi,
                     contact_position: origin + cast_dir * coll.time_of_impact,
+                    contact_velocity: contact_vel,
                 });
                 break 'raycasts;
             }
 
             test_time += 0.1;
+        }
+    }
+}
+
+pub fn update_landing_prediction(mut q_physics: Query<&mut PhysicsState>) {
+    for mut physics in q_physics.iter_mut() {
+        if physics.ground_state.contact_point.is_some() {
+            continue;
+        }
+        if physics.air_state.predicted_contact.is_some() {
+            let contact = physics.air_state.predicted_contact.clone().unwrap();
+            physics.ground_state.neg_cast_vec =
+                -(contact.contact_point - contact.contact_position).normalize();
         }
     }
 }
@@ -281,7 +297,6 @@ pub fn update_ground_force(
         &Rotation,
         &LinearVelocity,
         &AngularVelocity,
-        &Mass,
         &PlayerSpringParams,
         &mut PhysicsState,
         &mut PhysicsDebugInfo,
@@ -296,7 +311,6 @@ pub fn update_ground_force(
         Rotation(quat),
         LinearVelocity(velocity),
         AngularVelocity(angular_vel),
-        Mass(mass),
         spring_params,
         mut physics_state,
         mut debug,
@@ -372,69 +386,8 @@ pub fn update_ground_force(
             let tangential_spring_force = spring_force - normal_force;
             debug.tangential_force = tangential_spring_force;
 
-            let ext_dir = physics_state.external_force.normalize_or_zero();
-            let tangent_plane = normal.cross(-ext_dir).normalize_or_zero();
-            let tangent_slope = normal.cross(tangent_plane).normalize_or_zero();
-            let tangent_z = if normal.dot(Vec3::X).abs() > 0.9999 {
-                Vec3::Z
-            } else {
-                Vec3::X.cross(normal).normalize_or_zero()
-            };
-            let tangent_x = -tangent_z.cross(normal);
-            let input_tangent =
-                physics_state.input_dir.x * tangent_x + physics_state.input_dir.y * tangent_z;
-            // bias upwards on walls
-            // input_tangent =
-            //     (input_tangent - 0.5 * (1.0 - normal.dot(-ext_dir)) * tangent_slope).normalize();
-            let tangent_vel = *velocity - velocity.dot(normal) * normal;
-
-            debug.tangent_vel = tangent_vel;
-
-            let target_vel = input_tangent * 7.0;
-            debug.target_vel = target_vel;
-            let denominator = 1.0 - tangent_slope.dot(ext_dir).powi(2);
-            let slope_force = if denominator == 0.0 {
-                physics_state.external_force
-            } else {
-                -tangent_slope.dot(ext_dir) * normal_force.dot(ext_dir) * tangent_slope
-                    / denominator
-            };
-
-            // let slope_force = external_forces - normal.dot(external_forces) * normal;
-
-            let mut target_force = 0.3 * (target_vel - tangent_vel);
-            let tangent_contact = contact_point - contact_point.dot(normal) * normal;
-            if target_vel.length() < 0.0001 && false {
-                let max_stopping_force =
-                    0.5 * mass * tangent_vel.length_squared() / tangent_contact.length();
-                target_force = target_force.clamp_length_max(1.0 * max_stopping_force);
-            }
-
-            /*
-            let goal_pos = if tangent_vel.length() < 0.0001 {
-                tangent_contact
-            } else {
-                *position + target_vel
-            };
-            let mut target_force = 2.5 * (goal_pos - *position) - 4.5 * tangent_vel;
-            */
-
-            if (target_force - slope_force).length() > friction_force * FRICTION_MARGIN {
-                target_force = add_results_in_length(
-                    target_force.normalize_or_zero(),
-                    -slope_force,
-                    friction_force * FRICTION_MARGIN,
-                )
-                .unwrap_or(
-                    (target_force - slope_force).clamp_length_max(friction_force * FRICTION_MARGIN)
-                        + slope_force,
-                )
-            }
-            target_force -= slope_force;
-
-            // ok temporarily don't use the smart clamp, this fixes wallrun contact (because the smart clamp leads to forces inconsistent with normal force)
-            target_force = (0.3 * (target_vel - tangent_vel) - slope_force)
-                .clamp_length_max(friction_force * FRICTION_MARGIN);
+            let (target_vel, slope_force, target_force) =
+                get_target_force(&physics_state, normal, velocity, normal_force);
 
             physics_state.prev_substep_vel = velocity.clone();
             debug.target_force = target_force;
@@ -498,17 +451,67 @@ pub fn update_ground_force(
                 .apply_torque(angular_spring_torque - contact_point.cross(tangential_angle_force));
         } else {
             debug.grounded = false;
-            physics_state.ground_state.neg_cast_vec = capsule_up;
             physics_state.ground_state.contact_point = None;
             physics_state.ground_state.jumping = false;
             force.clear();
             torque.clear();
-            if let Some(contact) = physics_state.air_state.predicted_contact.as_ref() {
-                physics_state.ground_state.neg_cast_vec =
-                    -(contact.contact_point - contact.contact_position).normalize_or_zero();
-            }
         }
     }
+}
+
+fn get_target_force(
+    physics_state: &PhysicsState,
+    normal: Vec3,
+    velocity: &Vec3,
+    normal_force: Vec3,
+) -> (Vec3, Vec3, Vec3) {
+    let ext_dir = physics_state.external_force.normalize_or_zero();
+    let tangent_plane = normal.cross(-ext_dir).normalize_or_zero();
+    let tangent_slope = normal.cross(tangent_plane).normalize_or_zero();
+    let tangent_z = if normal.dot(Vec3::X).abs() > 0.9999 {
+        Vec3::Z
+    } else {
+        Vec3::X.cross(normal).normalize_or_zero()
+    };
+    let tangent_x = -tangent_z.cross(normal);
+    let input_tangent =
+        physics_state.input_dir.x * tangent_x + physics_state.input_dir.y * tangent_z;
+    // bias upwards on walls
+    // input_tangent =
+    //     (input_tangent - 0.5 * (1.0 - normal.dot(-ext_dir)) * tangent_slope).normalize();
+    let tangent_vel = *velocity - velocity.dot(normal) * normal;
+
+    let target_vel = input_tangent * 7.0;
+    let denominator = 1.0 - tangent_slope.dot(ext_dir).powi(2);
+    let slope_force = if denominator == 0.0 {
+        physics_state.external_force
+    } else {
+        -tangent_slope.dot(ext_dir) * normal_force.dot(ext_dir) * tangent_slope / denominator
+    };
+
+    // let slope_force = external_forces - normal.dot(external_forces) * normal;
+
+    let mut target_force = 0.3 * (target_vel - tangent_vel);
+
+    let friction_force_margin = normal_force.length() * GLOBAL_FRICTION * FRICTION_MARGIN;
+
+    if (target_force - slope_force).length() > friction_force_margin * FRICTION_MARGIN {
+        target_force = add_results_in_length(
+            target_force.normalize_or_zero(),
+            -slope_force,
+            friction_force_margin * FRICTION_MARGIN,
+        )
+        .unwrap_or(
+            (target_force - slope_force).clamp_length_max(friction_force_margin * FRICTION_MARGIN)
+                + slope_force,
+        )
+    }
+    target_force -= slope_force;
+
+    // ok temporarily don't use the smart clamp, this fixes wallrun contact (because the smart clamp leads to forces inconsistent with normal force)
+    target_force = (0.3 * (target_vel - tangent_vel) - slope_force)
+        .clamp_length_max(friction_force_margin * FRICTION_MARGIN);
+    (target_vel, slope_force, target_force)
 }
 
 pub struct PlayerPhysicsPlugin;
@@ -522,7 +525,12 @@ impl Plugin for PlayerPhysicsPlugin {
         );
         app.add_systems(
             PostUpdate,
-            (predict_contact, set_external_force).before(PhysicsSet::StepSimulation),
+            (
+                predict_contact,
+                set_external_force,
+                update_landing_prediction,
+            )
+                .before(PhysicsSet::StepSimulation),
         );
     }
 }
