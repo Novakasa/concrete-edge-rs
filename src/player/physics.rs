@@ -318,6 +318,7 @@ pub fn update_ground_force(
             false,
             filter.clone(),
         ) {
+            physics_state.air_state.predicted_contact = None;
             let normal = coll.normal1;
             debug.ground_normal = normal;
             physics_state.ground_state.contact_normal = Some(normal);
@@ -332,12 +333,17 @@ pub fn update_ground_force(
 
             let spring_vel = -velocity.dot(normal) / (-spring_dir.dot(normal));
             // println!("Time {:?}", coll.time_of_impact);
-            let mut spring_force = spring.force(
-                contact_point.length(),
-                spring_vel,
-                normal,
-                dt.delta_seconds(),
-            ) * spring_dir;
+            let mut spring_force = ({
+                let length = contact_point.length();
+                let damping = spring
+                    .max_damping
+                    .lerp(spring.min_damping, normal.dot(Vec3::Y).abs());
+                let target = (-spring.stiffness * (length - spring.rest_length)
+                    - damping * spring_vel)
+                    .min(spring.max_force)
+                    .max(spring.min_force);
+                target
+            }) * spring_dir;
             if (spring_force + physics_state.external_force).dot(normal) > 0.0
                 && !physics_state.ground_state.jumping
             {
