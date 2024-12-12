@@ -372,7 +372,8 @@ pub fn update_ground_force(
             let tangential_spring_force = spring_force - normal_force;
             debug.tangential_force = tangential_spring_force;
 
-            let tangent_plane = normal.cross(Vec3::Y).normalize_or_zero();
+            let ext_dir = physics_state.external_force.normalize_or_zero();
+            let tangent_plane = normal.cross(-ext_dir).normalize_or_zero();
             let tangent_slope = normal.cross(tangent_plane).normalize_or_zero();
             let tangent_z = if normal.dot(Vec3::X).abs() > 0.9999 {
                 Vec3::Z
@@ -382,13 +383,15 @@ pub fn update_ground_force(
             let tangent_x = -tangent_z.cross(normal);
             let input_tangent =
                 physics_state.input_dir.x * tangent_x + physics_state.input_dir.y * tangent_z;
+            // bias upwards on walls
+            // input_tangent =
+            //     (input_tangent - 0.5 * (1.0 - normal.dot(-ext_dir)) * tangent_slope).normalize();
             let tangent_vel = *velocity - velocity.dot(normal) * normal;
 
             debug.tangent_vel = tangent_vel;
 
             let target_vel = input_tangent * 7.0;
             debug.target_vel = target_vel;
-            let ext_dir = physics_state.external_force.normalize_or_zero();
             let denominator = 1.0 - tangent_slope.dot(ext_dir).powi(2);
             let slope_force = if denominator == 0.0 {
                 physics_state.external_force
@@ -422,7 +425,10 @@ pub fn update_ground_force(
                     -slope_force,
                     friction_force * FRICTION_MARGIN,
                 )
-                .unwrap_or(target_force)
+                .unwrap_or(
+                    (target_force - slope_force).clamp_length_max(friction_force * FRICTION_MARGIN)
+                        + slope_force,
+                )
             }
             target_force -= slope_force;
 
