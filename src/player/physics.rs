@@ -270,15 +270,18 @@ pub fn predict_contact(
     }
 }
 
-pub fn update_landing_prediction(mut q_physics: Query<&mut PhysicsState>) {
-    for mut physics in q_physics.iter_mut() {
+pub fn update_landing_prediction(mut q_physics: Query<(&mut PhysicsState, &LinearVelocity)>) {
+    for (mut physics, LinearVelocity(velocity)) in q_physics.iter_mut() {
         if physics.ground_state.contact_point.is_some() {
             continue;
         }
         if physics.air_state.predicted_contact.is_some() {
             let contact = physics.air_state.predicted_contact.clone().unwrap();
-            physics.ground_state.neg_cast_vec =
-                -(contact.contact_point - contact.contact_position).normalize();
+            let normal_force = contact.contact_normal * physics.external_force.length() * 2.0;
+            let (_target_vel, _slope_force, target_force) =
+                get_target_force(&physics, velocity, normal_force);
+
+            physics.ground_state.neg_cast_vec = (normal_force + target_force).normalize();
         }
     }
 }
@@ -387,7 +390,7 @@ pub fn update_ground_force(
             debug.tangential_force = tangential_spring_force;
 
             let (target_vel, slope_force, target_force) =
-                get_target_force(&physics_state, normal, velocity, normal_force);
+                get_target_force(&physics_state, velocity, normal_force);
 
             physics_state.prev_substep_vel = velocity.clone();
             debug.target_force = target_force;
@@ -461,10 +464,10 @@ pub fn update_ground_force(
 
 fn get_target_force(
     physics_state: &PhysicsState,
-    normal: Vec3,
     velocity: &Vec3,
     normal_force: Vec3,
 ) -> (Vec3, Vec3, Vec3) {
+    let normal = normal_force.normalize();
     let ext_dir = physics_state.external_force.normalize_or_zero();
     let tangent_plane = normal.cross(-ext_dir).normalize_or_zero();
     let tangent_slope = normal.cross(tangent_plane).normalize_or_zero();
