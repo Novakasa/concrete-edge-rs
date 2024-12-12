@@ -342,17 +342,11 @@ pub fn update_ground_force(
                 && !physics_state.ground_state.jumping
             {
                 if velocity.dot(normal) > 0.0 {
-                    let max_force = physics_state.external_force.length()
-                        * 0.8.lerp(
-                            5.0,
-                            physics_state
-                                .external_force
-                                .normalize()
-                                .dot(normal)
-                                .powf(1.0),
-                        );
-                    spring_force = spring_force.clamp_length_max(max_force);
-                    //this can be much smarter, because this ignores the external force
+                    let max_normal_force = 0.5 * physics_state.external_force.length();
+                    let max_spring_force = (max_normal_force
+                        - physics_state.external_force.dot(normal))
+                        / spring_dir.dot(normal);
+                    spring_force = spring_force.clamp_length_max(max_spring_force);
                 }
             }
             let grounded = spring_force.length() > 0.0001;
