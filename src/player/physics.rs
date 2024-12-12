@@ -244,7 +244,7 @@ pub fn predict_contact(
             );
             for coll in result {
                 let contact_toi = test_time + coll.time_of_impact / test_vel.length();
-                let contact_vel = test_vel + ext_acc * coll.time_of_impact;
+                let contact_vel = test_vel + ext_acc * coll.time_of_impact / test_vel.length();
                 if contact_vel.dot(coll.normal1) > 0.0 {
                     continue;
                 }
@@ -270,16 +270,17 @@ pub fn predict_contact(
     }
 }
 
-pub fn update_landing_prediction(mut q_physics: Query<(&mut PhysicsState, &LinearVelocity)>) {
-    for (mut physics, LinearVelocity(velocity)) in q_physics.iter_mut() {
+pub fn update_landing_prediction(mut q_physics: Query<&mut PhysicsState>) {
+    for mut physics in q_physics.iter_mut() {
         if physics.ground_state.contact_point.is_some() {
             continue;
         }
         if physics.air_state.predicted_contact.is_some() {
             let contact = physics.air_state.predicted_contact.clone().unwrap();
-            let normal_force = contact.contact_normal * physics.external_force.length() * 2.0;
+            // this is just an estimate, we could probably call the spring function here to get the actual force
+            let normal_force = contact.contact_normal * physics.external_force.length() * 0.5;
             let (_target_vel, _slope_force, target_force) =
-                get_target_force(&physics, velocity, normal_force);
+                get_target_force(&physics, &contact.contact_velocity, normal_force);
 
             physics.ground_state.neg_cast_vec = (normal_force + target_force).normalize();
         }
