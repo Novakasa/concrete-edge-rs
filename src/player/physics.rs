@@ -503,7 +503,7 @@ pub fn update_forces(
             let delta_dir = delta.try_normalize().unwrap_or(Vec3::ZERO);
             let spring_vel = velocity.dot(delta_dir) * delta_dir;
             let grab_force =
-                delta_dir * (delta.length() / (2.5 * MAX_TOI)).powi(4) * 1.5 - 1.5 * spring_vel;
+                delta_dir * (delta.length() / (0.8 * MAX_TOI)).powi(4) * 1.5 - 1.5 * spring_vel;
             force.apply_force_at_point(
                 grab_force,
                 grab_state.grab_position - *position,
@@ -511,7 +511,7 @@ pub fn update_forces(
             );
         } else if physics_state.grabbing {
             physics_state.grab_state = Some(PhysicsGrabState {
-                grab_position: anchor,
+                grab_position: anchor + capsule_up * CAPSULE_HEIGHT * 0.5,
             });
         }
         if physics_state.grab_state.is_some() && !physics_state.grabbing {
