@@ -35,6 +35,7 @@ pub enum DebugState {
 pub enum PlayerAction {
     Jump,
     Move,
+    Grab,
     View,
     Respawn,
     Menu,
@@ -59,6 +60,7 @@ impl PlayerAction {
         input_map.insert_dual_axis(Self::View, MouseMove::default());
         input_map.insert(Self::Menu, KeyCode::Escape);
         input_map.insert(Self::ViewMode, KeyCode::Tab);
+        input_map.insert(Self::Grab, MouseButton::Left);
         input_map
     }
 }
@@ -183,6 +185,7 @@ fn player_controls(
             if !action_state.pressed(&PlayerAction::Jump) {
                 move_state.ground_state.jumping = false;
             }
+            move_state.grabbing = action_state.pressed(&PlayerAction::Grab);
         }
     }
 }

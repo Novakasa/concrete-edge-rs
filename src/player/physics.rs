@@ -1,7 +1,7 @@
 use std::f32::consts::PI;
 
 use avian3d::prelude::*;
-use bevy::prelude::*;
+use bevy::{math::NormedVectorSpace, prelude::*};
 use dynamics::integrator::IntegrationSet;
 
 pub const CAPSULE_RADIUS: f32 = 0.2;
@@ -173,6 +173,13 @@ pub struct PhysicsState {
     prev_substep_vel: Vec3,
     pub ground_state: PhysicsGroundState,
     pub air_state: PhysicsAirState,
+    pub grabbing: bool,
+    pub grab_state: Option<PhysicsGrabState>,
+}
+
+#[derive(Debug, Reflect, Default)]
+pub struct PhysicsGrabState {
+    grab_position: Vec3,
 }
 
 #[derive(Debug, Reflect, Default)]
@@ -228,6 +235,7 @@ pub fn predict_contact(
     for (mut physics, Position(position), LinearVelocity(velocity), inv_mass) in q_player.iter_mut()
     {
         if physics.ground_state.contact_point.is_some() {
+            physics.air_state.predicted_contact = None;
             continue;
         }
         let filter = SpatialQueryFilter::from_mask(Layer::Platform);
@@ -360,7 +368,7 @@ pub fn update_forces(
             debug.shape_toi = coll.time_of_impact;
             debug.cast_dir = cast_dir;
 
-            let spring_vel = -velocity.dot(normal) / (-spring_dir.dot(normal));
+            let spring_vel = velocity.dot(normal) / (spring_dir.dot(normal));
             // println!("Time {:?}", coll.time_of_impact);
             let mut spring_force = ({
                 let length = contact_point.length();
@@ -487,6 +495,27 @@ pub fn update_forces(
                 torque.clear();
                 torque.apply_torque(angular_spring_torque);
             }
+        }
+
+        let anchor = *position + capsule_up * CAPSULE_HEIGHT * 0.5;
+        if let Some(grab_state) = physics_state.grab_state.as_ref() {
+            let delta = grab_state.grab_position - anchor;
+            let delta_dir = delta.try_normalize().unwrap_or(Vec3::ZERO);
+            let spring_vel = velocity.dot(delta_dir) * delta_dir;
+            let grab_force =
+                delta_dir * (delta.length() / (2.5 * MAX_TOI)).powi(4) * 1.5 - 1.5 * spring_vel;
+            force.apply_force_at_point(
+                grab_force,
+                grab_state.grab_position - *position,
+                Vec3::ZERO,
+            );
+        } else if physics_state.grabbing {
+            physics_state.grab_state = Some(PhysicsGrabState {
+                grab_position: anchor,
+            });
+        }
+        if physics_state.grab_state.is_some() && !physics_state.grabbing {
+            physics_state.grab_state = None;
         }
     }
 }

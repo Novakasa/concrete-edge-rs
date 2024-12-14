@@ -16207,6 +16207,7 @@
       "oneOf": [
         "Jump",
         "Move",
+        "Grab",
         "View",
         "Respawn",
         "Menu",
