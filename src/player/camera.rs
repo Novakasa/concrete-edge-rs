@@ -1,7 +1,10 @@
 use std::f32::consts::PI;
 
 use avian3d::prelude::*;
-use bevy::prelude::*;
+use bevy::{
+    core_pipeline::motion_blur::{MotionBlur, MotionBlurBundle},
+    prelude::*,
+};
 use leafwing_input_manager::prelude::*;
 
 #[derive(Component, Reflect, Debug, Default)]
@@ -17,9 +20,11 @@ pub struct CameraAnchor1stPerson {
 }
 
 pub fn spawn_camera_3rd_person(mut commands: Commands) {
-    let camera_arm = 0.15 * Vec3::new(0.0, 8.0, 25.0);
+    let camera_arm = 0.22 * Vec3::new(-3.0, 4.0, 12.0);
+    let mut look_dir = -camera_arm;
+    look_dir.x = 0.0;
     let transform =
-        Transform::from_translation(camera_arm).looking_to(-camera_arm.normalize(), Vec3::Y);
+        Transform::from_translation(camera_arm).looking_to(look_dir.normalize(), Vec3::Y);
     commands
         .spawn((
             TransformBundle::default(),
@@ -55,18 +60,27 @@ pub fn spawn_camera_1st_person(mut commands: Commands) {
         ))
         .with_children(|builder| {
             builder
-                .spawn(Camera3dBundle {
-                    projection: Projection::Perspective(PerspectiveProjection {
-                        fov: PI / 3.0,
-                        ..Default::default()
-                    }),
-                    camera: Camera {
-                        is_active: false,
+                .spawn((
+                    Camera3dBundle {
+                        projection: Projection::Perspective(PerspectiveProjection {
+                            fov: PI / 3.0,
+                            ..Default::default()
+                        }),
+                        camera: Camera {
+                            is_active: false,
+                            ..Default::default()
+                        },
+                        transform: transform,
                         ..Default::default()
                     },
-                    transform: transform,
-                    ..Default::default()
-                })
+                    MotionBlurBundle {
+                        motion_blur: MotionBlur {
+                            shutter_angle: 1.0,
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                ))
                 .insert(Name::new("PlayerCamera"));
         });
 }
