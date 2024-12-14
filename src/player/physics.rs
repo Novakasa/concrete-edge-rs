@@ -35,6 +35,7 @@ pub struct PlayerSpringParams {
     pub ground_spring_jumping: PlayerGroundSpring,
     pub angular_spring: PlayerAngularSpring,
     pub angular_spring_jumping: PlayerAngularSpring,
+    pub angular_spring_aerial: PlayerAngularSpring,
 }
 
 impl PlayerSpringParams {
@@ -44,6 +45,7 @@ impl PlayerSpringParams {
             ground_spring_jumping: PlayerGroundSpring::jumping(),
             angular_spring: PlayerAngularSpring::running(),
             angular_spring_jumping: PlayerAngularSpring::jumping(),
+            angular_spring_aerial: PlayerAngularSpring::aerial(),
         }
     }
 
@@ -133,6 +135,14 @@ impl PlayerAngularSpring {
             ..Self::running()
         }
     }
+
+    pub fn aerial() -> Self {
+        Self {
+            stiffness: 0.05,
+            damping: 0.05,
+            turn_stiffness: 0.05,
+        }
+    }
 }
 
 #[derive(Component, Reflect, Debug, Default)]
@@ -188,6 +198,7 @@ pub struct PredictedContact {
 #[derive(Debug, Reflect, Default)]
 pub struct PhysicsAirState {
     pub predicted_contact: Option<PredictedContact>,
+    pub arm_angular_momentum: Vec3,
 }
 
 impl PhysicsGroundState {
@@ -293,7 +304,7 @@ pub fn set_external_force(mut q_physics: Query<(&mut PhysicsState, &Mass)>, grav
     }
 }
 
-pub fn update_ground_force(
+pub fn update_forces(
     mut query: Query<(
         &mut ExternalForce,
         &mut ExternalTorque,
@@ -421,9 +432,6 @@ pub fn update_ground_force(
                     .try_normalize()
                     .unwrap(),
             );
-            let delta_quat = Quat::from_rotation_arc(capsule_up, target_up);
-
-            debug.delta_quat = delta_quat;
             let angular_spring_torque = angular_spring.stiffness
                 * Quat::from_rotation_arc(capsule_up, target_up).to_scaled_axis()
                 + (angular_spring.turn_stiffness
@@ -457,8 +465,28 @@ pub fn update_ground_force(
             debug.grounded = false;
             physics_state.ground_state.contact_point = None;
             physics_state.ground_state.jumping = false;
-            force.clear();
-            torque.clear();
+
+            let angular_spring = &spring_params.angular_spring_aerial;
+
+            if let Some(contact) = physics_state.air_state.predicted_contact.clone() {
+                let target_up = physics_state.ground_state.neg_cast_vec;
+                let target_forward = contact.contact_velocity.reject_from(contact.contact_normal);
+                let target_right = target_forward.cross(target_up).try_normalize().unwrap_or(
+                    physics_state
+                        .forward_dir
+                        .cross(target_up)
+                        .try_normalize()
+                        .unwrap(),
+                );
+                let angular_spring_torque = angular_spring.stiffness
+                    * Quat::from_rotation_arc(capsule_up, target_up).to_scaled_axis()
+                    + (angular_spring.turn_stiffness
+                        * Quat::from_rotation_arc(capsule_right, target_right).to_scaled_axis())
+                    - angular_spring.damping * angular_vel.clone();
+                force.clear();
+                torque.clear();
+                torque.apply_torque(angular_spring_torque);
+            }
         }
     }
 }
@@ -525,7 +553,7 @@ impl Plugin for PlayerPhysicsPlugin {
         app.init_gizmo_group::<PhysicsGizmos>();
         app.add_systems(
             SubstepSchedule,
-            (update_ground_force,).before(IntegrationSet::Velocity),
+            (update_forces,).before(IntegrationSet::Velocity),
         );
         app.add_systems(
             PostUpdate,
