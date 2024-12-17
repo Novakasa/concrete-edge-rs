@@ -126,7 +126,7 @@ fn spawn_player(
                 visibility,
                 ..Default::default()
             })
-            .insert((Restitution::new(0.0), Friction::new(0.0)))
+            .insert((Restitution::new(0.0), Friction::new(1.0)))
             .insert((
                 animation::ProceduralRigState::default(),
                 Name::new("PlayerBody"),

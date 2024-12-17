@@ -1,7 +1,7 @@
 use std::f32::consts::PI;
 
 use avian3d::prelude::*;
-use bevy::{math::NormedVectorSpace, prelude::*};
+use bevy::prelude::*;
 use dynamics::integrator::IntegrationSet;
 
 pub const CAPSULE_RADIUS: f32 = 0.2;
@@ -501,9 +501,13 @@ pub fn update_forces(
         if let Some(grab_state) = physics_state.grab_state.as_ref() {
             let delta = grab_state.grab_position - anchor;
             let delta_dir = delta.try_normalize().unwrap_or(Vec3::ZERO);
-            let spring_vel = velocity.dot(delta_dir) * delta_dir;
-            let grab_force =
-                delta_dir * (delta.length() / (0.8 * MAX_TOI)).powi(4) * 1.5 - 1.5 * spring_vel;
+            let anchor_vel = *velocity + angular_vel.cross(anchor - *position);
+            let spring_vel = anchor_vel.dot(delta_dir) * delta_dir;
+            let spring_vel_2 = anchor_vel - spring_vel;
+            let mut grab_force = delta_dir * (delta.length() / (0.8 * MAX_TOI)).powi(4) * 1.5
+                - 1.5 * spring_vel
+                - 0.6 * spring_vel_2;
+            grab_force = grab_force.clamp_length_max(20.0);
             force.apply_force_at_point(
                 grab_force,
                 grab_state.grab_position - *position,
