@@ -54,7 +54,7 @@ impl Actionlike for PlayerAction {
 impl PlayerAction {
     fn default_input_map() -> InputMap<Self> {
         let mut input_map = InputMap::default();
-        input_map.insert_dual_axis(Self::Move, KeyboardVirtualDPad::WASD);
+        input_map.insert_dual_axis(Self::Move, VirtualDPad::arrow_keys());
         input_map.insert(Self::Jump, KeyCode::Space);
         input_map.insert(Self::Respawn, KeyCode::KeyR);
         input_map.insert_dual_axis(Self::View, MouseMove::default());
@@ -120,12 +120,7 @@ fn spawn_player(
                 physics::PhysicsState::new(),
                 physics::PhysicsDebugInfo::default(),
             ))
-            .insert(MaterialMeshBundle {
-                mesh: capsule,
-                material,
-                visibility,
-                ..Default::default()
-            })
+            .insert((Mesh3d(capsule), MeshMaterial3d(material), visibility))
             .insert((Restitution::new(0.0), Friction::new(1.0)))
             .insert((
                 animation::ProceduralRigState::default(),
@@ -219,7 +214,11 @@ fn draw_debug_gizmos(
         query.iter_mut()
     {
         if let Some(contact) = &physics_state.air_state.predicted_contact {
-            gizmos.sphere(contact.contact_point, Quat::IDENTITY, 0.1, Color::from(RED));
+            gizmos.sphere(
+                Isometry3d::from_translation(contact.contact_point),
+                0.1,
+                Color::from(RED),
+            );
         }
         if debug.grounded {
             for (i, state) in steps.ground_state.foot_states.iter().enumerate() {
@@ -230,13 +229,17 @@ fn draw_debug_gizmos(
                 };
                 let pos = match state {
                     FootState::Locked(info) => {
-                        gizmos.sphere(info.pos, Quat::IDENTITY, 0.5 * CAPSULE_RADIUS, color);
+                        gizmos.sphere(
+                            Isometry3d::from_translation(info.pos),
+                            0.5 * CAPSULE_RADIUS,
+                            color,
+                        );
+
                         info.pos
                     }
                     FootState::Unlocked(info) => {
                         gizmos.sphere(
-                            info.pos,
-                            Quat::IDENTITY,
+                            Isometry3d::from_translation(info.pos),
                             0.5 * CAPSULE_RADIUS,
                             color.with_luminance(0.2),
                         );
@@ -259,8 +262,7 @@ fn draw_debug_gizmos(
                 gizmos
                     .primitive_3d(
                         &Capsule3d::new(CAPSULE_RADIUS, CAPSULE_HEIGHT - CAPSULE_RADIUS * 2.0),
-                        position.clone(),
-                        debug.delta_quat,
+                        Isometry3d::new(position.clone(), debug.delta_quat),
                         Color::from(GRAY),
                     )
                     .resolution(12);
@@ -284,8 +286,9 @@ fn draw_debug_gizmos(
                     Color::from(GREEN)
                 };
                 gizmos.sphere(
-                    position.clone() + debug.shape_toi * debug.cast_dir,
-                    Quat::IDENTITY,
+                    Isometry3d::from_translation(
+                        position.clone() + debug.shape_toi * debug.cast_dir,
+                    ),
                     CAST_RADIUS,
                     contact_color,
                 );
@@ -338,8 +341,9 @@ fn draw_debug_gizmos(
         } else {
             // draw circle at end of cast
             gizmos.sphere(
-                position.clone() - MAX_TOI * physics_state.ground_state.neg_cast_vec,
-                Quat::IDENTITY,
+                Isometry3d::from_translation(
+                    position.clone() - MAX_TOI * physics_state.ground_state.neg_cast_vec,
+                ),
                 CAST_RADIUS,
                 Color::BLACK,
             );
@@ -347,8 +351,7 @@ fn draw_debug_gizmos(
         gizmos
             .primitive_3d(
                 &Capsule3d::new(CAPSULE_RADIUS, CAPSULE_HEIGHT - CAPSULE_RADIUS * 2.0),
-                position.clone(),
-                quat.clone(),
+                Isometry3d::from_translation(position.clone()),
                 Color::WHITE,
             )
             .resolution(12);

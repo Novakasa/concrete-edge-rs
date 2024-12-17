@@ -8,7 +8,12 @@ use bevy::{
     window::{CursorGrabMode, PrimaryWindow},
 };
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
-use blenvy::{BlenvyPlugin, BlueprintInfo, GameWorldTag, HideUntilReady, SpawnBlueprint};
+use blenvy::{
+    blueprints::spawn_from_blueprints::{
+        BlueprintInfo, GameWorldTag, HideUntilReady, SpawnBlueprint,
+    },
+    BlenvyPlugin,
+};
 use leafwing_input_manager::prelude::*;
 use player::{DebugState, Player};
 
@@ -142,7 +147,7 @@ fn setup_player(
 fn replace_platform_material(
     mut commands: Commands,
     query: Query<
-        (Entity, &Handle<StandardMaterial>),
+        (Entity, &MeshMaterial3d<StandardMaterial>),
         (Without<Player>, Without<DebugMaterialMarker>),
     >,
     mut materials: ResMut<Assets<ExtendedMaterial<StandardMaterial, DebugMaterial>>>,
@@ -154,11 +159,13 @@ fn replace_platform_material(
         commands.entity(entity).insert(DebugMaterialMarker);
         commands
             .entity(entity)
-            .insert(materials.add(ExtendedMaterial {
+            .insert(MeshMaterial3d(materials.add(ExtendedMaterial {
                 base: StandardMaterial::from(color),
                 extension: DebugMaterial {},
-            }));
-        commands.entity(entity).remove::<Handle<StandardMaterial>>();
+            })));
+        commands
+            .entity(entity)
+            .remove::<MeshMaterial3d<StandardMaterial>>();
     }
 }
 
@@ -182,8 +189,8 @@ fn setup_platforms(
 
 fn lock_cursor(mut q_window: Query<&mut Window, With<PrimaryWindow>>) {
     let mut primary_window = q_window.single_mut();
-    primary_window.cursor.grab_mode = CursorGrabMode::Locked;
-    primary_window.cursor.visible = false;
+    primary_window.cursor_options.grab_mode = CursorGrabMode::Locked;
+    primary_window.cursor_options.visible = false;
 }
 
 fn main() {

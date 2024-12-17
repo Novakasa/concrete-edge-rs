@@ -313,7 +313,7 @@ pub fn update_procedural_steps(
     dt_real: Res<Time>,
     mut gizmos: Gizmos<RigGizmos>,
 ) {
-    let dt = dt_real.delta_seconds() * dt_physics.relative_speed();
+    let dt = dt_real.delta_secs() * dt_physics.relative_speed();
     for (
         Position(position),
         Rotation(quat),

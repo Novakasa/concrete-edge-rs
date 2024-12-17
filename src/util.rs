@@ -6,7 +6,7 @@ pub fn cosc_from_sides(a: f32, b: f32, c: f32) -> f32 {
 }
 
 pub fn ik2_positions(len1: f32, len2: f32, target: Vec3, bend_dir: Vec3) -> (Vec3, Vec3) {
-    let target_dir = target.try_normalize().unwrap();
+    let target_dir = target.try_normalize().unwrap_or(Vec3::NEG_X);
     let bend_orth = target_dir
         .cross(bend_dir)
         .cross(target_dir)

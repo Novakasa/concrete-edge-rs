@@ -23,9 +23,10 @@ fn add_results_in_length(dir: Vec3, rhs: Vec3, combined_length: f32) -> Option<V
     Some((-dot + discriminant.sqrt()) * dir)
 }
 
-#[derive(PhysicsLayer)]
+#[derive(PhysicsLayer, Default)]
 pub enum Layer {
     Player,
+    #[default]
     Platform,
 }
 
@@ -228,19 +229,18 @@ impl PhysicsState {
 }
 
 pub fn predict_contact(
-    mut q_player: Query<(&mut PhysicsState, &Position, &LinearVelocity, &InverseMass)>,
+    mut q_player: Query<(&mut PhysicsState, &Position, &LinearVelocity, &Mass)>,
     spatial_query: SpatialQuery,
     mut gizmos: Gizmos<PhysicsGizmos>,
 ) {
-    for (mut physics, Position(position), LinearVelocity(velocity), inv_mass) in q_player.iter_mut()
-    {
+    for (mut physics, Position(position), LinearVelocity(velocity), mass) in q_player.iter_mut() {
         if physics.ground_state.contact_point.is_some() {
             physics.air_state.predicted_contact = None;
             continue;
         }
         let filter = SpatialQueryFilter::from_mask(Layer::Platform);
         let mut test_time = 0.0;
-        let ext_acc = physics.external_force * inv_mass.0;
+        let ext_acc = physics.external_force / mass.0;
         'raycasts: while test_time < 2.0 {
             let origin =
                 position.clone() + *velocity * test_time + ext_acc * 0.5 * test_time.powi(2);
@@ -256,29 +256,27 @@ pub fn predict_contact(
                 origin,
                 Quat::IDENTITY,
                 cast_dir,
-                max_toi,
                 6,
-                true,
-                filter.clone(),
+                &ShapeCastConfig::default().with_max_distance(max_toi),
+                &filter,
             );
             for coll in result {
-                let contact_toi = test_time + coll.time_of_impact / test_vel.length();
-                let contact_vel = test_vel + ext_acc * coll.time_of_impact / test_vel.length();
+                let contact_toi = test_time + coll.distance / test_vel.length();
+                let contact_vel = test_vel + ext_acc * coll.distance / test_vel.length();
                 if contact_vel.dot(coll.normal1) > 0.0 {
                     continue;
                 }
 
                 gizmos.sphere(
-                    origin + cast_dir * coll.time_of_impact,
-                    Quat::IDENTITY,
+                    Isometry3d::from_translation(origin + cast_dir * coll.distance),
                     MAX_TOI + CAPSULE_RADIUS,
                     Color::WHITE.with_alpha(0.1),
                 );
                 physics.air_state.predicted_contact = Some(PredictedContact {
-                    contact_point: coll.point2 + origin + cast_dir * coll.time_of_impact,
+                    contact_point: coll.point2 + origin + cast_dir * coll.distance,
                     contact_normal: coll.normal1,
                     toi: contact_toi,
-                    contact_position: origin + cast_dir * coll.time_of_impact,
+                    contact_position: origin + cast_dir * coll.distance,
                     contact_velocity: contact_vel,
                 });
                 break 'raycasts;
@@ -351,21 +349,20 @@ pub fn update_forces(
             position.clone(),
             Quat::IDENTITY,
             Dir3::new_unchecked(cast_dir.try_normalize().unwrap()),
-            MAX_TOI,
-            false,
-            filter.clone(),
+            &ShapeCastConfig::default().with_max_distance(MAX_TOI),
+            &filter,
         ) {
             physics_state.air_state.predicted_contact = None;
             let normal = coll.normal1;
             debug.ground_normal = normal;
             physics_state.ground_state.contact_normal = Some(normal);
 
-            let contact_point = coll.point2 + cast_dir * coll.time_of_impact;
+            let contact_point = coll.point2 + cast_dir * coll.distance;
             physics_state.ground_state.contact_point = Some(contact_point);
             let spring_dir = -contact_point.normalize_or_zero();
             // let spring_dir = from_up;
             debug.contact_point = contact_point;
-            debug.shape_toi = coll.time_of_impact;
+            debug.shape_toi = coll.distance;
             debug.cast_dir = cast_dir;
 
             let spring_vel = velocity.dot(normal) / (spring_dir.dot(normal));
@@ -419,7 +416,7 @@ pub fn update_forces(
             let target_spring_dir = (target_force + normal_force).normalize_or_zero();
 
             let raw_neg_cast_vec = (physics_state.ground_state.neg_cast_vec
-                + 10.0 * (target_spring_dir - spring_dir) * dt.delta_seconds())
+                + 10.0 * (target_spring_dir - spring_dir) * dt.delta_secs())
             .try_normalize()
             .unwrap();
 
