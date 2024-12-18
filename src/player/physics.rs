@@ -229,7 +229,7 @@ impl PhysicsState {
 }
 
 pub fn predict_contact(
-    mut q_player: Query<(&mut PhysicsState, &Position, &LinearVelocity, &Mass)>,
+    mut q_player: Query<(&mut PhysicsState, &Position, &LinearVelocity, &ComputedMass)>,
     spatial_query: SpatialQuery,
     mut gizmos: Gizmos<PhysicsGizmos>,
 ) {
@@ -240,7 +240,7 @@ pub fn predict_contact(
         }
         let filter = SpatialQueryFilter::from_mask(Layer::Platform);
         let mut test_time = 0.0;
-        let ext_acc = physics.external_force / mass.0;
+        let ext_acc = physics.external_force * mass.inverse();
         'raycasts: while test_time < 2.0 {
             let origin =
                 position.clone() + *velocity * test_time + ext_acc * 0.5 * test_time.powi(2);
@@ -304,9 +304,12 @@ pub fn update_landing_prediction(mut q_physics: Query<&mut PhysicsState>) {
     }
 }
 
-pub fn set_external_force(mut q_physics: Query<(&mut PhysicsState, &Mass)>, gravity: Res<Gravity>) {
+pub fn set_external_force(
+    mut q_physics: Query<(&mut PhysicsState, &ComputedMass)>,
+    gravity: Res<Gravity>,
+) {
     for (mut physics, mass) in q_physics.iter_mut() {
-        physics.external_force = gravity.0 * mass.0;
+        physics.external_force = gravity.0 * mass.value();
     }
 }
 
@@ -349,7 +352,10 @@ pub fn update_forces(
             position.clone(),
             Quat::IDENTITY,
             Dir3::new_unchecked(cast_dir.try_normalize().unwrap()),
-            &ShapeCastConfig::default().with_max_distance(MAX_TOI),
+            &ShapeCastConfig {
+                max_distance: MAX_TOI,
+                ..Default::default()
+            },
             &filter,
         ) {
             physics_state.air_state.predicted_contact = None;
@@ -392,7 +398,6 @@ pub fn update_forces(
             let grounded = spring_force.length() > 0.0001;
             debug.grounded = grounded;
             if !grounded {
-                physics_state.ground_state.contact_point = None;
                 force.clear();
                 torque.clear();
                 continue;
@@ -586,7 +591,7 @@ impl Plugin for PlayerPhysicsPlugin {
             (update_forces,).before(IntegrationSet::Velocity),
         );
         app.add_systems(
-            PostUpdate,
+            FixedPostUpdate,
             (
                 predict_contact,
                 set_external_force,

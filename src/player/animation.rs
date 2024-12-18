@@ -1,8 +1,5 @@
 use avian3d::prelude::*;
-use bevy::{
-    color::palettes::css::{BLUE, RED},
-    prelude::*,
-};
+use bevy::prelude::*;
 
 use super::{
     physics::{PhysicsState, CAPSULE_HEIGHT, CAPSULE_RADIUS},
@@ -178,7 +175,7 @@ impl RigGroundState {
         physics_state: &PhysicsState,
         right_dir: Dir3,
         velocity: &Vec3,
-        mass: &Mass,
+        mass: &ComputedMass,
         dt: f32,
         up_dir: Dir3,
         gizmos: &mut Gizmos<RigGizmos>,
@@ -192,7 +189,7 @@ impl RigGroundState {
         let tangential_vel = *velocity - velocity.dot(normal) * normal;
         let acceleration = (physics_state.ground_state.tangential_force
             + physics_state.ground_state.slope_force)
-            / mass.0;
+            * mass.inverse();
         let lock_duration = 0.06;
         let travel_duration = lock_duration * 2.5;
         let min_lock = 0.03;
@@ -207,7 +204,7 @@ impl RigGroundState {
         let window_travel_dist = (window_pos_ahead - window_pos_behind).length();
         let ahead_to_contact = (window_pos_ahead - contact).length();
         let slip_vel = if physics_state.ground_state.slipping {
-            -0.5 * physics_state.ground_state.tangential_force / mass.0
+            -0.5 * physics_state.ground_state.tangential_force * mass.inverse()
         } else {
             Vec3::ZERO
         };
@@ -303,7 +300,7 @@ pub fn update_procedural_steps(
             &Rotation,
             &mut ProceduralRigState,
             &PhysicsState,
-            &Mass,
+            &ComputedMass,
             &LinearVelocity,
         ),
         With<Player>,

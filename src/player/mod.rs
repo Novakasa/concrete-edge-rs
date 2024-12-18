@@ -54,7 +54,7 @@ impl Actionlike for PlayerAction {
 impl PlayerAction {
     fn default_input_map() -> InputMap<Self> {
         let mut input_map = InputMap::default();
-        input_map.insert_dual_axis(Self::Move, VirtualDPad::arrow_keys());
+        input_map.insert_dual_axis(Self::Move, VirtualDPad::wasd());
         input_map.insert(Self::Jump, KeyCode::Space);
         input_map.insert(Self::Respawn, KeyCode::KeyR);
         input_map.insert_dual_axis(Self::View, MouseMove::default());
@@ -220,7 +220,7 @@ fn draw_debug_gizmos(
                 Color::from(RED),
             );
         }
-        if debug.grounded {
+        if physics_state.ground_state.contact_point.is_some() {
             for (i, state) in steps.ground_state.foot_states.iter().enumerate() {
                 let color = if i == 0 {
                     Color::from(RED)
@@ -351,7 +351,7 @@ fn draw_debug_gizmos(
         gizmos
             .primitive_3d(
                 &Capsule3d::new(CAPSULE_RADIUS, CAPSULE_HEIGHT - CAPSULE_RADIUS * 2.0),
-                Isometry3d::from_translation(position.clone()),
+                Isometry3d::new(position.clone(), quat.clone()),
                 Color::WHITE,
             )
             .resolution(12);
