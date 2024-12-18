@@ -1,10 +1,7 @@
 use std::f32::consts::PI;
 
 use avian3d::prelude::*;
-use bevy::{
-    core_pipeline::motion_blur::{MotionBlur, MotionBlurBundle},
-    prelude::*,
-};
+use bevy::{core_pipeline::motion_blur::MotionBlur, prelude::*};
 use leafwing_input_manager::prelude::*;
 
 #[derive(Component, Reflect, Debug, Default)]
@@ -27,24 +24,24 @@ pub fn spawn_camera_3rd_person(mut commands: Commands) {
         Transform::from_translation(camera_arm).looking_to(look_dir.normalize(), Vec3::Y);
     commands
         .spawn((
-            TransformBundle::default(),
+            Transform::default(),
             Name::new("CameraAnchor"),
             CameraAnchor3rdPerson::default(),
         ))
         .with_children(|builder| {
             builder
-                .spawn(Camera3dBundle {
-                    projection: Projection::Perspective(PerspectiveProjection {
+                .spawn((
+                    Camera3d::default(),
+                    Projection::Perspective(PerspectiveProjection {
                         fov: PI / 3.0,
                         ..Default::default()
                     }),
-                    camera: Camera {
+                    Camera {
                         is_active: true,
                         ..Default::default()
                     },
-                    transform: transform,
-                    ..Default::default()
-                })
+                    transform,
+                ))
                 .insert(Name::new("PlayerCamera"));
         });
 }
@@ -54,30 +51,25 @@ pub fn spawn_camera_1st_person(mut commands: Commands) {
     let transform = Transform::from_translation(camera_arm);
     commands
         .spawn((
-            TransformBundle::default(),
+            Transform::default(),
             Name::new("CameraAnchor"),
             CameraAnchor1stPerson::default(),
         ))
         .with_children(|builder| {
             builder
                 .spawn((
-                    Camera3dBundle {
-                        projection: Projection::Perspective(PerspectiveProjection {
-                            fov: PI / 3.0,
-                            ..Default::default()
-                        }),
-                        camera: Camera {
-                            is_active: false,
-                            ..Default::default()
-                        },
-                        transform: transform,
+                    Camera3d::default(),
+                    Camera {
+                        is_active: false,
                         ..Default::default()
                     },
-                    MotionBlurBundle {
-                        motion_blur: MotionBlur {
-                            shutter_angle: 1.0,
-                            ..Default::default()
-                        },
+                    Projection::Perspective(PerspectiveProjection {
+                        fov: PI / 3.0,
+                        ..Default::default()
+                    }),
+                    transform,
+                    MotionBlur {
+                        shutter_angle: 1.0,
                         ..Default::default()
                     },
                 ))
