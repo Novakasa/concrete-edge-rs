@@ -265,7 +265,7 @@ fn draw_debug_gizmos(
                         Isometry3d::new(position.clone(), debug.delta_quat),
                         Color::from(GRAY),
                     )
-                    .resolution(12);
+                    .resolution(6);
                 gizmos.arrow(
                     *position,
                     *position + debug.delta_quat * Vec3::NEG_Z,
@@ -354,7 +354,7 @@ fn draw_debug_gizmos(
                 Isometry3d::new(position.clone(), quat.clone()),
                 Color::WHITE,
             )
-            .resolution(12);
+            .resolution(6);
         gizmos.arrow(
             *position,
             *position + 0.2 * physics_state.forward_dir,
