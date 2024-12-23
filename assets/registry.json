@@ -1867,6 +1867,38 @@
       "type": "array",
       "typeInfo": "TupleStruct"
     },
+    "avian3d::dynamics::rigid_body::MaxAngularSpeed": {
+      "isComponent": true,
+      "isResource": false,
+      "items": false,
+      "long_name": "avian3d::dynamics::rigid_body::MaxAngularSpeed",
+      "prefixItems": [
+        {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        }
+      ],
+      "short_name": "MaxAngularSpeed",
+      "type": "array",
+      "typeInfo": "TupleStruct"
+    },
+    "avian3d::dynamics::rigid_body::MaxLinearSpeed": {
+      "isComponent": true,
+      "isResource": false,
+      "items": false,
+      "long_name": "avian3d::dynamics::rigid_body::MaxLinearSpeed",
+      "prefixItems": [
+        {
+          "type": {
+            "$ref": "#/$defs/f32"
+          }
+        }
+      ],
+      "short_name": "MaxLinearSpeed",
+      "type": "array",
+      "typeInfo": "TupleStruct"
+    },
     "avian3d::dynamics::rigid_body::PreSolveAngularVelocity": {
       "isComponent": true,
       "isResource": false,
