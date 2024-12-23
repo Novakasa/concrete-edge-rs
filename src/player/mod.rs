@@ -249,8 +249,8 @@ fn draw_debug_gizmos(
 
                 let hip_pos = steps.hip_pos;
                 let (pos1, pos2) = ik2_positions(
-                    CAPSULE_HEIGHT * 0.4,
-                    CAPSULE_HEIGHT * 0.4,
+                    CAPSULE_HEIGHT * 0.5,
+                    CAPSULE_HEIGHT * 0.5,
                     pos - hip_pos,
                     physics_state.forward_dir,
                 );

@@ -87,7 +87,7 @@ impl PlayerGroundSpring {
 
     pub fn running() -> Self {
         Self {
-            rest_length: CAPSULE_HEIGHT * 0.7 + CAPSULE_RADIUS,
+            rest_length: CAPSULE_HEIGHT * 0.9 + CAPSULE_RADIUS,
             min_damping: 1.5,
             stiffness: 15.0,
             ..Self::new()
