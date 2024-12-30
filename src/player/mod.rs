@@ -34,6 +34,7 @@ pub enum DebugState {
 #[derive(PartialEq, Eq, Hash, Clone, Debug, Reflect)]
 pub enum PlayerAction {
     Jump,
+    Crouch,
     Move,
     Grab,
     View,
@@ -56,6 +57,7 @@ impl PlayerAction {
         let mut input_map = InputMap::default();
         input_map.insert_dual_axis(Self::Move, VirtualDPad::wasd());
         input_map.insert(Self::Jump, KeyCode::Space);
+        input_map.insert(Self::Crouch, MouseButton::Right);
         input_map.insert(Self::Respawn, KeyCode::KeyR);
         input_map.insert_dual_axis(Self::View, MouseMove::default());
         input_map.insert(Self::Menu, KeyCode::Escape);
@@ -181,6 +183,7 @@ fn player_controls(
                 move_state.ground_state.jumping = false;
             }
             move_state.grabbing = action_state.pressed(&PlayerAction::Grab);
+            move_state.ground_state.crouching = action_state.pressed(&PlayerAction::Crouch);
         }
     }
 }
@@ -378,7 +381,7 @@ impl Plugin for PlayerPlugin {
         app.register_type::<PlayerGroundSpring>();
         app.register_type::<PlayerAngularSpring>();
         app.insert_state(DebugState::None);
-        app.insert_resource(SubstepCount(12));
+        app.insert_resource(SubstepCount(4));
         app.add_systems(
             Startup,
             (

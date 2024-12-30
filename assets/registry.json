@@ -19341,6 +19341,7 @@
       "long_name": "conrete_edge_rs::player::PlayerAction",
       "oneOf": [
         "Jump",
+        "Crouch",
         "Move",
         "Grab",
         "View",

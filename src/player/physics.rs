@@ -33,7 +33,7 @@ pub enum Layer {
 #[derive(Component, Reflect, Debug, Default)]
 pub struct PlayerSpringParams {
     pub ground_spring: PlayerGroundSpring,
-    pub ground_spring_jumping: PlayerGroundSpring,
+    pub ground_spring_crouching: PlayerGroundSpring,
     pub angular_spring: PlayerAngularSpring,
     pub angular_spring_jumping: PlayerAngularSpring,
     pub angular_spring_aerial: PlayerAngularSpring,
@@ -43,16 +43,16 @@ impl PlayerSpringParams {
     pub fn new() -> Self {
         Self {
             ground_spring: PlayerGroundSpring::running(),
-            ground_spring_jumping: PlayerGroundSpring::jumping(),
+            ground_spring_crouching: PlayerGroundSpring::crouching(),
             angular_spring: PlayerAngularSpring::running(),
             angular_spring_jumping: PlayerAngularSpring::jumping(),
             angular_spring_aerial: PlayerAngularSpring::aerial(),
         }
     }
 
-    pub fn get_ground_spring(&self, jumping: bool) -> &PlayerGroundSpring {
-        if jumping {
-            &self.ground_spring_jumping
+    pub fn get_ground_spring(&self, crouching: bool) -> &PlayerGroundSpring {
+        if crouching {
+            &self.ground_spring_crouching
         } else {
             &self.ground_spring
         }
@@ -94,12 +94,12 @@ impl PlayerGroundSpring {
         }
     }
 
-    pub fn jumping() -> Self {
+    pub fn crouching() -> Self {
         Self {
-            rest_length: CAPSULE_HEIGHT * 1.4 + CAPSULE_RADIUS,
-            min_damping: 1.0,
-            stiffness: 15.0,
-            ..Self::new()
+            rest_length: CAPSULE_HEIGHT * 0.5 + CAPSULE_RADIUS,
+            min_damping: 2.5,
+            stiffness: 25.0,
+            ..Self::running()
         }
     }
 
@@ -188,6 +188,7 @@ pub struct PhysicsGroundState {
     pub neg_cast_vec: Vec3,
     pub slipping: bool,
     pub jumping: bool,
+    pub crouching: bool,
     pub contact_point: Option<Vec3>,
     pub contact_normal: Option<Vec3>,
     pub tangential_force: Vec3,
@@ -344,7 +345,7 @@ pub fn update_forces(
         let cast_dir = -physics_state.ground_state.neg_cast_vec;
         let capsule_up = *quat * Vec3::Y;
         let capsule_right = *quat * Vec3::X;
-        let spring = spring_params.get_ground_spring(physics_state.ground_state.jumping);
+        let spring = spring_params.get_ground_spring(physics_state.ground_state.crouching);
         let angular_spring = spring_params.get_angular_spring(physics_state.ground_state.jumping);
         physics_state.forward_dir = *quat * Vec3::NEG_Z;
         if let Some(coll) = shape_cast.cast_shape(
@@ -395,6 +396,9 @@ pub fn update_forces(
                     spring_force = spring_force.clamp_length_max(max_spring_force);
                 }
             }
+            if physics_state.ground_state.jumping {
+                spring_force = 3.5 * spring_dir;
+            }
             let grounded = spring_force.length() > 0.0001;
             debug.grounded = grounded;
             if !grounded {
@@ -434,7 +438,10 @@ pub fn update_forces(
                 Quat::IDENTITY.slerp(cast_quat, angle.min(0.3 * PI) / angle) * capsule_up
             };
 
-            let target_up = spring_dir;
+            let mut target_up = spring_dir;
+            if physics_state.ground_state.jumping {
+                target_up = Vec3::Y;
+            }
             let target_right = target_vel.cross(target_up).try_normalize().unwrap_or(
                 physics_state
                     .forward_dir
