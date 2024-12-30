@@ -17,7 +17,7 @@ pub struct CameraAnchor1stPerson {
 }
 
 pub fn spawn_camera_3rd_person(mut commands: Commands) {
-    let camera_arm = 0.22 * Vec3::new(-3.0, 4.0, 12.0);
+    let camera_arm = 0.22 * Vec3::new(0.0, 4.0, 12.0);
     let mut look_dir = -camera_arm;
     look_dir.x = 0.0;
     let transform =
