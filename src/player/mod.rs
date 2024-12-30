@@ -123,7 +123,7 @@ fn spawn_player(
                 physics::PhysicsDebugInfo::default(),
             ))
             .insert((Mesh3d(capsule), MeshMaterial3d(material), visibility))
-            .insert((Restitution::new(0.0), Friction::new(1.0)))
+            .insert((Restitution::new(0.0), Friction::new(0.0)))
             .insert((
                 animation::ProceduralRigState::default(),
                 Name::new("PlayerBody"),

@@ -178,7 +178,8 @@ fn setup_platforms(
         commands
             .entity(entity)
             .insert(Name::new(format!("Platform{}", entity.index())))
-            .insert(RigidBody::Static);
+            .insert(RigidBody::Static)
+            .insert(Friction::new(0.0));
         for child in children.iter() {
             commands
                 .entity(*child)
