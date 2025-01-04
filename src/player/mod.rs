@@ -61,7 +61,7 @@ impl PlayerAction {
         input_map.insert(Self::Jump, KeyCode::Space);
         input_map.insert(Self::Crouch, MouseButton::Right);
         input_map.insert(Self::Respawn, KeyCode::F2);
-        input_map.insert(Self::Rewind, KeyCode::KeyR);
+        input_map.insert(Self::Rewind, MouseButton::Middle);
         input_map.insert_dual_axis(Self::View, MouseMove::default());
         input_map.insert(Self::Menu, KeyCode::Escape);
         input_map.insert(Self::ViewMode, KeyCode::Tab);
@@ -161,6 +161,7 @@ fn player_controls(
     mut next_rewind_state: ResMut<NextState<rewind::RewindState>>,
     rewind_state: Res<State<rewind::RewindState>>,
     mut rewind_info: ResMut<rewind::RewindInfo>,
+    time: Res<Time>,
 ) {
     for (action_state, mut move_state) in query.iter_mut() {
         let move_input = action_state
