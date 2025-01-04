@@ -22,6 +22,7 @@ use crate::util::ik2_positions;
 mod animation;
 mod camera;
 mod physics;
+mod rewind;
 
 #[derive(States, Debug, Clone, PartialEq, Eq, Hash)]
 pub enum DebugState {
@@ -39,6 +40,7 @@ pub enum PlayerAction {
     Grab,
     View,
     Respawn,
+    Rewind,
     Menu,
     ViewMode,
 }
@@ -58,7 +60,8 @@ impl PlayerAction {
         input_map.insert_dual_axis(Self::Move, VirtualDPad::wasd());
         input_map.insert(Self::Jump, KeyCode::Space);
         input_map.insert(Self::Crouch, MouseButton::Right);
-        input_map.insert(Self::Respawn, KeyCode::KeyR);
+        input_map.insert(Self::Respawn, KeyCode::F2);
+        input_map.insert(Self::Rewind, KeyCode::KeyR);
         input_map.insert_dual_axis(Self::View, MouseMove::default());
         input_map.insert(Self::Menu, KeyCode::Escape);
         input_map.insert(Self::ViewMode, KeyCode::Tab);
@@ -126,6 +129,7 @@ fn spawn_player(
             .insert((Restitution::new(0.0), Friction::new(0.0)))
             .insert((
                 animation::ProceduralRigState::default(),
+                rewind::RewindHistory::default(),
                 Name::new("PlayerBody"),
             ))
             .id();
@@ -154,6 +158,9 @@ fn player_controls(
     mut query: Query<(&ActionState<PlayerAction>, &mut physics::PhysicsState), With<Player>>,
     mut q_cam3: Query<&mut CameraAnchor3rdPerson, Without<CameraAnchor1stPerson>>,
     mut q_cam1: Query<&mut CameraAnchor1stPerson, Without<CameraAnchor3rdPerson>>,
+    mut next_rewind_state: ResMut<NextState<rewind::RewindState>>,
+    rewind_state: Res<State<rewind::RewindState>>,
+    mut rewind_info: ResMut<rewind::RewindInfo>,
 ) {
     for (action_state, mut move_state) in query.iter_mut() {
         let move_input = action_state
@@ -182,6 +189,17 @@ fn player_controls(
             if !action_state.pressed(&PlayerAction::Jump) {
                 move_state.ground_state.jumping = false;
             }
+            if action_state.just_pressed(&PlayerAction::Rewind) {
+                next_rewind_state.set(rewind::RewindState::Rewinding);
+                println!("{:?}", rewind_state.get());
+            }
+            if action_state.just_released(&PlayerAction::Rewind) {
+                next_rewind_state.set(rewind::RewindState::Playing);
+                println!("{:?}", rewind_state.get());
+            }
+
+            rewind_info.rewind_time += move_input.x;
+
             move_state.grabbing = action_state.pressed(&PlayerAction::Grab);
             move_state.ground_state.crouching = action_state.pressed(&PlayerAction::Crouch);
         }
@@ -423,6 +441,7 @@ impl Plugin for PlayerPlugin {
         app.add_systems(OnExit(DebugState::None), set_visible::<false>);
         app.add_plugins(physics::PlayerPhysicsPlugin);
         app.add_plugins(animation::PlayerAnimationPlugin);
+        app.add_plugins(rewind::RewindPlugin);
         // app.add_plugins(PhysicsDebugPlugin::default());
     }
 }

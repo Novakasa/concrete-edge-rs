@@ -4,6 +4,8 @@ use avian3d::prelude::*;
 use bevy::prelude::*;
 use dynamics::integrator::IntegrationSet;
 
+use super::rewind::RewindState;
+
 pub const CAPSULE_RADIUS: f32 = 0.2;
 pub const CAPSULE_HEIGHT: f32 = 4.0 * CAPSULE_RADIUS;
 pub const CAST_RADIUS: f32 = 1.0 * CAPSULE_RADIUS;
@@ -166,7 +168,7 @@ pub struct PhysicsDebugInfo {
     pub delta_quat: Quat,
 }
 
-#[derive(Component, Reflect, Debug, Default)]
+#[derive(Component, Reflect, Debug, Default, Clone)]
 pub struct PhysicsState {
     pub external_force: Vec3,
     pub forward_dir: Vec3,
@@ -178,12 +180,12 @@ pub struct PhysicsState {
     pub grab_state: Option<PhysicsGrabState>,
 }
 
-#[derive(Debug, Reflect, Default)]
+#[derive(Debug, Reflect, Default, Clone)]
 pub struct PhysicsGrabState {
     grab_position: Vec3,
 }
 
-#[derive(Debug, Reflect, Default)]
+#[derive(Debug, Reflect, Default, Clone)]
 pub struct PhysicsGroundState {
     pub neg_cast_vec: Vec3,
     pub slipping: bool,
@@ -204,7 +206,7 @@ pub struct PredictedContact {
     pub contact_velocity: Vec3,
 }
 
-#[derive(Debug, Reflect, Default)]
+#[derive(Debug, Reflect, Default, Clone)]
 pub struct PhysicsAirState {
     pub predicted_contact: Option<PredictedContact>,
     pub arm_angular_momentum: Vec3,
@@ -595,16 +597,20 @@ impl Plugin for PlayerPhysicsPlugin {
         app.init_gizmo_group::<PhysicsGizmos>();
         app.add_systems(
             SubstepSchedule,
-            (update_forces,).before(IntegrationSet::Velocity),
+            (update_forces,)
+                .before(IntegrationSet::Velocity)
+                .run_if(in_state(RewindState::Playing)),
         );
         app.add_systems(
             FixedPostUpdate,
             (
-                predict_contact,
                 set_external_force,
                 update_landing_prediction,
+                predict_contact,
             )
-                .before(PhysicsSet::StepSimulation),
+                .chain()
+                .before(PhysicsSet::StepSimulation)
+                .run_if(in_state(RewindState::Playing)),
         );
     }
 }
