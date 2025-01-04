@@ -25,6 +25,15 @@ impl RewindHistory {
             .unwrap_or(0);
         &self.0[index]
     }
+
+    fn discard_after_time(&mut self, rewind_time: f32) {
+        let index = self
+            .0
+            .len()
+            .checked_sub((-rewind_time + 1.0) as usize)
+            .unwrap_or(0);
+        self.0.truncate(index);
+    }
 }
 
 #[derive(Component, Reflect, Debug, Default, Clone)]
@@ -74,8 +83,14 @@ fn init_rewind(mut rewind_info: ResMut<RewindInfo>, mut time: ResMut<Time<Physic
     time.pause();
 }
 
-fn exit_rewind(mut rewind_info: ResMut<RewindInfo>, mut time: ResMut<Time<Physics>>) {
-    rewind_info.rewind_time = 0.0;
+fn exit_rewind(
+    mut rewind_info: ResMut<RewindInfo>,
+    mut time: ResMut<Time<Physics>>,
+    mut q_historyt: Query<&mut RewindHistory>,
+) {
+    for mut history in q_historyt.iter_mut() {
+        history.discard_after_time(rewind_info.rewind_time);
+    }
     time.unpause();
 }
 
