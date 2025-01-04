@@ -14,10 +14,21 @@ pub struct RewindInfo {
 }
 
 #[derive(Component, Reflect, Debug, Default)]
-pub struct RewindHistory(pub Vec<RewindEntry>);
+pub struct RewindHistory(pub Vec<HistoryState>);
 
-#[derive(Component, Reflect, Debug, Default)]
-pub struct RewindEntry {
+impl RewindHistory {
+    fn get_state_at_time(&self, rewind_time: &f32) -> &HistoryState {
+        let index = self
+            .0
+            .len()
+            .checked_sub((-rewind_time + 1.0) as usize)
+            .unwrap_or(0);
+        &self.0[index]
+    }
+}
+
+#[derive(Component, Reflect, Debug, Default, Clone)]
+pub struct HistoryState {
     pub position: Vec3,
     pub velocity: Vec3,
     pub rotation: Quat,
@@ -44,7 +55,7 @@ fn record_history(
         mut history,
     ) in q_physics.iter_mut()
     {
-        history.0.push(RewindEntry {
+        history.0.push(HistoryState {
             position: *position,
             velocity: *velocity,
             rotation: *rotation,
@@ -91,21 +102,12 @@ fn update_rewind(
         rewind_info.rewind_time = rewind_info
             .rewind_time
             .clamp(-(history.0.len() as f32), 0.0);
-        println!("rewind_time: {}", rewind_info.rewind_time);
-        let index = history
-            .0
-            .len()
-            .checked_sub((-rewind_info.rewind_time + 1.0) as usize)
-            .unwrap_or(history.0.len() - 1);
-        println!("index: {}", index);
-        if index > 0 && index < history.0.len() {
-            let entry = &history.0[index];
-            position.0 = entry.position;
-            rotation.0 = entry.rotation;
-            velocity.0 = entry.velocity;
-            angular_velocity.0 = entry.angular_velocity;
-            *physics_state = entry.physics_state.clone();
-        }
+        let entry = history.get_state_at_time(&rewind_info.rewind_time);
+        position.0 = entry.position;
+        rotation.0 = entry.rotation;
+        velocity.0 = entry.velocity;
+        angular_velocity.0 = entry.angular_velocity;
+        *physics_state = entry.physics_state.clone();
     }
 }
 
