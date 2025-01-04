@@ -192,14 +192,14 @@ fn player_controls(
             }
             if action_state.just_pressed(&PlayerAction::Rewind) {
                 next_rewind_state.set(rewind::RewindState::Rewinding);
-                println!("{:?}", rewind_state.get());
             }
             if action_state.just_released(&PlayerAction::Rewind) {
                 next_rewind_state.set(rewind::RewindState::Playing);
-                println!("{:?}", rewind_state.get());
             }
 
-            rewind_info.rewind_time += move_input.x;
+            if rewind_state.get() == &rewind::RewindState::Rewinding {
+                rewind_info.rewind_time += move_input.x * time.delta_secs();
+            }
 
             move_state.grabbing = action_state.pressed(&PlayerAction::Grab);
             move_state.ground_state.crouching = action_state.pressed(&PlayerAction::Crouch);

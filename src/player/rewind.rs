@@ -11,6 +11,7 @@ pub enum RewindState {
 #[derive(Resource, Debug, Default)]
 pub struct RewindInfo {
     pub rewind_time: f32,
+    pub latest_time: f32,
 }
 
 #[derive(Component, Reflect, Debug, Default)]
@@ -28,17 +29,28 @@ impl RewindHistory {
     }
 
     fn index_at_time(&self, rewind_time: &f32) -> usize {
-        let index = self
-            .0
-            .len()
-            .checked_sub((-rewind_time + 1.0) as usize)
-            .unwrap_or(0);
+        let mut index = 0;
+        for (i, entry) in self.0.iter().enumerate() {
+            if entry.time > *rewind_time {
+                break;
+            }
+            index = i;
+        }
         index
+    }
+
+    fn get_latest_time(&self) -> f32 {
+        self.0.last().unwrap().time
+    }
+
+    fn get_earliest_time(&self) -> f32 {
+        self.0.first().unwrap().time
     }
 }
 
 #[derive(Component, Reflect, Debug, Default, Clone)]
 pub struct HistoryState {
+    pub time: f32,
     pub position: Vec3,
     pub velocity: Vec3,
     pub rotation: Quat,
@@ -55,6 +67,8 @@ fn record_history(
         &PhysicsState,
         &mut RewindHistory,
     )>,
+    mut rewind_info: ResMut<RewindInfo>,
+    physics_time: Res<Time<Physics>>,
 ) {
     for (
         Position(position),
@@ -66,6 +80,7 @@ fn record_history(
     ) in q_physics.iter_mut()
     {
         history.0.push(HistoryState {
+            time: rewind_info.latest_time,
             position: *position,
             velocity: *velocity,
             rotation: *rotation,
@@ -76,16 +91,16 @@ fn record_history(
             history.0.remove(0);
         }
     }
+    rewind_info.latest_time += physics_time.delta_secs();
 }
 
 fn init_rewind(mut rewind_info: ResMut<RewindInfo>, mut time: ResMut<Time<Physics>>) {
-    rewind_info.rewind_time = 0.0;
-    println!("Rewind started");
+    rewind_info.rewind_time = rewind_info.latest_time;
     time.pause();
 }
 
 fn exit_rewind(
-    rewind_info: ResMut<RewindInfo>,
+    mut rewind_info: ResMut<RewindInfo>,
     mut time: ResMut<Time<Physics>>,
     mut q_historyt: Query<&mut RewindHistory>,
 ) {
@@ -93,6 +108,7 @@ fn exit_rewind(
         history.discard_after_time(&rewind_info.rewind_time);
     }
     time.unpause();
+    rewind_info.latest_time = rewind_info.rewind_time;
 }
 
 fn update_rewind(
@@ -115,15 +131,15 @@ fn update_rewind(
         history,
     ) in q_physics.iter_mut()
     {
-        rewind_info.rewind_time = rewind_info
-            .rewind_time
-            .clamp(-(history.0.len() as f32), 0.0);
         let entry = history.get_state_at_time(&rewind_info.rewind_time);
         position.0 = entry.position;
         rotation.0 = entry.rotation;
         velocity.0 = entry.velocity;
         angular_velocity.0 = entry.angular_velocity;
         *physics_state = entry.physics_state.clone();
+        rewind_info.rewind_time = rewind_info
+            .rewind_time
+            .clamp(history.get_earliest_time(), history.get_latest_time());
     }
 }
 
