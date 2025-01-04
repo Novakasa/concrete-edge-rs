@@ -18,21 +18,22 @@ pub struct RewindHistory(pub Vec<HistoryState>);
 
 impl RewindHistory {
     fn get_state_at_time(&self, rewind_time: &f32) -> &HistoryState {
-        let index = self
-            .0
-            .len()
-            .checked_sub((-rewind_time + 1.0) as usize)
-            .unwrap_or(0);
+        let index = self.index_at_time(rewind_time);
         &self.0[index]
     }
 
-    fn discard_after_time(&mut self, rewind_time: f32) {
+    fn discard_after_time(&mut self, rewind_time: &f32) {
+        let index = self.index_at_time(rewind_time);
+        self.0.truncate(index);
+    }
+
+    fn index_at_time(&self, rewind_time: &f32) -> usize {
         let index = self
             .0
             .len()
             .checked_sub((-rewind_time + 1.0) as usize)
             .unwrap_or(0);
-        self.0.truncate(index);
+        index
     }
 }
 
@@ -71,7 +72,7 @@ fn record_history(
             angular_velocity: *angular_velocity,
             physics_state: physics_state.clone(),
         });
-        if history.0.len() > 300 {
+        if history.0.len() > 3000 {
             history.0.remove(0);
         }
     }
@@ -84,12 +85,12 @@ fn init_rewind(mut rewind_info: ResMut<RewindInfo>, mut time: ResMut<Time<Physic
 }
 
 fn exit_rewind(
-    mut rewind_info: ResMut<RewindInfo>,
+    rewind_info: ResMut<RewindInfo>,
     mut time: ResMut<Time<Physics>>,
     mut q_historyt: Query<&mut RewindHistory>,
 ) {
     for mut history in q_historyt.iter_mut() {
-        history.discard_after_time(rewind_info.rewind_time);
+        history.discard_after_time(&rewind_info.rewind_time);
     }
     time.unpause();
 }
