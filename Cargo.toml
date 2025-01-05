@@ -13,6 +13,9 @@ bevy_framepace = "0.18"
 blenvy = { git = "https://github.com/jwright159/Blenvy", branch = "main" }
 leafwing-input-manager = "0.16"
 
+[dev-dependencies]
+bevy = { version = "0.15", features = ["dynamic_linking"] }
+
 # Enable a small amount of optimization in debug mode
 [profile.dev]
 opt-level = 1
