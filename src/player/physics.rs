@@ -585,7 +585,12 @@ fn get_target_force(
     target_force -= slope_force;
 
     // ok temporarily don't use the smart clamp, this fixes wallrun contact (because the smart clamp leads to forces inconsistent with normal force)
-    target_force = (0.3 * (target_vel - tangent_vel) - slope_force)
+    let vel_delta = target_vel - tangent_vel;
+    let vel_delta_length = vel_delta.length();
+    let vel_delta_dir = vel_delta.try_normalize().unwrap_or(Vec3::ZERO);
+    target_force = (0.15 * vel_delta_length.powf(2.0) * vel_delta_dir
+        + 0.05 * vel_delta_length.powf(0.5) * vel_delta_dir
+        - slope_force)
         .clamp_length_max(friction_force_margin * FRICTION_MARGIN);
     (target_vel, slope_force, target_force)
 }
