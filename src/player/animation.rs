@@ -215,7 +215,7 @@ impl RigGroundState {
 
         let i_lock = self.get_lock_candidate(window_pos_ahead);
 
-        let offset_length = 0.3 * CAPSULE_RADIUS;
+        let offset_length = 0.5 * CAPSULE_RADIUS;
         let is_both_locked = self.is_both_locked();
         let is_any_locked = self.is_any_locked();
         let unlocked_time = self.cycle_state.get_unlocked_time();
@@ -394,9 +394,9 @@ pub fn update_procedural_state(
         rig_state.torso_forward = up_dir.cross(right_dir.into());
 
         if let Some(contact_point) = move_state.ground_state.contact_point {
-            rig_state.hip_pos = (*position - up_dir * CAPSULE_HEIGHT * 0.2)
-                .lerp(*position + contact_point * 0.5, 0.3);
-            rig_state.neck_pos = *position + *position - rig_state.hip_pos;
+            rig_state.hip_pos = *position + contact_point * 0.2;
+            rig_state.neck_pos =
+                *position + up_dir * CAPSULE_HEIGHT * 0.3 - rig_state.hip_pos + *position;
             rig_state.ground_state.update(
                 contact_point,
                 position,

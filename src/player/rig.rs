@@ -8,7 +8,7 @@ use crate::util::ik2_positions;
 
 use super::animation::{FootState, ProceduralRigState};
 
-const STICK_RADIUS: f32 = 0.05;
+const STICK_RADIUS: f32 = 0.08;
 
 #[derive(Component, Reflect, Debug, Clone, Hash, PartialEq, Eq)]
 pub enum RigBone {
@@ -18,6 +18,7 @@ pub enum RigBone {
     LeftLowerLeg,
     RightUpperLeg,
     RightLowerLeg,
+    Head,
 }
 
 impl RigBone {
@@ -27,8 +28,9 @@ impl RigBone {
             Self::UpperBack => 40.0,
             Self::LeftUpperLeg | Self::RightUpperLeg => 44.0,
             Self::LeftLowerLeg | Self::RightLowerLeg => 44.0,
+            Self::Head => 50.0,
         };
-        raw * 0.0055
+        raw * 0.0065
     }
 }
 
@@ -55,11 +57,16 @@ fn spawn_meshes(
             MeshMaterial3d(material.clone()),
         ));
     }
+    commands.spawn((
+        Mesh3d(meshes.add(Mesh::from(Sphere::new(RigBone::Head.length())))),
+        RigBone::Head,
+        MeshMaterial3d(material.clone()),
+    ));
 }
 
 fn update_bones(
     mut bones: Query<(&RigBone, &mut Transform, &mut Visibility)>,
-    rig: Query<(&ProceduralRigState)>,
+    rig: Query<&ProceduralRigState>,
 ) {
     for steps in rig.iter() {
         let transforms = steps.get_bone_transforms();
