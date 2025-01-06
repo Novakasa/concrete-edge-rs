@@ -23,6 +23,7 @@ mod animation;
 mod camera;
 mod physics;
 mod rewind;
+mod rig;
 
 #[derive(States, Debug, Clone, PartialEq, Eq, Hash)]
 pub enum DebugState {
@@ -89,7 +90,6 @@ fn spawn_player(
     mut commands: Commands,
     query: Query<(Entity, &GlobalTransform), (With<PlayerSpawn>, Without<PlayerSpawned>)>,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
     debug_state: Res<State<DebugState>>,
 ) {
     for (entity, transform) in query.iter() {
@@ -99,7 +99,6 @@ fn spawn_player(
             physics::CAPSULE_RADIUS,
             physics::CAPSULE_HEIGHT - 2.0 * physics::CAPSULE_RADIUS,
         )));
-        let material = materials.add(Color::WHITE);
         let visibility = if debug_state.get() == &DebugState::None {
             Visibility::Visible
         } else {
@@ -118,6 +117,7 @@ fn spawn_player(
                 Transform::from_translation(transform.translation()),
                 GlobalTransform::default(),
                 Player,
+                visibility,
                 ExternalForce::default().with_persistence(false),
                 ExternalTorque::default().with_persistence(false),
                 PlayerSpringParams::new(),
@@ -125,7 +125,6 @@ fn spawn_player(
                 physics::PhysicsState::new(),
                 physics::PhysicsDebugInfo::default(),
             ))
-            .insert((Mesh3d(capsule), MeshMaterial3d(material), visibility))
             .insert((Restitution::new(0.0), Friction::new(0.0)))
             .insert((
                 animation::ProceduralRigState::default(),
@@ -417,7 +416,7 @@ impl Plugin for PlayerPlugin {
                 camera::toggle_active_view,
                 draw_debug_gizmos
                     .run_if(not(in_state(DebugState::None)))
-                    .after(animation::update_procedural_steps),
+                    .after(animation::update_procedural_state),
                 (
                     camera::track_camera_3rd_person,
                     camera::track_camera_1st_person,
@@ -443,6 +442,7 @@ impl Plugin for PlayerPlugin {
         app.add_plugins(physics::PlayerPhysicsPlugin);
         app.add_plugins(animation::PlayerAnimationPlugin);
         app.add_plugins(rewind::RewindPlugin);
+        app.add_plugins(rig::RigPlugin);
         // app.add_plugins(PhysicsDebugPlugin::default());
     }
 }

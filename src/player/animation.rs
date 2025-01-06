@@ -1,8 +1,11 @@
-use avian3d::prelude::*;
-use bevy::prelude::*;
+use avian3d::{parry::query::contact, prelude::*};
+use bevy::{prelude::*, utils::HashMap};
+
+use crate::util::ik2_positions;
 
 use super::{
     physics::{PhysicsState, CAPSULE_HEIGHT, CAPSULE_RADIUS},
+    rig::RigBone,
     Player,
 };
 
@@ -291,9 +294,73 @@ pub struct ProceduralRigState {
     pub neck_pos: Vec3,
     pub ground_state: RigGroundState,
     pub air_state: RigAirState,
+    pub torso_forward: Vec3,
+    pub grounded: bool,
 }
 
-pub fn update_procedural_steps(
+impl ProceduralRigState {
+    pub fn get_bone_transforms(&self) -> HashMap<RigBone, Transform> {
+        let mut transforms = HashMap::default();
+
+        if self.grounded {
+            let (pos1, pos2) = ik2_positions(
+                RigBone::LowerBack.length(),
+                RigBone::UpperBack.length(),
+                self.neck_pos - self.hip_pos,
+                -self.torso_forward,
+            );
+            let spine_pos = self.hip_pos + pos1;
+            let lower_up = (spine_pos - self.hip_pos).normalize_or_zero();
+            let lower_forward = Vec3::X.cross(lower_up).normalize_or_zero();
+            let lower_transform = Transform::from_translation(0.5 * (spine_pos + self.hip_pos))
+                .looking_to(lower_forward, lower_up);
+            transforms.insert(RigBone::LowerBack, lower_transform);
+
+            let upper_up = (self.neck_pos - spine_pos).normalize_or_zero();
+            let upper_forward = Vec3::X.cross(upper_up).normalize_or_zero();
+            let upper_transform = Transform::from_translation(0.5 * (self.neck_pos + spine_pos))
+                .looking_to(upper_forward, upper_up);
+            transforms.insert(RigBone::UpperBack, upper_transform);
+            for (i, state) in self.ground_state.foot_states.iter().enumerate() {
+                let pos = match state {
+                    FootState::Locked(info) => info.pos,
+                    FootState::Unlocked(info) => info.pos,
+                };
+
+                let (pos1, pos2) = ik2_positions(
+                    RigBone::LeftUpperLeg.length(),
+                    RigBone::LeftLowerLeg.length(),
+                    pos - self.hip_pos,
+                    self.torso_forward,
+                );
+
+                let knee_pos = self.hip_pos + pos1;
+                let foot_pos = self.hip_pos + pos2;
+
+                let (upper_bone, lower_bone) = match i {
+                    0 => (RigBone::LeftUpperLeg, RigBone::LeftLowerLeg),
+                    1 => (RigBone::RightUpperLeg, RigBone::RightLowerLeg),
+                    _ => unreachable!(),
+                };
+
+                let upper_up = (self.hip_pos - knee_pos).normalize_or_zero();
+                let upper_forward = Vec3::X.cross(upper_up).normalize_or_zero();
+                let upper_transform = Transform::from_translation(0.5 * (knee_pos + self.hip_pos))
+                    .looking_to(upper_forward, upper_up);
+                transforms.insert(upper_bone, upper_transform);
+
+                let lower_up = (knee_pos - foot_pos).normalize_or_zero();
+                let lower_forward = Vec3::X.cross(lower_up).normalize_or_zero();
+                let lower_transform = Transform::from_translation(0.5 * (foot_pos + knee_pos))
+                    .looking_to(lower_forward, lower_up);
+                transforms.insert(lower_bone, lower_transform);
+            }
+        }
+        transforms
+    }
+}
+
+pub fn update_procedural_state(
     mut query: Query<
         (
             &Position,
@@ -320,12 +387,16 @@ pub fn update_procedural_steps(
         LinearVelocity(velocity),
     ) in query.iter_mut()
     {
+        rig_state.center_of_mass = *position;
+        rig_state.grounded = move_state.ground_state.contact_point.is_some();
         let up_dir = *quat * Dir3::Y;
         let right_dir = *quat * Dir3::X;
+        rig_state.torso_forward = up_dir.cross(right_dir.into());
 
         if let Some(contact_point) = move_state.ground_state.contact_point {
-            rig_state.hip_pos = *position
-                - up_dir.slerp(Dir3::new(-contact_point).unwrap(), 0.5) * CAPSULE_HEIGHT * 0.15;
+            rig_state.hip_pos = (*position - up_dir * CAPSULE_HEIGHT * 0.2)
+                .lerp(*position + contact_point * 0.5, 0.3);
+            rig_state.neck_pos = *position + *position - rig_state.hip_pos;
             rig_state.ground_state.update(
                 contact_point,
                 position,
@@ -355,6 +426,6 @@ pub struct PlayerAnimationPlugin;
 impl Plugin for PlayerAnimationPlugin {
     fn build(&self, app: &mut App) {
         app.init_gizmo_group::<RigGizmos>();
-        app.add_systems(Update, update_procedural_steps);
+        app.add_systems(Update, update_procedural_state);
     }
 }

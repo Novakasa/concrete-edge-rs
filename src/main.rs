@@ -5,8 +5,9 @@ use bevy::{
     pbr::{ExtendedMaterial, MaterialExtension},
     prelude::*,
     render::render_resource::{AsBindGroup, ShaderRef},
-    window::{CursorGrabMode, PrimaryWindow},
+    window::{CursorGrabMode, PresentMode, PrimaryWindow},
 };
+use bevy_framepace::Limiter;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use blenvy::{
     blueprints::spawn_from_blueprints::{
@@ -68,6 +69,14 @@ struct DebugMaterialMarker;
 #[reflect(Component)]
 struct TestPlayer {
     test: i32,
+}
+
+fn window_settings(// mut window: Single<&mut Window>,
+    // mut framepace_settings: ResMut<bevy_framepace::FramepaceSettings>,
+) {
+    // window.present_mode = PresentMode::AutoNoVsync;
+    println!("Window settings");
+    // framepace_settings.limiter = Limiter::Auto(30.0);
 }
 
 fn quit_on_menu(
@@ -215,7 +224,7 @@ fn main() {
         .add_plugins(MaterialPlugin::<
             ExtendedMaterial<StandardMaterial, DebugMaterial>,
         >::default())
-        .add_systems(Startup, load_level)
+        .add_systems(Startup, (load_level, window_settings))
         .add_systems(Update, (setup_platforms, setup_player))
         //.add_systems(Update, print_platforms)
         .add_systems(
