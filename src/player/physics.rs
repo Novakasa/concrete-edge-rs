@@ -290,19 +290,29 @@ pub fn predict_contact(
     }
 }
 
-pub fn update_landing_prediction(mut q_physics: Query<&mut PhysicsState>) {
-    for mut physics in q_physics.iter_mut() {
+pub fn update_landing_prediction(mut q_physics: Query<(&mut PhysicsState, &PlayerSpringParams)>) {
+    for (mut physics, spring_params) in q_physics.iter_mut() {
         if physics.ground_state.contact_point.is_some() {
             continue;
         }
         if physics.air_state.predicted_contact.is_some() {
             let contact = physics.air_state.predicted_contact.clone().unwrap();
-            // this is just an estimate, we could probably call the spring function here to get the actual force
+            let contact_point = physics.ground_state.neg_cast_vec * (MAX_TOI + CAST_RADIUS) * 0.1;
+            // println!("{:?}", contact_point);
+            let spring_force = spring_force(
+                &contact.contact_velocity,
+                spring_params.get_ground_spring(false),
+                contact.contact_normal,
+                contact_point,
+            );
+            // println!("{:?}", spring_force);
+            // let normal_force = spring_force.project_onto(contact.contact_normal);
             let normal_force = contact.contact_normal * physics.external_force.length() * 0.5;
             let (_target_vel, _slope_force, target_force) =
                 get_target_force(&physics, &contact.contact_velocity, normal_force);
 
-            physics.ground_state.neg_cast_vec = (normal_force + target_force).normalize();
+            physics.ground_state.neg_cast_vec =
+                (normal_force + target_force).try_normalize().unwrap();
         }
     }
 }
@@ -374,19 +384,7 @@ pub fn update_forces(
             debug.shape_toi = coll.distance;
             debug.cast_dir = cast_dir;
 
-            let spring_vel = velocity.dot(normal) / (spring_dir.dot(normal));
-            // println!("Time {:?}", coll.time_of_impact);
-            let mut spring_force = ({
-                let length = contact_point.length();
-                let damping = spring
-                    .max_damping
-                    .lerp(spring.min_damping, normal.dot(Vec3::Y).abs());
-                let target = (-spring.stiffness * (length - spring.rest_length)
-                    - damping * spring_vel)
-                    .min(spring.max_force)
-                    .max(spring.min_force);
-                target
-            }) * spring_dir;
+            let mut spring_force = spring_force(velocity, spring, normal, contact_point);
             if (spring_force + physics_state.external_force).dot(normal) > 0.0
                 && !physics_state.ground_state.jumping
             {
@@ -533,6 +531,26 @@ pub fn update_forces(
             physics_state.grab_state = None;
         }
     }
+}
+
+fn spring_force(
+    velocity: &Vec3,
+    spring: &PlayerGroundSpring,
+    normal: Vec3,
+    contact_point: Vec3,
+) -> Vec3 {
+    let spring_dir = -contact_point.try_normalize().unwrap();
+    let spring_vel = velocity.dot(normal) / (spring_dir.dot(normal));
+    // println!("{:?}", spring_vel);
+    // println!("Time {:?}", coll.time_of_impact);
+    let length = contact_point.length();
+    let damping = spring
+        .max_damping
+        .lerp(spring.min_damping, normal.dot(Vec3::Y).abs());
+    let target = (-spring.stiffness * (length - spring.rest_length) - damping * spring_vel)
+        .min(spring.max_force)
+        .max(spring.min_force);
+    target * spring_dir
 }
 
 fn get_target_force(
