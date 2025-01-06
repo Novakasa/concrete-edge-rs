@@ -58,7 +58,9 @@ fn spawn_meshes(
         ));
     }
     commands.spawn((
-        Mesh3d(meshes.add(Mesh::from(Sphere::new(RigBone::Head.length())))),
+        Mesh3d(meshes.add(Mesh::from(Sphere::new(
+            RigBone::Head.length() * 0.5 + STICK_RADIUS * 0.5,
+        )))),
         RigBone::Head,
         MeshMaterial3d(material.clone()),
     ));

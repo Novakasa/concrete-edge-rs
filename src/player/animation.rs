@@ -303,7 +303,7 @@ impl ProceduralRigState {
         let mut transforms = HashMap::default();
 
         if self.grounded {
-            let (pos1, pos2) = ik2_positions(
+            let (pos1, _pos2) = ik2_positions(
                 RigBone::LowerBack.length(),
                 RigBone::UpperBack.length(),
                 self.neck_pos - self.hip_pos,
@@ -315,6 +315,10 @@ impl ProceduralRigState {
             let lower_transform = Transform::from_translation(0.5 * (spine_pos + self.hip_pos))
                 .looking_to(lower_forward, lower_up);
             transforms.insert(RigBone::LowerBack, lower_transform);
+
+            let head_pos =
+                self.neck_pos + (self.neck_pos - self.hip_pos).normalize_or_zero() * 0.13;
+            transforms.insert(RigBone::Head, Transform::from_translation(head_pos));
 
             let upper_up = (self.neck_pos - spine_pos).normalize_or_zero();
             let upper_forward = Vec3::X.cross(upper_up).normalize_or_zero();
