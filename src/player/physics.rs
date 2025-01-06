@@ -589,7 +589,7 @@ fn get_target_force(
     let vel_delta_length = vel_delta.length();
     let vel_delta_dir = vel_delta.try_normalize().unwrap_or(Vec3::ZERO);
     target_force = (0.15 * vel_delta_length.powf(2.0) * vel_delta_dir
-        + 0.05 * vel_delta_length.powf(0.5) * vel_delta_dir
+        + 0.07 * vel_delta_length.powf(0.5).min(1.0) * vel_delta_dir
         - slope_force)
         .clamp_length_max(friction_force_margin * FRICTION_MARGIN);
     (target_vel, slope_force, target_force)
