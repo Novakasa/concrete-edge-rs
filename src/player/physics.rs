@@ -308,8 +308,12 @@ pub fn update_landing_prediction(mut q_physics: Query<(&mut PhysicsState, &Playe
             // println!("{:?}", spring_force);
             // let normal_force = spring_force.project_onto(contact.contact_normal);
             let normal_force = contact.contact_normal * physics.external_force.length() * 0.5;
-            let (_target_vel, _slope_force, target_force) =
-                get_target_force(&physics, &contact.contact_velocity, normal_force);
+            let (_target_vel, _slope_force, target_force) = get_target_force(
+                &physics,
+                &contact.contact_velocity,
+                normal_force,
+                Vec3::ZERO,
+            );
 
             physics.ground_state.neg_cast_vec =
                 (normal_force + target_force).try_normalize().unwrap();
@@ -407,6 +411,9 @@ pub fn update_forces(
                 continue;
             }
 
+            let air_friction =
+                -0.00 * velocity.length() * velocity.try_normalize().unwrap_or(Vec3::ZERO);
+
             debug.spring_force = spring_force;
 
             let normal_force = spring_force.dot(normal) * normal;
@@ -416,7 +423,7 @@ pub fn update_forces(
             debug.tangential_force = tangential_spring_force;
 
             let (target_vel, slope_force, target_force) =
-                get_target_force(&physics_state, velocity, normal_force);
+                get_target_force(&physics_state, velocity, normal_force, air_friction);
 
             physics_state.prev_substep_vel = velocity.clone();
             debug.target_force = target_force;
@@ -425,7 +432,7 @@ pub fn update_forces(
             let target_spring_dir = (target_force + normal_force).normalize_or_zero();
 
             let raw_neg_cast_vec = (physics_state.ground_state.neg_cast_vec
-                + 10.0 * (target_spring_dir - spring_dir) * dt.delta_secs())
+                + 15.0 * (target_spring_dir - spring_dir) * dt.delta_secs())
             .try_normalize()
             .unwrap();
 
@@ -475,6 +482,7 @@ pub fn update_forces(
                 contact_point,
                 Vec3::ZERO,
             );
+            force.apply_force(air_friction);
             torque.clear();
             torque
                 .apply_torque(angular_spring_torque - contact_point.cross(tangential_angle_force));
@@ -557,6 +565,7 @@ fn get_target_force(
     physics_state: &PhysicsState,
     velocity: &Vec3,
     normal_force: Vec3,
+    air_friction: Vec3,
 ) -> (Vec3, Vec3, Vec3) {
     let normal = normal_force.normalize();
     let ext_dir = physics_state.external_force.normalize_or_zero();
@@ -606,10 +615,11 @@ fn get_target_force(
     let vel_delta = target_vel - tangent_vel;
     let vel_delta_length = vel_delta.length();
     let vel_delta_dir = vel_delta.try_normalize().unwrap_or(Vec3::ZERO);
-    target_force = (0.15 * vel_delta_length.powf(2.0) * vel_delta_dir
-        + 0.07 * vel_delta_length.powf(0.5).min(1.0) * vel_delta_dir
-        - slope_force)
-        .clamp_length_max(friction_force_margin * FRICTION_MARGIN);
+    target_force = (0.22 * vel_delta_length.powf(2.0) * vel_delta_dir
+        + 0.10 * vel_delta_length.powf(0.5).min(1.0) * vel_delta_dir
+        - slope_force
+        - air_friction.reject_from(normal))
+    .clamp_length_max(friction_force_margin * FRICTION_MARGIN);
     (target_vel, slope_force, target_force)
 }
 
