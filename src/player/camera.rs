@@ -41,6 +41,10 @@ pub fn spawn_camera_3rd_person(mut commands: Commands) {
                         ..Default::default()
                     },
                     transform,
+                    MotionBlur {
+                        shutter_angle: 1.0,
+                        ..Default::default()
+                    },
                 ))
                 .insert(Name::new("PlayerCamera"));
         });

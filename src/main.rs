@@ -71,12 +71,13 @@ struct TestPlayer {
     test: i32,
 }
 
-fn window_settings(// mut window: Single<&mut Window>,
-    // mut framepace_settings: ResMut<bevy_framepace::FramepaceSettings>,
+fn window_settings(
+    // mut window: Single<&mut Window>,
+    mut framepace_settings: ResMut<bevy_framepace::FramepaceSettings>,
 ) {
     // window.present_mode = PresentMode::AutoNoVsync;
     println!("Window settings");
-    // framepace_settings.limiter = Limiter::Auto(30.0);
+    // framepace_settings.limiter = Limiter::from_framerate(30.0);
 }
 
 fn quit_on_menu(
