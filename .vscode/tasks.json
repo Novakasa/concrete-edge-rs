@@ -10,19 +10,23 @@
         },
         {
             "label": "copy to dist",
+            "dependsOn": [
+                "build release"
+            ],
             "type": "shell",
             "command": "cp -r assets target/dist/ ; cp target/release/*.exe target/dist/"
         },
         {
             "label": "tar release",
+            "dependsOn": [
+                "copy to dist"
+            ],
             "type": "shell",
             "command": "cd target/dist/ ; tar -czvf ../concrete-edge.tar.gz *"
         },
         {
             "label": "create release",
             "dependsOn": [
-                "build release",
-                "copy to dist",
                 "tar release"
             ],
         }
