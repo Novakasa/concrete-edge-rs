@@ -156,14 +156,18 @@ fn setup_player(
 
 fn replace_platform_material(
     mut commands: Commands,
-    query: Query<
-        (Entity, &MeshMaterial3d<StandardMaterial>),
-        (Without<Player>, Without<DebugMaterialMarker>),
+    q_materials: Query<
+        (Entity, &Parent, &MeshMaterial3d<StandardMaterial>),
+        Without<DebugMaterialMarker>,
     >,
+    q_platforms: Query<Entity, With<Platform>>,
     mut materials: ResMut<Assets<ExtendedMaterial<StandardMaterial, DebugMaterial>>>,
     standard_materials: Res<Assets<StandardMaterial>>,
 ) {
-    for (entity, prev_material) in query.iter() {
+    for (entity, parent, prev_material) in q_materials.iter() {
+        if q_platforms.contains(parent.get()) {
+            continue;
+        }
         let color = standard_materials.get(prev_material).unwrap().base_color;
         println!("Replacing platform material: {:?}", entity);
         commands.entity(entity).insert(DebugMaterialMarker);

@@ -1,4 +1,6 @@
-use bevy::prelude::*;
+use std::f32::consts::PI;
+
+use bevy::{math::VectorSpace, prelude::*};
 
 pub fn cosc_from_sides(a: f32, b: f32, c: f32) -> f32 {
     // law of cosines
@@ -61,4 +63,24 @@ pub fn ik3_positions(
     let pos3 = target;
 
     (po1, pos2, pos3)
+}
+
+#[derive(Debug, Clone, Default)]
+struct SpringValue<T: VectorSpace> {
+    f: f32,
+    zeta: f32,
+    velocity: T,
+    value: T,
+    external_acceleration: T,
+}
+
+impl<T: VectorSpace> SpringValue<T> {
+    fn update(&mut self, target: T, dt: f32) -> T {
+        let k = (2.0 * PI * self.f).powi(2);
+        let c = self.zeta * self.f / PI;
+        self.velocity = self.velocity + (target - self.value) * k * dt - self.velocity * c * dt
+            + self.external_acceleration * dt;
+        self.value = self.value + self.velocity * dt;
+        self.value
+    }
 }

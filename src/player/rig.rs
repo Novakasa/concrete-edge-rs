@@ -39,7 +39,9 @@ fn spawn_meshes(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    let material = materials.add(StandardMaterial::from_color(Color::from(BLACK)));
+    let mut material = StandardMaterial::from_color(Color::from(BLACK));
+    material.perceptual_roughness = 0.8;
+    let material = materials.add(material);
 
     for bone in [
         RigBone::LeftUpperLeg,
