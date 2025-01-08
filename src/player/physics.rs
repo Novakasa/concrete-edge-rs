@@ -98,7 +98,7 @@ impl PlayerGroundSpring {
 
     pub fn crouching() -> Self {
         Self {
-            rest_length: CAPSULE_HEIGHT * 0.5 + CAPSULE_RADIUS,
+            rest_length: CAPSULE_HEIGHT * 0.4 + CAPSULE_RADIUS,
             min_damping: 2.5,
             stiffness: 25.0,
             ..Self::running()
