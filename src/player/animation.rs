@@ -1,7 +1,7 @@
 use avian3d::{parry::query::contact, prelude::*};
 use bevy::{prelude::*, utils::HashMap};
 
-use crate::util::ik2_positions;
+use crate::util::{ik2_positions, SpringValue};
 
 use super::{
     physics::{PhysicsState, CAPSULE_HEIGHT, CAPSULE_RADIUS},
@@ -288,7 +288,7 @@ pub struct RigAirState;
 
 #[derive(Component, Debug, Default)]
 pub struct ProceduralRigState {
-    pub center_of_mass: Vec3,
+    pub cm_offset: SpringValue<Vec3>,
     pub velocity: Vec3,
     pub hip_pos: Vec3,
     pub neck_pos: Vec3,
@@ -301,30 +301,29 @@ pub struct ProceduralRigState {
 impl ProceduralRigState {
     pub fn get_bone_transforms(&self) -> HashMap<RigBone, Transform> {
         let mut transforms = HashMap::default();
+        let (pos1, _pos2) = ik2_positions(
+            RigBone::LowerBack.length(),
+            RigBone::UpperBack.length(),
+            self.neck_pos - self.hip_pos,
+            -self.torso_forward,
+        );
+        let spine_pos = self.hip_pos + pos1;
+        let lower_up = (spine_pos - self.hip_pos).normalize_or_zero();
+        let lower_forward = Vec3::X.cross(lower_up).normalize_or_zero();
+        let lower_transform = Transform::from_translation(0.5 * (spine_pos + self.hip_pos))
+            .looking_to(lower_forward, lower_up);
+        transforms.insert(RigBone::LowerBack, lower_transform);
+
+        let head_pos = self.neck_pos + (self.neck_pos - self.hip_pos).normalize_or_zero() * 0.13;
+        transforms.insert(RigBone::Head, Transform::from_translation(head_pos));
+
+        let upper_up = (self.neck_pos - spine_pos).normalize_or_zero();
+        let upper_forward = Vec3::X.cross(upper_up).normalize_or_zero();
+        let upper_transform = Transform::from_translation(0.5 * (self.neck_pos + spine_pos))
+            .looking_to(upper_forward, upper_up);
+        transforms.insert(RigBone::UpperBack, upper_transform);
 
         if self.grounded {
-            let (pos1, _pos2) = ik2_positions(
-                RigBone::LowerBack.length(),
-                RigBone::UpperBack.length(),
-                self.neck_pos - self.hip_pos,
-                -self.torso_forward,
-            );
-            let spine_pos = self.hip_pos + pos1;
-            let lower_up = (spine_pos - self.hip_pos).normalize_or_zero();
-            let lower_forward = Vec3::X.cross(lower_up).normalize_or_zero();
-            let lower_transform = Transform::from_translation(0.5 * (spine_pos + self.hip_pos))
-                .looking_to(lower_forward, lower_up);
-            transforms.insert(RigBone::LowerBack, lower_transform);
-
-            let head_pos =
-                self.neck_pos + (self.neck_pos - self.hip_pos).normalize_or_zero() * 0.13;
-            transforms.insert(RigBone::Head, Transform::from_translation(head_pos));
-
-            let upper_up = (self.neck_pos - spine_pos).normalize_or_zero();
-            let upper_forward = Vec3::X.cross(upper_up).normalize_or_zero();
-            let upper_transform = Transform::from_translation(0.5 * (self.neck_pos + spine_pos))
-                .looking_to(upper_forward, upper_up);
-            transforms.insert(RigBone::UpperBack, upper_transform);
             for (i, state) in self.ground_state.foot_states.iter().enumerate() {
                 let pos = match state {
                     FootState::Locked(info) => info.pos,
@@ -391,7 +390,6 @@ pub fn update_procedural_state(
         LinearVelocity(velocity),
     ) in query.iter_mut()
     {
-        rig_state.center_of_mass = *position;
         rig_state.grounded = move_state.ground_state.contact_point.is_some();
         let up_dir = *quat * Dir3::Y;
         let right_dir = *quat * Dir3::X;
@@ -414,6 +412,10 @@ pub fn update_procedural_state(
             );
         } else {
             rig_state.ground_state = RigGroundState::default();
+            let feet_pos = -up_dir * CAPSULE_HEIGHT * 1.0;
+            rig_state.hip_pos = *position + feet_pos * 0.2;
+            rig_state.neck_pos =
+                *position + up_dir * CAPSULE_HEIGHT * 0.3 - rig_state.hip_pos + *position;
         }
     }
 }

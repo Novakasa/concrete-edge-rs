@@ -13,7 +13,7 @@ pub fn ik2_positions(len1: f32, len2: f32, target: Vec3, bend_dir: Vec3) -> (Vec
         .cross(bend_dir)
         .cross(target_dir)
         .try_normalize()
-        .unwrap();
+        .unwrap_or(Vec3::NEG_Z);
     let min_range = len1.max(len2) - len1.min(len2);
     let max_range = len1 + len2;
     let target_dir = target.normalize();
@@ -66,7 +66,7 @@ pub fn ik3_positions(
 }
 
 #[derive(Debug, Clone, Default)]
-struct SpringValue<T: VectorSpace> {
+pub struct SpringValue<T: VectorSpace> {
     f: f32,
     zeta: f32,
     velocity: T,
@@ -75,7 +75,7 @@ struct SpringValue<T: VectorSpace> {
 }
 
 impl<T: VectorSpace> SpringValue<T> {
-    fn update(&mut self, target: T, dt: f32) -> T {
+    pub fn update(&mut self, target: T, dt: f32) -> T {
         let k = (2.0 * PI * self.f).powi(2);
         let c = self.zeta * self.f / PI;
         self.velocity = self.velocity + (target - self.value) * k * dt - self.velocity * c * dt

@@ -422,20 +422,8 @@ impl Plugin for PlayerPlugin {
                     camera::track_camera_1st_person,
                 )
                     .chain()
-                    .after(PhysicsSet::Sync)
-                    .run_if(not(in_state(DebugState::None))),
+                    .after(PhysicsSet::Sync),
             ),
-        );
-        app.add_systems(
-            SubstepSchedule,
-            (((
-                camera::track_camera_3rd_person,
-                camera::track_camera_1st_person,
-            )
-                .chain()
-                .run_if(in_state(DebugState::None)),)
-                .chain())
-            .before(IntegrationSet::Velocity),
         );
         app.add_systems(OnEnter(DebugState::None), set_visible::<true>);
         app.add_systems(OnExit(DebugState::None), set_visible::<false>);

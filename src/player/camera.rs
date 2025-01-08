@@ -4,6 +4,8 @@ use avian3d::prelude::*;
 use bevy::{core_pipeline::motion_blur::MotionBlur, prelude::*};
 use leafwing_input_manager::prelude::*;
 
+use super::animation::ProceduralRigState;
+
 #[derive(Component, Reflect, Debug, Default)]
 pub struct CameraAnchor3rdPerson {
     pub yaw: f32,
@@ -51,7 +53,7 @@ pub fn spawn_camera_3rd_person(mut commands: Commands) {
 }
 
 pub fn spawn_camera_1st_person(mut commands: Commands) {
-    let camera_arm = Vec3::new(0.0, 0.2 * super::physics::CAPSULE_HEIGHT, 0.0);
+    let camera_arm = Vec3::new(0.0, 0.0, 0.0);
     let transform = Transform::from_translation(camera_arm);
     commands
         .spawn((
@@ -114,14 +116,14 @@ pub fn track_camera_3rd_person(
 }
 
 pub fn track_camera_1st_person(
-    query: Query<(&Position, &Rotation), With<super::Player>>,
+    query: Query<(&Position, &Rotation, &ProceduralRigState), With<super::Player>>,
     mut camera_query: Query<(&mut Transform, &CameraAnchor1stPerson)>,
 ) {
-    for (Position(pos), Rotation(quat)) in query.iter() {
+    for (Position(pos), Rotation(quat), rig_state) in query.iter() {
         let up_dir = *quat * Vec3::Y;
 
         let cam_up = Quat::IDENTITY.slerp(Quat::from_rotation_arc(Vec3::Y, up_dir), 0.2) * Vec3::Y;
-        let pos = pos.clone() + up_dir * super::physics::CAPSULE_HEIGHT * 0.3;
+        let pos = rig_state.neck_pos + up_dir * super::physics::CAPSULE_HEIGHT * 0.1;
         for (mut transform, cam1) in camera_query.iter_mut() {
             let view_unrolled = Quat::from_euler(EulerRot::YXZ, cam1.yaw, cam1.pitch, 0.0);
             let forward = view_unrolled * Vec3::NEG_Z;
