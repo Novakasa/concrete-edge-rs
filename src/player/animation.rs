@@ -131,12 +131,29 @@ impl Default for CycleState {
     }
 }
 
-#[derive(Debug, Default, Reflect, Clone)]
+#[derive(Debug, Reflect, Clone)]
 pub struct RigGroundState {
+    pub hip_pos: Vec3,
     pub foot_states: [FootState; 2],
     cycle_state: CycleState,
-    cm_offset: f32,
-    torso_extent: f32,
+    cm_offset: SpringValue<Vec3>,
+}
+
+impl Default for RigGroundState {
+    fn default() -> Self {
+        Self {
+            foot_states: [FootState::default(), FootState::default()],
+            cycle_state: CycleState::default(),
+            hip_pos: Vec3::ZERO,
+            cm_offset: SpringValue {
+                f: 1.0,
+                zeta: 1.0,
+                velocity: Vec3::ZERO,
+                value: Vec3::ZERO,
+                external_acceleration: Vec3::ZERO,
+            },
+        }
+    }
 }
 
 impl RigGroundState {
@@ -179,7 +196,7 @@ impl RigGroundState {
     fn update(
         &mut self,
         contact_point: Vec3,
-        position: &Vec3,
+        position: Vec3,
         physics_state: &PhysicsState,
         right_dir: Dir3,
         velocity: &Vec3,
@@ -188,7 +205,7 @@ impl RigGroundState {
         up_dir: Dir3,
     ) {
         self.cycle_state.increment(dt);
-        let contact = contact_point + *position;
+        let contact = contact_point + position;
         let normal = physics_state.ground_state.contact_normal.unwrap();
 
         let right_tangent =
@@ -225,12 +242,31 @@ impl RigGroundState {
         let is_any_locked = self.is_any_locked();
         let unlocked_time = self.cycle_state.get_unlocked_time();
 
+        let spring_force =
+            physics_state.ground_state.normal_force + physics_state.ground_state.tangential_force;
+        let contact_force =
+            (physics_state.external_force.length() * 0.5).lerp(spring_force.length(), 0.25);
+        let lock_ratio = 1.0.lerp(0.3, (velocity.length() / MAX_VELOCITY).min(1.0));
+        if is_any_locked {
+            self.cm_offset.external_acceleration =
+                spring_force * (1.0 / lock_ratio - 1.0) * mass.inverse();
+        } else {
+            self.cm_offset.external_acceleration = -spring_force * mass.inverse();
+        }
+        self.cm_offset.update(Vec3::ZERO, dt);
+
+        let spring_dir = -contact.normalize_or_zero();
+        let cm_vel = self.cm_offset.velocity.dot(spring_dir);
+        let cm_pos = self.cm_offset.value.dot(spring_dir);
+
         for (i, state) in self.foot_states.iter_mut().enumerate() {
             let lr = if i == 0 { -1.0 } else { 1.0 };
             let foot_offset = right_tangent * lr * offset_length;
             match state {
                 FootState::Locked(info) => {
                     info.pos += slip_vel * dt;
+
+                    self.cm_offset.external_acceleration = spring_force * mass.inverse();
                     let next_lock_pos = contact
                         + (acceleration * (travel_duration + 0.5 * lock_duration) + tangential_vel)
                             * (travel_duration + 0.5 * lock_duration)
@@ -238,10 +274,15 @@ impl RigGroundState {
                     let _local_travel_dist = (window_pos_ahead - info.pos).length();
                     let pos_to_next = (info.pos - next_lock_pos).length();
                     let pos_to_contact = (info.pos - contact).length();
-                    if pos_to_next > min_step_size
-                        && pos_to_contact > window_travel_dist * 0.5
-                        && pos_to_contact > 1.3 * ahead_to_contact
-                        && (self.cycle_state.get_locked_time() > min_lock || is_both_locked)
+                    let pos_to_hip = info.pos - self.hip_pos;
+                    if (pos_to_hip.length() > RigBone::leg_length() * 0.95
+                        && velocity.dot(pos_to_hip.normalize_or_zero()) > 0.0)
+                        || (pos_to_next > min_step_size
+                            && pos_to_contact > window_travel_dist * 0.5
+                            && pos_to_contact > 1.3 * ahead_to_contact
+                            || (cm_vel > 0.0 && cm_pos > 0.0)
+                                && (self.cycle_state.get_locked_time() > min_lock
+                                    || is_both_locked))
                     {
                         *state = FootState::unlocked(info.pos, travel_duration);
                     }
@@ -293,9 +334,7 @@ pub struct RigAirState;
 
 #[derive(Component, Debug, Default, Reflect, Clone)]
 pub struct ProceduralRigState {
-    pub cm_offset: SpringValue<Vec3>,
     pub velocity: Vec3,
-    pub hip_pos: Vec3,
     pub neck_pos: Vec3,
     pub ground_state: RigGroundState,
     pub air_state: RigAirState,
@@ -307,21 +346,22 @@ impl ProceduralRigState {
     pub fn get_bone_transforms(&self) -> HashMap<RigBone, Transform> {
         let mut transforms = HashMap::default();
         let torso_forward = (self.hip_forward + 0.5 * Vec3::Y).normalize_or_zero();
+        let hip_pos = self.ground_state.hip_pos;
         let (pos1, _pos2) = ik2_positions(
             RigBone::LowerBack.length(),
             RigBone::UpperBack.length(),
-            self.neck_pos - self.hip_pos,
+            self.neck_pos - self.ground_state.hip_pos,
             -torso_forward,
         );
-        let spine_pos = self.hip_pos + pos1;
-        let lower_up = (spine_pos - self.hip_pos).normalize_or_zero();
+        let spine_pos = hip_pos + pos1;
+        let lower_up = (spine_pos - hip_pos).normalize_or_zero();
         let lower_forward = Vec3::X.cross(lower_up).normalize_or_zero();
-        let lower_transform = Transform::from_translation(0.5 * (spine_pos + self.hip_pos))
+        let lower_transform = Transform::from_translation(0.5 * (spine_pos + hip_pos))
             .looking_to(lower_forward, lower_up);
         transforms.insert(RigBone::LowerBack, lower_transform);
 
         let head_pos = self.neck_pos
-            + (self.neck_pos - self.hip_pos)
+            + (self.neck_pos - self.ground_state.hip_pos)
                 .normalize_or_zero()
                 .lerp(Vec3::Y, 0.8)
                 .normalize_or_zero()
@@ -344,12 +384,12 @@ impl ProceduralRigState {
                 let (pos1, pos2) = ik2_positions(
                     RigBone::LeftUpperLeg.length(),
                     RigBone::LeftLowerLeg.length(),
-                    pos - self.hip_pos,
+                    pos - hip_pos,
                     self.hip_forward,
                 );
 
-                let knee_pos = self.hip_pos + pos1;
-                let foot_pos = self.hip_pos + pos2;
+                let knee_pos = hip_pos + pos1;
+                let foot_pos = hip_pos + pos2;
 
                 let (upper_bone, lower_bone) = match i {
                     0 => (RigBone::LeftUpperLeg, RigBone::LeftLowerLeg),
@@ -357,9 +397,9 @@ impl ProceduralRigState {
                     _ => unreachable!(),
                 };
 
-                let upper_up = (self.hip_pos - knee_pos).normalize_or_zero();
+                let upper_up = (hip_pos - knee_pos).normalize_or_zero();
                 let upper_forward = Vec3::X.cross(upper_up).normalize_or_zero();
-                let upper_transform = Transform::from_translation(0.5 * (knee_pos + self.hip_pos))
+                let upper_transform = Transform::from_translation(0.5 * (knee_pos + hip_pos))
                     .looking_to(upper_forward, upper_up);
                 transforms.insert(upper_bone, upper_transform);
 
@@ -406,12 +446,15 @@ pub fn update_procedural_state(
         rig_state.hip_forward = up_dir.cross(right_dir.into());
 
         if let Some(contact_point) = move_state.ground_state.contact_point {
-            rig_state.hip_pos = *position + contact_point * 0.2;
+            rig_state.ground_state.hip_pos =
+                *position + rig_state.ground_state.cm_offset.value + contact_point * 0.2;
             rig_state.neck_pos =
-                *position + up_dir * CAPSULE_HEIGHT * 0.3 - rig_state.hip_pos + *position;
+                *position + rig_state.ground_state.cm_offset.value + up_dir * CAPSULE_HEIGHT * 0.3
+                    - rig_state.ground_state.hip_pos
+                    + *position;
             rig_state.ground_state.update(
                 contact_point,
-                position,
+                *position,
                 move_state,
                 right_dir,
                 velocity,
@@ -422,9 +465,10 @@ pub fn update_procedural_state(
         } else {
             rig_state.ground_state = RigGroundState::default();
             let feet_pos = -up_dir * CAPSULE_HEIGHT * 1.0;
-            rig_state.hip_pos = *position + feet_pos * 0.2;
-            rig_state.neck_pos =
-                *position + up_dir * CAPSULE_HEIGHT * 0.3 - rig_state.hip_pos + *position;
+            rig_state.ground_state.hip_pos = *position + feet_pos * 0.2;
+            rig_state.neck_pos = *position + up_dir * CAPSULE_HEIGHT * 0.3
+                - rig_state.ground_state.hip_pos
+                + *position;
         }
     }
 }
@@ -463,7 +507,7 @@ fn draw_gizmos(
                 }
             };
 
-            let hip_pos = steps.hip_pos;
+            let hip_pos = steps.ground_state.hip_pos;
             let (pos1, pos2) = ik2_positions(
                 CAPSULE_HEIGHT * 0.4,
                 CAPSULE_HEIGHT * 0.4,
