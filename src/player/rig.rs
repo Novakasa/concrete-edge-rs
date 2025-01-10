@@ -32,6 +32,10 @@ impl RigBone {
         };
         raw * 0.0065
     }
+
+    pub fn leg_length() -> f32 {
+        RigBone::LeftUpperLeg.length() + RigBone::LeftLowerLeg.length()
+    }
 }
 
 fn spawn_meshes(

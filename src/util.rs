@@ -67,20 +67,19 @@ pub fn ik3_positions(
 
 #[derive(Debug, Clone, Default)]
 pub struct SpringValue<T: VectorSpace> {
-    f: f32,
-    zeta: f32,
-    velocity: T,
-    value: T,
-    external_acceleration: T,
+    pub f: f32,
+    pub zeta: f32,
+    pub velocity: T,
+    pub value: T,
+    pub external_acceleration: T,
 }
 
 impl<T: VectorSpace> SpringValue<T> {
-    pub fn update(&mut self, target: T, dt: f32) -> T {
+    pub fn update(&mut self, target: T, dt: f32) {
         let k = (2.0 * PI * self.f).powi(2);
-        let c = self.zeta * self.f / PI;
+        let c = 2.0 * self.zeta * self.f * PI;
         self.velocity = self.velocity + (target - self.value) * k * dt - self.velocity * c * dt
             + self.external_acceleration * dt;
         self.value = self.value + self.velocity * dt;
-        self.value
     }
 }

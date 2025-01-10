@@ -8,10 +8,11 @@ use super::rewind::RewindState;
 
 pub const CAPSULE_RADIUS: f32 = 0.2;
 pub const CAPSULE_HEIGHT: f32 = 4.0 * CAPSULE_RADIUS;
-pub const CAST_RADIUS: f32 = 1.0 * CAPSULE_RADIUS;
+pub const CAST_RADIUS: f32 = 0.8 * CAPSULE_RADIUS;
 pub const MAX_TOI: f32 = CAPSULE_HEIGHT * 1.0;
 pub const FRICTION_MARGIN: f32 = 0.98;
 pub const GLOBAL_FRICTION: f32 = 1.0;
+pub const MAX_VELOCITY: f32 = 7.0;
 
 #[derive(Reflect, Debug, Default, GizmoConfigGroup)]
 pub struct PhysicsGizmos;
@@ -194,6 +195,7 @@ pub struct PhysicsGroundState {
     pub contact_point: Option<Vec3>,
     pub contact_normal: Option<Vec3>,
     pub tangential_force: Vec3,
+    pub normal_force: Vec3,
     pub slope_force: Vec3,
 }
 
@@ -466,6 +468,7 @@ pub fn update_forces(
             physics_state.ground_state.slope_force = slope_force;
             physics_state.ground_state.slipping =
                 (tangential_spring_force + tangential_angle_force).length() > friction_force;
+            physics_state.ground_state.normal_force = normal_force;
 
             force.clear();
             force.apply_force_at_point(
@@ -575,7 +578,7 @@ fn get_target_force(
     //     (input_tangent - 0.5 * (1.0 - normal.dot(-ext_dir)) * tangent_slope).normalize();
     let tangent_vel = *velocity - velocity.dot(normal) * normal;
 
-    let target_vel = input_tangent * 7.0;
+    let target_vel = input_tangent * MAX_VELOCITY;
     let denominator = 1.0 - tangent_slope.dot(ext_dir).powi(2);
     let slope_force = if denominator == 0.0 {
         physics_state.external_force

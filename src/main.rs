@@ -100,10 +100,9 @@ fn toggle_debug_state(
 ) {
     if input.just_pressed(&GlobalAction::ToggleDebug) {
         match debug_state.get() {
-            DebugState::None => next_debug_state.set(DebugState::Colliders),
-            DebugState::Colliders => next_debug_state.set(DebugState::Forces),
-            DebugState::Forces => next_debug_state.set(DebugState::Torque),
-            DebugState::Torque => next_debug_state.set(DebugState::None),
+            DebugState::None => next_debug_state.set(DebugState::Physics),
+            DebugState::Physics => next_debug_state.set(DebugState::Animation),
+            DebugState::Animation => next_debug_state.set(DebugState::None),
         }
     }
 }

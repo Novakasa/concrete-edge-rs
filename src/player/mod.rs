@@ -28,9 +28,8 @@ mod rig;
 #[derive(States, Debug, Clone, PartialEq, Eq, Hash)]
 pub enum DebugState {
     None,
-    Colliders,
-    Torque,
-    Forces,
+    Animation,
+    Physics,
 }
 
 #[derive(PartialEq, Eq, Hash, Clone, Debug, Reflect)]
@@ -228,14 +227,14 @@ fn draw_debug_gizmos(
         ),
         With<Player>,
     >,
-    mut gizmos: Gizmos,
+    mut physics_gizmos: Gizmos<PhysicsGizmos>,
     debug_state: Res<State<DebugState>>,
 ) {
     for (debug, Position(position), Rotation(quat), LinearVelocity(_vel), physics_state, steps) in
         query.iter_mut()
     {
         if let Some(contact) = &physics_state.air_state.predicted_contact {
-            gizmos.sphere(
+            physics_gizmos.sphere(
                 Isometry3d::from_translation(contact.contact_point),
                 0.1,
                 Color::from(RED),
@@ -250,7 +249,7 @@ fn draw_debug_gizmos(
                 };
                 let pos = match state {
                     FootState::Locked(info) => {
-                        gizmos.sphere(
+                        physics_gizmos.sphere(
                             Isometry3d::from_translation(info.pos),
                             0.5 * CAPSULE_RADIUS,
                             color,
@@ -259,7 +258,7 @@ fn draw_debug_gizmos(
                         info.pos
                     }
                     FootState::Unlocked(info) => {
-                        gizmos.sphere(
+                        physics_gizmos.sphere(
                             Isometry3d::from_translation(info.pos),
                             0.5 * CAPSULE_RADIUS,
                             color.with_luminance(0.2),
@@ -268,84 +267,63 @@ fn draw_debug_gizmos(
                     }
                 };
 
-                let hip_pos = steps.hip_pos;
+                let hip_pos = steps.ground_state.hip_pos;
                 let (pos1, pos2) = ik2_positions(
                     CAPSULE_HEIGHT * 0.4,
                     CAPSULE_HEIGHT * 0.4,
                     pos - hip_pos,
                     physics_state.forward_dir,
                 );
-                gizmos.arrow(hip_pos, hip_pos + pos1, Color::WHITE);
-                gizmos.arrow(hip_pos + pos1, hip_pos + pos2, Color::WHITE);
+                physics_gizmos.arrow(hip_pos, hip_pos + pos1, Color::WHITE);
+                physics_gizmos.arrow(hip_pos + pos1, hip_pos + pos2, Color::WHITE);
             }
 
-            if debug_state.get() == &DebugState::Torque {
-                gizmos
-                    .primitive_3d(
-                        &Capsule3d::new(CAPSULE_RADIUS, CAPSULE_HEIGHT - CAPSULE_RADIUS * 2.0),
-                        Isometry3d::new(position.clone(), debug.delta_quat),
-                        Color::from(GRAY),
-                    )
-                    .resolution(6);
-                gizmos.arrow(
-                    *position,
-                    *position + debug.delta_quat * Vec3::NEG_Z,
-                    Color::WHITE,
-                );
-                let delta_quat = debug.delta_quat * quat.inverse();
-                gizmos.arrow(
-                    *position,
-                    *position + delta_quat.to_scaled_axis(),
-                    Color::BLACK,
-                );
-            }
-
-            if debug_state.get() == &DebugState::Forces {
+            if debug_state.get() == &DebugState::Physics {
                 let contact_color = if physics_state.ground_state.slipping {
                     Color::from(RED)
                 } else {
                     Color::from(GREEN)
                 };
-                gizmos.sphere(
+                physics_gizmos.sphere(
                     Isometry3d::from_translation(
                         position.clone() + debug.shape_toi * debug.cast_dir,
                     ),
                     CAST_RADIUS,
                     contact_color,
                 );
-                gizmos.arrow(
+                physics_gizmos.arrow(
                     position.clone() + debug.contact_point,
                     position.clone() + debug.contact_point + debug.spring_force,
                     Color::from(CYAN_100),
                 );
-                gizmos.arrow(
+                physics_gizmos.arrow(
                     position.clone() + debug.contact_point,
                     position.clone() + debug.contact_point + debug.normal_force,
                     Color::from(BLUE),
                 );
 
-                gizmos.arrow(
+                physics_gizmos.arrow(
                     position.clone() + debug.contact_point,
                     position.clone() + debug.contact_point + debug.tangential_force,
                     Color::from(PINK),
                 );
 
-                gizmos.arrow(
+                physics_gizmos.arrow(
                     position.clone() + debug.contact_point,
                     position.clone() + debug.contact_point + debug.tangent_vel,
                     Color::from(ORANGE),
                 );
-                gizmos.arrow(
+                physics_gizmos.arrow(
                     position.clone() + debug.contact_point,
                     position.clone() + debug.contact_point + debug.target_vel,
                     Color::from(GREEN),
                 );
-                gizmos.arrow(
+                physics_gizmos.arrow(
                     position.clone() + debug.contact_point,
                     position.clone() + debug.contact_point + debug.target_force,
                     Color::from(RED),
                 );
-                gizmos.arrow(
+                physics_gizmos.arrow(
                     position.clone() + debug.contact_point + debug.tangential_force,
                     position.clone()
                         + debug.contact_point
@@ -353,7 +331,7 @@ fn draw_debug_gizmos(
                         + debug.angle_force,
                     Color::from(YELLOW),
                 );
-                gizmos.arrow(
+                physics_gizmos.arrow(
                     position.clone(),
                     position.clone() + debug.spring_torque,
                     Color::from(YELLOW),
@@ -361,7 +339,7 @@ fn draw_debug_gizmos(
             }
         } else {
             // draw circle at end of cast
-            gizmos.sphere(
+            physics_gizmos.sphere(
                 Isometry3d::from_translation(
                     position.clone() - MAX_TOI * physics_state.ground_state.neg_cast_vec,
                 ),
@@ -369,19 +347,19 @@ fn draw_debug_gizmos(
                 Color::BLACK,
             );
         }
-        gizmos
+        physics_gizmos
             .primitive_3d(
                 &Capsule3d::new(CAPSULE_RADIUS, CAPSULE_HEIGHT - CAPSULE_RADIUS * 2.0),
                 Isometry3d::new(position.clone(), quat.clone()),
                 Color::WHITE,
             )
             .resolution(6);
-        gizmos.arrow(
+        physics_gizmos.arrow(
             *position,
             *position + 0.2 * physics_state.forward_dir,
             Color::from(BLUE),
         );
-        gizmos.arrow(
+        physics_gizmos.arrow(
             *position,
             *position - 0.2 * physics_state.forward_dir,
             Color::from(RED),
