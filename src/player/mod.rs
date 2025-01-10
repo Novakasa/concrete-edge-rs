@@ -13,8 +13,8 @@ use camera::{CameraAnchor1stPerson, CameraAnchor3rdPerson};
 use dynamics::integrator::IntegrationSet;
 use leafwing_input_manager::prelude::*;
 use physics::{
-    PhysicsDebugInfo, PhysicsState, PlayerAngularSpring, PlayerGroundSpring, PlayerSpringParams,
-    CAPSULE_HEIGHT, CAPSULE_RADIUS, CAST_RADIUS, MAX_TOI,
+    PhysicsDebugInfo, PhysicsGizmos, PhysicsState, PlayerAngularSpring, PlayerGroundSpring,
+    PlayerSpringParams, CAPSULE_HEIGHT, CAPSULE_RADIUS, CAST_RADIUS, MAX_TOI,
 };
 
 use crate::util::ik2_positions;
@@ -267,7 +267,7 @@ fn draw_debug_gizmos(
                     }
                 };
 
-                let hip_pos = steps.ground_state.hip_pos;
+                let hip_pos = steps.hip_pos;
                 let (pos1, pos2) = ik2_positions(
                     CAPSULE_HEIGHT * 0.4,
                     CAPSULE_HEIGHT * 0.4,
