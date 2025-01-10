@@ -620,7 +620,13 @@ pub struct PlayerPhysicsPlugin;
 
 impl Plugin for PlayerPhysicsPlugin {
     fn build(&self, app: &mut App) {
-        app.init_gizmo_group::<PhysicsGizmos>();
+        app.insert_gizmo_config(
+            PhysicsGizmos::default(),
+            GizmoConfig {
+                enabled: false,
+                ..Default::default()
+            },
+        );
         app.add_systems(
             SubstepSchedule,
             (update_forces,)

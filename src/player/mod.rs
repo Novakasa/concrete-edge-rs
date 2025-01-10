@@ -19,11 +19,11 @@ use physics::{
 
 use crate::util::ik2_positions;
 
-mod animation;
-mod camera;
-mod physics;
-mod rewind;
-mod rig;
+pub mod animation;
+pub mod camera;
+pub mod physics;
+pub mod rewind;
+pub mod rig;
 
 #[derive(States, Debug, Clone, PartialEq, Eq, Hash)]
 pub enum DebugState {
@@ -392,9 +392,7 @@ impl Plugin for PlayerPlugin {
                 player_controls,
                 respawn_player,
                 camera::toggle_active_view,
-                draw_debug_gizmos
-                    .run_if(not(in_state(DebugState::None)))
-                    .after(animation::update_procedural_state),
+                draw_debug_gizmos.after(animation::update_procedural_state),
                 (
                     camera::track_camera_3rd_person,
                     camera::track_camera_1st_person,
