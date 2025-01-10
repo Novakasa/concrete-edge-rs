@@ -1,5 +1,9 @@
 use avian3d::{parry::query::contact, prelude::*};
-use bevy::{prelude::*, utils::HashMap};
+use bevy::{
+    color::palettes::css::{GREEN, RED},
+    prelude::*,
+    utils::HashMap,
+};
 
 use crate::util::{ik2_positions, SpringValue};
 
@@ -314,7 +318,12 @@ impl ProceduralRigState {
             .looking_to(lower_forward, lower_up);
         transforms.insert(RigBone::LowerBack, lower_transform);
 
-        let head_pos = self.neck_pos + (self.neck_pos - self.hip_pos).normalize_or_zero() * 0.13;
+        let head_pos = self.neck_pos
+            + (self.neck_pos - self.hip_pos)
+                .normalize_or_zero()
+                .lerp(Vec3::Y, 0.8)
+                .normalize_or_zero()
+                * 0.13;
         transforms.insert(RigBone::Head, Transform::from_translation(head_pos));
 
         let upper_up = (self.neck_pos - spine_pos).normalize_or_zero();
@@ -420,6 +429,53 @@ pub fn update_procedural_state(
     }
 }
 
+fn draw_gizmos(
+    query: Query<(&PhysicsState, &ProceduralRigState), With<Player>>,
+    mut rig_gizmos: Gizmos<RigGizmos>,
+) {
+    for (physics_state, steps) in query.iter() {
+        if physics_state.ground_state.contact_point.is_none() {
+            continue;
+        }
+        for (i, state) in steps.ground_state.foot_states.iter().enumerate() {
+            let color = if i == 0 {
+                Color::from(RED)
+            } else {
+                Color::from(GREEN)
+            };
+            let pos = match state {
+                FootState::Locked(info) => {
+                    rig_gizmos.sphere(
+                        Isometry3d::from_translation(info.pos),
+                        0.5 * CAPSULE_RADIUS,
+                        color,
+                    );
+
+                    info.pos
+                }
+                FootState::Unlocked(info) => {
+                    rig_gizmos.sphere(
+                        Isometry3d::from_translation(info.pos),
+                        0.5 * CAPSULE_RADIUS,
+                        color.with_luminance(0.2),
+                    );
+                    info.pos
+                }
+            };
+
+            let hip_pos = steps.hip_pos;
+            let (pos1, pos2) = ik2_positions(
+                CAPSULE_HEIGHT * 0.4,
+                CAPSULE_HEIGHT * 0.4,
+                pos - hip_pos,
+                physics_state.forward_dir,
+            );
+            rig_gizmos.arrow(hip_pos, hip_pos + pos1, Color::WHITE);
+            rig_gizmos.arrow(hip_pos + pos1, hip_pos + pos2, Color::WHITE);
+        }
+    }
+}
+
 fn smoothstep(t: f32) -> f32 {
     3.0 * t.powi(2) - 2.0 * t.powi(3)
 }
@@ -431,7 +487,13 @@ fn smoothstart(t: f32) -> f32 {
 pub struct PlayerAnimationPlugin;
 impl Plugin for PlayerAnimationPlugin {
     fn build(&self, app: &mut App) {
-        app.init_gizmo_group::<RigGizmos>();
-        app.add_systems(Update, update_procedural_state);
+        app.insert_gizmo_config(
+            RigGizmos::default(),
+            GizmoConfig {
+                enabled: false,
+                ..Default::default()
+            },
+        );
+        app.add_systems(Update, (update_procedural_state, draw_gizmos).chain());
     }
 }

@@ -4,7 +4,7 @@ use avian3d::prelude::*;
 use bevy::{core_pipeline::motion_blur::MotionBlur, prelude::*};
 use leafwing_input_manager::prelude::*;
 
-use super::animation::ProceduralRigState;
+use super::{animation::ProceduralRigState, rig::RigBone};
 
 #[derive(Component, Reflect, Debug, Default)]
 pub struct CameraAnchor3rdPerson {
@@ -53,7 +53,7 @@ pub fn spawn_camera_3rd_person(mut commands: Commands) {
 }
 
 pub fn spawn_camera_1st_person(mut commands: Commands) {
-    let camera_arm = Vec3::new(0.0, 0.0, 0.0);
+    let camera_arm = Vec3::new(0.0, 0.0, -RigBone::Head.length() * 0.5);
     let transform = Transform::from_translation(camera_arm);
     commands
         .spawn((
@@ -121,6 +121,7 @@ pub fn track_camera_1st_person(
 ) {
     for (Position(pos), Rotation(quat), rig_state) in query.iter() {
         let up_dir = *quat * Vec3::Y;
+        let forward_dir = *quat * Vec3::NEG_Z;
 
         let cam_up = Quat::IDENTITY.slerp(Quat::from_rotation_arc(Vec3::Y, up_dir), 0.2) * Vec3::Y;
         let pos = rig_state.neck_pos + up_dir * super::physics::CAPSULE_HEIGHT * 0.1;

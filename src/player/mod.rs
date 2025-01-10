@@ -241,43 +241,6 @@ fn draw_debug_gizmos(
             );
         }
         if physics_state.ground_state.contact_point.is_some() {
-            for (i, state) in steps.ground_state.foot_states.iter().enumerate() {
-                let color = if i == 0 {
-                    Color::from(RED)
-                } else {
-                    Color::from(GREEN)
-                };
-                let pos = match state {
-                    FootState::Locked(info) => {
-                        physics_gizmos.sphere(
-                            Isometry3d::from_translation(info.pos),
-                            0.5 * CAPSULE_RADIUS,
-                            color,
-                        );
-
-                        info.pos
-                    }
-                    FootState::Unlocked(info) => {
-                        physics_gizmos.sphere(
-                            Isometry3d::from_translation(info.pos),
-                            0.5 * CAPSULE_RADIUS,
-                            color.with_luminance(0.2),
-                        );
-                        info.pos
-                    }
-                };
-
-                let hip_pos = steps.hip_pos;
-                let (pos1, pos2) = ik2_positions(
-                    CAPSULE_HEIGHT * 0.4,
-                    CAPSULE_HEIGHT * 0.4,
-                    pos - hip_pos,
-                    physics_state.forward_dir,
-                );
-                physics_gizmos.arrow(hip_pos, hip_pos + pos1, Color::WHITE);
-                physics_gizmos.arrow(hip_pos + pos1, hip_pos + pos2, Color::WHITE);
-            }
-
             if debug_state.get() == &DebugState::Physics {
                 let contact_color = if physics_state.ground_state.slipping {
                     Color::from(RED)
@@ -398,6 +361,7 @@ impl Plugin for PlayerPlugin {
                     camera::track_camera_1st_person,
                 )
                     .chain()
+                    .after(animation::update_procedural_state)
                     .after(PhysicsSet::Sync),
             ),
         );

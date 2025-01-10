@@ -16,7 +16,7 @@ use blenvy::{
     BlenvyPlugin,
 };
 use leafwing_input_manager::prelude::*;
-use player::{physics::PhysicsGizmos, DebugState, Player};
+use player::{animation::RigGizmos, physics::PhysicsGizmos, DebugState, Player};
 
 mod player;
 mod util;
@@ -93,14 +93,13 @@ fn quit_on_menu(
     }
 }
 
-fn toggle_gizmos(
-    mut next_debug_state: ResMut<NextState<DebugState>>,
-    debug_state: Res<State<DebugState>>,
-    input: Res<ButtonInput<KeyCode>>,
-    mut config_store: ResMut<GizmoConfigStore>,
-) {
+fn toggle_gizmos(input: Res<ButtonInput<KeyCode>>, mut config_store: ResMut<GizmoConfigStore>) {
     if input.just_pressed(KeyCode::F3) {
         let (config, _) = config_store.config_mut::<PhysicsGizmos>();
+        config.enabled = !config.enabled;
+    }
+    if input.just_pressed(KeyCode::F4) {
+        let (config, _) = config_store.config_mut::<RigGizmos>();
         config.enabled = !config.enabled;
     }
 }
