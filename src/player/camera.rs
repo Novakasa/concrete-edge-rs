@@ -119,9 +119,9 @@ pub fn track_camera_1st_person(
     query: Query<(&Position, &Rotation, &ProceduralRigState), With<super::Player>>,
     mut camera_query: Query<(&mut Transform, &CameraAnchor1stPerson)>,
 ) {
-    for (Position(pos), Rotation(quat), rig_state) in query.iter() {
+    for (Position(_pos), Rotation(quat), rig_state) in query.iter() {
         let up_dir = *quat * Vec3::Y;
-        let forward_dir = *quat * Vec3::NEG_Z;
+        let _forward_dir = *quat * Vec3::NEG_Z;
 
         let cam_up = Quat::IDENTITY.slerp(Quat::from_rotation_arc(Vec3::Y, up_dir), 0.2) * Vec3::Y;
         let pos = rig_state.neck_pos + up_dir * super::physics::CAPSULE_HEIGHT * 0.1;

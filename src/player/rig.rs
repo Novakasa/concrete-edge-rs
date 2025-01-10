@@ -1,12 +1,6 @@
-use avian3d::prelude::*;
-use bevy::{
-    color::palettes::css::{BLACK, LIME, WHITE},
-    prelude::*,
-};
+use bevy::{color::palettes::css::BLACK, prelude::*};
 
-use crate::util::ik2_positions;
-
-use super::animation::{FootState, ProceduralRigState};
+use super::animation::ProceduralRigState;
 
 const STICK_RADIUS: f32 = 0.08;
 

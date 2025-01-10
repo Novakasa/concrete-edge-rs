@@ -301,7 +301,7 @@ pub fn update_landing_prediction(mut q_physics: Query<(&mut PhysicsState, &Playe
             let contact = physics.air_state.predicted_contact.clone().unwrap();
             let contact_point = physics.ground_state.neg_cast_vec * (MAX_TOI + CAST_RADIUS) * 0.1;
             // println!("{:?}", contact_point);
-            let spring_force = spring_force(
+            let _spring_force = spring_force(
                 &contact.contact_velocity,
                 spring_params.get_ground_spring(false),
                 contact.contact_normal,

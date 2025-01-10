@@ -1,23 +1,19 @@
 use std::f32::consts::PI;
 
-use animation::{FootState, ProceduralRigState};
 use avian3d::prelude::*;
 use bevy::{
     color::palettes::{
-        css::{BLUE, GRAY, GREEN, ORANGE, PINK, RED, YELLOW},
+        css::{BLUE, GREEN, ORANGE, PINK, RED, YELLOW},
         tailwind::CYAN_100,
     },
     prelude::*,
 };
 use camera::{CameraAnchor1stPerson, CameraAnchor3rdPerson};
-use dynamics::integrator::IntegrationSet;
 use leafwing_input_manager::prelude::*;
 use physics::{
     PhysicsDebugInfo, PhysicsGizmos, PhysicsState, PlayerAngularSpring, PlayerGroundSpring,
     PlayerSpringParams, CAPSULE_HEIGHT, CAPSULE_RADIUS, CAST_RADIUS, MAX_TOI,
 };
-
-use crate::util::ik2_positions;
 
 pub mod animation;
 pub mod camera;
@@ -94,7 +90,7 @@ fn spawn_player(
     for (entity, transform) in query.iter() {
         commands.entity(entity).insert(PlayerSpawned);
         println!("Spawning player: {:?}", entity);
-        let capsule = meshes.add(Mesh::from(Capsule3d::new(
+        meshes.add(Mesh::from(Capsule3d::new(
             physics::CAPSULE_RADIUS,
             physics::CAPSULE_HEIGHT - 2.0 * physics::CAPSULE_RADIUS,
         )));
@@ -223,14 +219,12 @@ fn draw_debug_gizmos(
             &Rotation,
             &LinearVelocity,
             &PhysicsState,
-            &ProceduralRigState,
         ),
         With<Player>,
     >,
     mut physics_gizmos: Gizmos<PhysicsGizmos>,
-    debug_state: Res<State<DebugState>>,
 ) {
-    for (debug, Position(position), Rotation(quat), LinearVelocity(_vel), physics_state, steps) in
+    for (debug, Position(position), Rotation(quat), LinearVelocity(_vel), physics_state) in
         query.iter_mut()
     {
         if let Some(contact) = &physics_state.air_state.predicted_contact {
@@ -241,65 +235,58 @@ fn draw_debug_gizmos(
             );
         }
         if physics_state.ground_state.contact_point.is_some() {
-            if debug_state.get() == &DebugState::Physics {
-                let contact_color = if physics_state.ground_state.slipping {
-                    Color::from(RED)
-                } else {
-                    Color::from(GREEN)
-                };
-                physics_gizmos.sphere(
-                    Isometry3d::from_translation(
-                        position.clone() + debug.shape_toi * debug.cast_dir,
-                    ),
-                    CAST_RADIUS,
-                    contact_color,
-                );
-                physics_gizmos.arrow(
-                    position.clone() + debug.contact_point,
-                    position.clone() + debug.contact_point + debug.spring_force,
-                    Color::from(CYAN_100),
-                );
-                physics_gizmos.arrow(
-                    position.clone() + debug.contact_point,
-                    position.clone() + debug.contact_point + debug.normal_force,
-                    Color::from(BLUE),
-                );
+            let contact_color = if physics_state.ground_state.slipping {
+                Color::from(RED)
+            } else {
+                Color::from(GREEN)
+            };
+            physics_gizmos.sphere(
+                Isometry3d::from_translation(position.clone() + debug.shape_toi * debug.cast_dir),
+                CAST_RADIUS,
+                contact_color,
+            );
+            physics_gizmos.arrow(
+                position.clone() + debug.contact_point,
+                position.clone() + debug.contact_point + debug.spring_force,
+                Color::from(CYAN_100),
+            );
+            physics_gizmos.arrow(
+                position.clone() + debug.contact_point,
+                position.clone() + debug.contact_point + debug.normal_force,
+                Color::from(BLUE),
+            );
 
-                physics_gizmos.arrow(
-                    position.clone() + debug.contact_point,
-                    position.clone() + debug.contact_point + debug.tangential_force,
-                    Color::from(PINK),
-                );
+            physics_gizmos.arrow(
+                position.clone() + debug.contact_point,
+                position.clone() + debug.contact_point + debug.tangential_force,
+                Color::from(PINK),
+            );
 
-                physics_gizmos.arrow(
-                    position.clone() + debug.contact_point,
-                    position.clone() + debug.contact_point + debug.tangent_vel,
-                    Color::from(ORANGE),
-                );
-                physics_gizmos.arrow(
-                    position.clone() + debug.contact_point,
-                    position.clone() + debug.contact_point + debug.target_vel,
-                    Color::from(GREEN),
-                );
-                physics_gizmos.arrow(
-                    position.clone() + debug.contact_point,
-                    position.clone() + debug.contact_point + debug.target_force,
-                    Color::from(RED),
-                );
-                physics_gizmos.arrow(
-                    position.clone() + debug.contact_point + debug.tangential_force,
-                    position.clone()
-                        + debug.contact_point
-                        + debug.tangential_force
-                        + debug.angle_force,
-                    Color::from(YELLOW),
-                );
-                physics_gizmos.arrow(
-                    position.clone(),
-                    position.clone() + debug.spring_torque,
-                    Color::from(YELLOW),
-                );
-            }
+            physics_gizmos.arrow(
+                position.clone() + debug.contact_point,
+                position.clone() + debug.contact_point + debug.tangent_vel,
+                Color::from(ORANGE),
+            );
+            physics_gizmos.arrow(
+                position.clone() + debug.contact_point,
+                position.clone() + debug.contact_point + debug.target_vel,
+                Color::from(GREEN),
+            );
+            physics_gizmos.arrow(
+                position.clone() + debug.contact_point,
+                position.clone() + debug.contact_point + debug.target_force,
+                Color::from(RED),
+            );
+            physics_gizmos.arrow(
+                position.clone() + debug.contact_point + debug.tangential_force,
+                position.clone() + debug.contact_point + debug.tangential_force + debug.angle_force,
+                Color::from(YELLOW),
+            );
+            physics_gizmos.arrow(
+                position.clone(),
+                position.clone() + debug.spring_torque,
+                Color::from(YELLOW),
+            );
         } else {
             // draw circle at end of cast
             physics_gizmos.sphere(

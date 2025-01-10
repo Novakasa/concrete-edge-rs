@@ -1,4 +1,4 @@
-use avian3d::{parry::query::contact, prelude::*};
+use avian3d::prelude::*;
 use bevy::{
     color::palettes::css::{GREEN, RED},
     prelude::*,
@@ -185,7 +185,6 @@ impl RigGroundState {
         mass: &ComputedMass,
         dt: f32,
         up_dir: Dir3,
-        gizmos: &mut Gizmos<RigGizmos>,
     ) {
         self.cycle_state.increment(dt);
         let contact = contact_point + *position;
@@ -387,7 +386,6 @@ pub fn update_procedural_state(
     _spatial_query: SpatialQuery,
     dt_physics: Res<Time<Physics>>,
     dt_real: Res<Time>,
-    mut gizmos: Gizmos<RigGizmos>,
 ) {
     let dt = dt_real.delta_secs() * dt_physics.relative_speed();
     for (
@@ -417,7 +415,6 @@ pub fn update_procedural_state(
                 mass,
                 dt,
                 Dir3::new_unchecked(move_state.ground_state.contact_normal.unwrap()),
-                &mut gizmos,
             );
         } else {
             rig_state.ground_state = RigGroundState::default();
