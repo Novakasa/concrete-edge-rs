@@ -8,7 +8,8 @@ use bevy::{
 use crate::util::{ik2_positions, SpringValue};
 
 use super::{
-    physics::{PhysicsState, CAPSULE_HEIGHT, CAPSULE_RADIUS},
+    physics::{PhysicsState, CAPSULE_HEIGHT, CAPSULE_RADIUS, MAX_VELOCITY},
+    rewind::RewindState,
     rig::RigBone,
     Player,
 };
@@ -16,7 +17,7 @@ use super::{
 #[derive(Debug, Reflect, Default, GizmoConfigGroup)]
 pub struct RigGizmos;
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Reflect)]
 pub struct FootTravelInfo {
     time: f32,
     pub pos: Vec3,
@@ -37,7 +38,7 @@ impl FootTravelInfo {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Reflect)]
 pub struct FootLockInfo {
     time: f32,
     pub pos: Vec3,
@@ -49,7 +50,7 @@ impl FootLockInfo {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Reflect, Clone)]
 pub enum FootState {
     Locked(FootLockInfo),
     Unlocked(FootTravelInfo),
@@ -75,7 +76,7 @@ impl Default for FootState {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Reflect)]
 enum CycleState {
     Locked(f32),
     Unlocked(f32),
@@ -130,7 +131,7 @@ impl Default for CycleState {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Reflect, Clone)]
 pub struct RigGroundState {
     pub foot_states: [FootState; 2],
     cycle_state: CycleState,
@@ -218,7 +219,8 @@ impl RigGroundState {
 
         let i_lock = self.get_lock_candidate(window_pos_ahead);
 
-        let offset_length = 0.5 * CAPSULE_RADIUS;
+        let offset_length =
+            0.5.lerp(0.2, (velocity.length() / MAX_VELOCITY).min(1.0)) * CAPSULE_RADIUS;
         let is_both_locked = self.is_both_locked();
         let is_any_locked = self.is_any_locked();
         let unlocked_time = self.cycle_state.get_unlocked_time();
@@ -286,10 +288,10 @@ impl RigGroundState {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Reflect, Clone)]
 pub struct RigAirState;
 
-#[derive(Component, Debug, Default)]
+#[derive(Component, Debug, Default, Reflect, Clone)]
 pub struct ProceduralRigState {
     pub cm_offset: SpringValue<Vec3>,
     pub velocity: Vec3,
@@ -297,18 +299,19 @@ pub struct ProceduralRigState {
     pub neck_pos: Vec3,
     pub ground_state: RigGroundState,
     pub air_state: RigAirState,
-    pub torso_forward: Vec3,
+    pub hip_forward: Vec3,
     pub grounded: bool,
 }
 
 impl ProceduralRigState {
     pub fn get_bone_transforms(&self) -> HashMap<RigBone, Transform> {
         let mut transforms = HashMap::default();
+        let torso_forward = (self.hip_forward + 0.5 * Vec3::Y).normalize_or_zero();
         let (pos1, _pos2) = ik2_positions(
             RigBone::LowerBack.length(),
             RigBone::UpperBack.length(),
             self.neck_pos - self.hip_pos,
-            -self.torso_forward,
+            -torso_forward,
         );
         let spine_pos = self.hip_pos + pos1;
         let lower_up = (spine_pos - self.hip_pos).normalize_or_zero();
@@ -342,7 +345,7 @@ impl ProceduralRigState {
                     RigBone::LeftUpperLeg.length(),
                     RigBone::LeftLowerLeg.length(),
                     pos - self.hip_pos,
-                    self.torso_forward,
+                    self.hip_forward,
                 );
 
                 let knee_pos = self.hip_pos + pos1;
@@ -400,7 +403,7 @@ pub fn update_procedural_state(
         rig_state.grounded = move_state.ground_state.contact_point.is_some();
         let up_dir = *quat * Dir3::Y;
         let right_dir = *quat * Dir3::X;
-        rig_state.torso_forward = up_dir.cross(right_dir.into());
+        rig_state.hip_forward = up_dir.cross(right_dir.into());
 
         if let Some(contact_point) = move_state.ground_state.contact_point {
             rig_state.hip_pos = *position + contact_point * 0.2;
@@ -491,6 +494,13 @@ impl Plugin for PlayerAnimationPlugin {
                 ..Default::default()
             },
         );
-        app.add_systems(Update, (update_procedural_state, draw_gizmos).chain());
+        app.add_systems(
+            Update,
+            (
+                update_procedural_state.run_if(in_state(RewindState::Playing)),
+                draw_gizmos,
+            )
+                .chain(),
+        );
     }
 }

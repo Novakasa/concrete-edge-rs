@@ -1,4 +1,4 @@
-use super::physics::*;
+use super::{animation::ProceduralRigState, physics::*};
 use avian3d::prelude::*;
 use bevy::prelude::*;
 
@@ -56,6 +56,7 @@ pub struct HistoryState {
     pub rotation: Quat,
     pub angular_velocity: Vec3,
     pub physics_state: PhysicsState,
+    pub procedural_rig: ProceduralRigState,
 }
 
 fn record_history(
@@ -65,6 +66,7 @@ fn record_history(
         &Rotation,
         &AngularVelocity,
         &PhysicsState,
+        &ProceduralRigState,
         &mut RewindHistory,
     )>,
     mut rewind_info: ResMut<RewindInfo>,
@@ -76,6 +78,7 @@ fn record_history(
         Rotation(rotation),
         AngularVelocity(angular_velocity),
         physics_state,
+        rig_state,
         mut history,
     ) in q_physics.iter_mut()
     {
@@ -86,6 +89,7 @@ fn record_history(
             rotation: *rotation,
             angular_velocity: *angular_velocity,
             physics_state: physics_state.clone(),
+            procedural_rig: rig_state.clone(),
         });
         if history.0.len() > 3000 {
             history.0.remove(0);
@@ -118,6 +122,7 @@ fn update_rewind(
         &mut LinearVelocity,
         &mut AngularVelocity,
         &mut PhysicsState,
+        &mut ProceduralRigState,
         &RewindHistory,
     )>,
     mut rewind_info: ResMut<RewindInfo>,
@@ -128,6 +133,7 @@ fn update_rewind(
         mut velocity,
         mut angular_velocity,
         mut physics_state,
+        mut rig_state,
         history,
     ) in q_physics.iter_mut()
     {
@@ -137,6 +143,8 @@ fn update_rewind(
         velocity.0 = entry.velocity;
         angular_velocity.0 = entry.angular_velocity;
         *physics_state = entry.physics_state.clone();
+        *rig_state = entry.procedural_rig.clone();
+
         rewind_info.rewind_time = rewind_info
             .rewind_time
             .clamp(history.get_earliest_time(), history.get_latest_time());

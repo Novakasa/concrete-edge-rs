@@ -65,7 +65,7 @@ pub fn ik3_positions(
     (po1, pos2, pos3)
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Reflect)]
 pub struct SpringValue<T: VectorSpace> {
     pub f: f32,
     pub zeta: f32,

@@ -9,8 +9,8 @@ use super::rewind::RewindState;
 pub const CAPSULE_RADIUS: f32 = 0.2;
 pub const CAPSULE_HEIGHT: f32 = 4.0 * CAPSULE_RADIUS;
 pub const CAST_RADIUS: f32 = 0.8 * CAPSULE_RADIUS;
-pub const MAX_TOI: f32 = CAPSULE_HEIGHT * 1.0;
-pub const FRICTION_MARGIN: f32 = 0.98;
+pub const MAX_TOI: f32 = CAPSULE_HEIGHT * 0.9;
+pub const FRICTION_MARGIN: f32 = 0.98 * 0.98;
 pub const GLOBAL_FRICTION: f32 = 1.0;
 pub const MAX_VELOCITY: f32 = 7.0;
 
@@ -129,7 +129,7 @@ impl PlayerAngularSpring {
         Self {
             stiffness: 0.5,
             damping: 0.15,
-            turn_stiffness: 0.4,
+            turn_stiffness: 0.3,
         }
     }
 
@@ -427,7 +427,7 @@ pub fn update_forces(
             let target_spring_dir = (target_force + normal_force).normalize_or_zero();
 
             let raw_neg_cast_vec = (physics_state.ground_state.neg_cast_vec
-                + 10.0 * (target_spring_dir - spring_dir) * dt.delta_secs())
+                + 12.0 * (target_spring_dir - spring_dir) * dt.delta_secs())
             .try_normalize()
             .unwrap();
 
@@ -440,7 +440,10 @@ pub fn update_forces(
                 Quat::IDENTITY.slerp(cast_quat, angle.min(0.3 * PI) / angle) * capsule_up
             };
 
-            let mut target_up = spring_dir;
+            let mut target_up = (-physics_state.external_force)
+                .normalize_or_zero()
+                .lerp(spring_dir, 0.8)
+                .normalize_or_zero();
             if physics_state.ground_state.jumping {
                 target_up = Vec3::Y;
             }
@@ -599,8 +602,7 @@ fn get_target_force(
             friction_force_margin * FRICTION_MARGIN,
         )
         .unwrap_or(
-            (target_force - slope_force).clamp_length_max(friction_force_margin * FRICTION_MARGIN)
-                + slope_force,
+            (target_force - slope_force).clamp_length_max(friction_force_margin) + slope_force,
         )
     }
     target_force -= slope_force;
@@ -609,10 +611,10 @@ fn get_target_force(
     let vel_delta = target_vel - tangent_vel;
     let vel_delta_length = vel_delta.length();
     let vel_delta_dir = vel_delta.try_normalize().unwrap_or(Vec3::ZERO);
-    target_force = (0.15 * vel_delta_length.powf(2.0) * vel_delta_dir
-        + 0.07 * vel_delta_length.powf(0.5).min(1.0) * vel_delta_dir
+    target_force = (0.17 * vel_delta_length.powf(2.0) * vel_delta_dir
+        + 0.1 * vel_delta_length.powf(0.5).min(1.0) * vel_delta_dir
         - slope_force)
-        .clamp_length_max(friction_force_margin * FRICTION_MARGIN);
+        .clamp_length_max(friction_force_margin);
     (target_vel, slope_force, target_force)
 }
 
