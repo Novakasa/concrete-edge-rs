@@ -501,10 +501,17 @@ pub fn update_forces(
                         .try_normalize()
                         .unwrap(),
                 );
+                let apply_turn = if physics_state.ground_state.slipping {
+                    0.0
+                } else {
+                    1.0
+                };
                 let angular_spring_torque = angular_spring.stiffness
                     * Quat::from_rotation_arc(capsule_up, target_up).to_scaled_axis()
-                    + (angular_spring.turn_stiffness
-                        * Quat::from_rotation_arc(capsule_right, target_right).to_scaled_axis())
+                    + apply_turn
+                        * (angular_spring.turn_stiffness
+                            * Quat::from_rotation_arc(capsule_right, target_right)
+                                .to_scaled_axis())
                     - angular_spring.damping * angular_vel.clone();
                 force.clear();
                 torque.clear();
