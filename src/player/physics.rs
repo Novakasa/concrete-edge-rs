@@ -6,7 +6,7 @@ use dynamics::integrator::IntegrationSet;
 
 use super::{rewind::RewindState, rig::RigBone};
 
-pub const CAPSULE_RADIUS: f32 = 0.2;
+pub const CAPSULE_RADIUS: f32 = 0.15;
 pub const CAPSULE_HEIGHT: f32 = 4.0 * CAPSULE_RADIUS;
 pub const CAST_RADIUS: f32 = 0.8 * CAPSULE_RADIUS;
 pub const FRICTION_MARGIN: f32 = 0.98 * 0.98;
