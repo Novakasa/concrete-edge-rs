@@ -1,6 +1,6 @@
 use bevy::{color::palettes::css::BLACK, prelude::*};
 
-use super::{animation::ProceduralRigState, physics::CAST_RADIUS};
+use super::animation::ProceduralRigState;
 
 const STICK_RADIUS: f32 = 0.08;
 

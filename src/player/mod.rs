@@ -106,7 +106,6 @@ fn spawn_player(
                     physics::CAPSULE_RADIUS,
                     physics::CAPSULE_HEIGHT - 2.0 * physics::CAPSULE_RADIUS,
                 ),
-                ColliderDensity(1.5),
                 CollisionLayers::new(physics::Layer::Player, physics::Layer::Platform),
                 RigidBody::default(),
                 Position::from(transform.translation()),
@@ -126,6 +125,8 @@ fn spawn_player(
                 animation::ProceduralRigState::default(),
                 rewind::RewindHistory::default(),
                 Name::new("PlayerBody"),
+                Mass(0.125),
+                AngularInertia::new(0.006 * Vec3::new(1.0, 1.0, 1.0)),
             ))
             .id();
     }

@@ -320,10 +320,10 @@ pub fn update_landing_prediction(mut q_physics: Query<(&mut PhysicsState, &Playe
 }
 
 pub fn set_external_force(
-    mut q_physics: Query<(&mut PhysicsState, &ComputedMass)>,
+    mut q_physics: Query<(&mut PhysicsState, &ComputedMass, &ComputedAngularInertia)>,
     gravity: Res<Gravity>,
 ) {
-    for (mut physics, mass) in q_physics.iter_mut() {
+    for (mut physics, mass, _inertia) in q_physics.iter_mut() {
         physics.external_force = gravity.0 * mass.value();
     }
 }
