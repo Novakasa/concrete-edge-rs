@@ -102,6 +102,11 @@ fn toggle_gizmos(input: Res<ButtonInput<KeyCode>>, mut config_store: ResMut<Gizm
         let (config, _) = config_store.config_mut::<RigGizmos>();
         config.enabled = !config.enabled;
     }
+    if input.just_pressed(KeyCode::KeyV) {
+        for (_, config, _) in config_store.iter_mut() {
+            config.depth_bias = -1.0 - config.depth_bias;
+        }
+    }
 }
 
 fn physics_speed_control(mut time: ResMut<Time<Physics>>, input: Res<ActionState<GlobalAction>>) {
