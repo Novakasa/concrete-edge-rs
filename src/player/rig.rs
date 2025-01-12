@@ -1,6 +1,6 @@
 use bevy::{color::palettes::css::BLACK, prelude::*};
 
-use super::animation::ProceduralRigState;
+use super::{animation::ProceduralRigState, physics::CAST_RADIUS};
 
 const STICK_RADIUS: f32 = 0.08;
 
@@ -16,6 +16,10 @@ pub enum RigBone {
 }
 
 impl RigBone {
+    pub fn scale() -> f32 {
+        0.0065
+    }
+
     pub fn length(&self) -> f32 {
         let raw = match self {
             Self::LowerBack => 40.0,
@@ -24,11 +28,27 @@ impl RigBone {
             Self::LeftLowerLeg | Self::RightLowerLeg => 44.0,
             Self::Head => 50.0,
         };
-        raw * 0.0065
+        raw * Self::scale()
     }
 
     pub fn leg_length() -> f32 {
         RigBone::LeftUpperLeg.length() + RigBone::LeftLowerLeg.length()
+    }
+
+    pub fn legacy_capsule_height() -> f32 {
+        let back_length = RigBone::LowerBack.length() + RigBone::UpperBack.length();
+        let legacy_back_length = (40.0 + 40.0) * Self::scale();
+        back_length / legacy_back_length * 0.8
+    }
+
+    pub fn legacy_capsule_radius() -> f32 {
+        let back_length = RigBone::LowerBack.length() + RigBone::UpperBack.length();
+        let legacy_back_length = (40.0 + 40.0) * Self::scale();
+        back_length / legacy_back_length * 0.2
+    }
+
+    pub fn max_contact_dist() -> f32 {
+        Self::legacy_capsule_height() * 0.9 + 0.16
     }
 }
 

@@ -8,7 +8,7 @@ use bevy::{
 use crate::util::{ik2_positions, SpringValue};
 
 use super::{
-    physics::{PhysicsState, CAPSULE_HEIGHT, CAPSULE_RADIUS, MAX_VELOCITY},
+    physics::{PhysicsState, MAX_VELOCITY},
     rewind::RewindState,
     rig::RigBone,
     Player,
@@ -207,7 +207,7 @@ impl RigGroundState {
         // println!("{:?}", mass.0);
         let window_pos_behind =
             contact + 0.5 * (acceleration * 0.5 * lock_duration - tangential_vel) * lock_duration;
-        let min_step_size = CAPSULE_RADIUS * 0.5;
+        let min_step_size = RigBone::legacy_capsule_radius() * 0.5;
         let window_travel_dist = (window_pos_ahead - window_pos_behind).length();
         let ahead_to_contact = (window_pos_ahead - contact).length();
         let slip_vel = if physics_state.ground_state.slipping {
@@ -219,8 +219,8 @@ impl RigGroundState {
 
         let i_lock = self.get_lock_candidate(window_pos_ahead);
 
-        let offset_length =
-            0.5.lerp(0.2, (velocity.length() / MAX_VELOCITY).min(1.0)) * CAPSULE_RADIUS;
+        let offset_length = 0.5.lerp(0.2, (velocity.length() / MAX_VELOCITY).min(1.0))
+            * RigBone::legacy_capsule_radius();
         let is_both_locked = self.is_both_locked();
         let is_any_locked = self.is_any_locked();
         let unlocked_time = self.cycle_state.get_unlocked_time();
@@ -407,8 +407,9 @@ pub fn update_procedural_state(
 
         if let Some(contact_point) = move_state.ground_state.contact_point {
             rig_state.hip_pos = *position + contact_point * 0.2;
-            rig_state.neck_pos =
-                *position + up_dir * CAPSULE_HEIGHT * 0.3 - rig_state.hip_pos + *position;
+            rig_state.neck_pos = *position + up_dir * RigBone::legacy_capsule_height() * 0.3
+                - rig_state.hip_pos
+                + *position;
             rig_state.ground_state.update(
                 contact_point,
                 position,
@@ -421,10 +422,11 @@ pub fn update_procedural_state(
             );
         } else {
             rig_state.ground_state = RigGroundState::default();
-            let feet_pos = -up_dir * CAPSULE_HEIGHT * 1.0;
+            let feet_pos = -up_dir * RigBone::legacy_capsule_height() * 1.0;
             rig_state.hip_pos = *position + feet_pos * 0.2;
-            rig_state.neck_pos =
-                *position + up_dir * CAPSULE_HEIGHT * 0.3 - rig_state.hip_pos + *position;
+            rig_state.neck_pos = *position + up_dir * RigBone::legacy_capsule_height() * 0.3
+                - rig_state.hip_pos
+                + *position;
         }
     }
 }
@@ -443,35 +445,22 @@ fn draw_gizmos(
             } else {
                 Color::from(GREEN)
             };
-            let pos = match state {
+            match state {
                 FootState::Locked(info) => {
                     rig_gizmos.sphere(
                         Isometry3d::from_translation(info.pos),
-                        0.5 * CAPSULE_RADIUS,
+                        0.5 * RigBone::legacy_capsule_radius(),
                         color,
                     );
-
-                    info.pos
                 }
                 FootState::Unlocked(info) => {
                     rig_gizmos.sphere(
                         Isometry3d::from_translation(info.pos),
-                        0.5 * CAPSULE_RADIUS,
+                        0.5 * RigBone::legacy_capsule_radius(),
                         color.with_luminance(0.2),
                     );
-                    info.pos
                 }
             };
-
-            let hip_pos = steps.hip_pos;
-            let (pos1, pos2) = ik2_positions(
-                CAPSULE_HEIGHT * 0.4,
-                CAPSULE_HEIGHT * 0.4,
-                pos - hip_pos,
-                physics_state.forward_dir,
-            );
-            rig_gizmos.arrow(hip_pos, hip_pos + pos1, Color::WHITE);
-            rig_gizmos.arrow(hip_pos + pos1, hip_pos + pos2, Color::WHITE);
         }
     }
 }

@@ -4,12 +4,11 @@ use avian3d::prelude::*;
 use bevy::prelude::*;
 use dynamics::integrator::IntegrationSet;
 
-use super::rewind::RewindState;
+use super::{rewind::RewindState, rig::RigBone};
 
 pub const CAPSULE_RADIUS: f32 = 0.2;
 pub const CAPSULE_HEIGHT: f32 = 4.0 * CAPSULE_RADIUS;
 pub const CAST_RADIUS: f32 = 0.8 * CAPSULE_RADIUS;
-pub const MAX_TOI: f32 = CAPSULE_HEIGHT * 0.9;
 pub const FRICTION_MARGIN: f32 = 0.98 * 0.98;
 pub const GLOBAL_FRICTION: f32 = 1.0;
 pub const MAX_VELOCITY: f32 = 7.0;
@@ -90,7 +89,7 @@ impl PlayerGroundSpring {
 
     pub fn running() -> Self {
         Self {
-            rest_length: CAPSULE_HEIGHT * 0.7 + CAPSULE_RADIUS,
+            rest_length: RigBone::legacy_capsule_height() * 0.7 + RigBone::legacy_capsule_radius(),
             min_damping: 1.5,
             stiffness: 15.0,
             ..Self::new()
@@ -99,7 +98,7 @@ impl PlayerGroundSpring {
 
     pub fn crouching() -> Self {
         Self {
-            rest_length: CAPSULE_HEIGHT * 0.4 + CAPSULE_RADIUS,
+            rest_length: RigBone::legacy_capsule_height() * 0.4 + RigBone::legacy_capsule_radius(),
             min_damping: 2.5,
             stiffness: 25.0,
             ..Self::running()
@@ -257,7 +256,7 @@ pub fn predict_contact(
             let test_vel = *velocity + ext_acc * (test_time + 0.05);
             let max_toi = (target - origin).length();
             let result = spatial_query.shape_hits(
-                &Collider::sphere(MAX_TOI + CAPSULE_RADIUS),
+                &Collider::sphere(RigBone::max_contact_dist()),
                 origin,
                 Quat::IDENTITY,
                 cast_dir,
@@ -274,7 +273,7 @@ pub fn predict_contact(
 
                 gizmos.sphere(
                     Isometry3d::from_translation(origin + cast_dir * coll.distance),
-                    MAX_TOI + CAPSULE_RADIUS,
+                    RigBone::max_contact_dist(),
                     Color::WHITE.with_alpha(0.1),
                 );
                 physics.air_state.predicted_contact = Some(PredictedContact {
@@ -299,7 +298,8 @@ pub fn update_landing_prediction(mut q_physics: Query<(&mut PhysicsState, &Playe
         }
         if physics.air_state.predicted_contact.is_some() {
             let contact = physics.air_state.predicted_contact.clone().unwrap();
-            let contact_point = physics.ground_state.neg_cast_vec * (MAX_TOI + CAST_RADIUS) * 0.1;
+            let contact_point =
+                physics.ground_state.neg_cast_vec * (RigBone::max_contact_dist()) * 0.1;
             // println!("{:?}", contact_point);
             let _spring_force = spring_force(
                 &contact.contact_velocity,
@@ -368,7 +368,7 @@ pub fn update_forces(
             Quat::IDENTITY,
             Dir3::new_unchecked(cast_dir.try_normalize().unwrap()),
             &ShapeCastConfig {
-                max_distance: MAX_TOI,
+                max_distance: RigBone::max_contact_dist() - CAST_RADIUS,
                 ..Default::default()
             },
             &filter,
@@ -519,16 +519,17 @@ pub fn update_forces(
             }
         }
 
-        let anchor = *position + capsule_up * CAPSULE_HEIGHT * 0.5;
+        let anchor = *position + capsule_up * RigBone::legacy_capsule_height() * 0.5;
         if let Some(grab_state) = physics_state.grab_state.as_ref() {
             let delta = grab_state.grab_position - anchor;
             let delta_dir = delta.try_normalize().unwrap_or(Vec3::ZERO);
             let anchor_vel = *velocity + angular_vel.cross(anchor - *position);
             let spring_vel = anchor_vel.dot(delta_dir) * delta_dir;
             let spring_vel_2 = anchor_vel - spring_vel;
-            let mut grab_force = delta_dir * (delta.length() / (0.8 * MAX_TOI)).powi(4) * 1.5
-                - 1.5 * spring_vel
-                - 0.6 * spring_vel_2;
+            let mut grab_force =
+                delta_dir * (delta.length() / (0.8 * RigBone::max_contact_dist())).powi(4) * 1.5
+                    - 1.5 * spring_vel
+                    - 0.6 * spring_vel_2;
             grab_force = grab_force.clamp_length_max(20.0);
             force.apply_force_at_point(
                 grab_force,
@@ -537,7 +538,7 @@ pub fn update_forces(
             );
         } else if physics_state.grabbing {
             physics_state.grab_state = Some(PhysicsGrabState {
-                grab_position: anchor + capsule_up * CAPSULE_HEIGHT * 0.5,
+                grab_position: anchor + capsule_up * RigBone::legacy_capsule_height() * 0.5,
             });
         }
         if physics_state.grab_state.is_some() && !physics_state.grabbing {

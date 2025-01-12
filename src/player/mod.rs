@@ -12,8 +12,9 @@ use camera::{CameraAnchor1stPerson, CameraAnchor3rdPerson};
 use leafwing_input_manager::prelude::*;
 use physics::{
     PhysicsDebugInfo, PhysicsGizmos, PhysicsState, PlayerAngularSpring, PlayerGroundSpring,
-    PlayerSpringParams, CAPSULE_HEIGHT, CAPSULE_RADIUS, CAST_RADIUS, MAX_TOI,
+    PlayerSpringParams, CAPSULE_HEIGHT, CAPSULE_RADIUS, CAST_RADIUS,
 };
+use rig::RigBone;
 
 pub mod animation;
 pub mod camera;
@@ -291,7 +292,9 @@ fn draw_debug_gizmos(
             // draw circle at end of cast
             physics_gizmos.sphere(
                 Isometry3d::from_translation(
-                    position.clone() - MAX_TOI * physics_state.ground_state.neg_cast_vec,
+                    position.clone()
+                        - (RigBone::max_contact_dist() - CAST_RADIUS)
+                            * physics_state.ground_state.neg_cast_vec,
                 ),
                 CAST_RADIUS,
                 Color::BLACK,

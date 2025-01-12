@@ -124,7 +124,7 @@ pub fn track_camera_1st_person(
         let _forward_dir = *quat * Vec3::NEG_Z;
 
         let cam_up = Quat::IDENTITY.slerp(Quat::from_rotation_arc(Vec3::Y, up_dir), 0.35) * Vec3::Y;
-        let pos = rig_state.neck_pos + up_dir * super::physics::CAPSULE_HEIGHT * 0.1;
+        let pos = rig_state.neck_pos + up_dir * RigBone::legacy_capsule_height() * 0.1;
         for (mut transform, cam1) in camera_query.iter_mut() {
             let view_unrolled = Quat::from_euler(EulerRot::YXZ, cam1.yaw, cam1.pitch, 0.0);
             let forward = view_unrolled * Vec3::NEG_Z;
