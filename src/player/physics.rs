@@ -591,7 +591,7 @@ fn get_target_force(
 
     let target_vel = input_tangent * MAX_VELOCITY;
     let denominator = 1.0 - tangent_slope.dot(ext_dir).powi(2);
-    let slope_force = if denominator == 0.0 {
+    let slope_force = if denominator < 1.0e-4 {
         physics_state.external_force
     } else {
         -tangent_slope.dot(ext_dir) * normal_force.dot(ext_dir) * tangent_slope / denominator

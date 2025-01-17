@@ -44,7 +44,7 @@ pub fn spawn_camera_3rd_person(mut commands: Commands) {
                     },
                     transform,
                     MotionBlur {
-                        shutter_angle: 1.0,
+                        shutter_angle: 0.5,
                         ..Default::default()
                     },
                 ))
@@ -75,7 +75,7 @@ pub fn spawn_camera_1st_person(mut commands: Commands) {
                     }),
                     transform,
                     MotionBlur {
-                        shutter_angle: 1.0,
+                        shutter_angle: 0.5,
                         ..Default::default()
                     },
                 ))
