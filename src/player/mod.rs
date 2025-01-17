@@ -174,9 +174,9 @@ fn player_controls(
                 cam1.pitch = cam3.pitch;
             }
 
-            move_state.input_dir = (Quat::from_euler(EulerRot::YXZ, cam3.yaw, 0.0, 0.0)
-                * Vec3::new(move_input.x, 0.0, -move_input.y))
-            .xz();
+            move_state.input_dir = Quat::from_euler(EulerRot::YXZ, cam3.yaw, 0.0, 0.0)
+                * Vec3::new(move_input.x, 0.0, -move_input.y);
+
             // println!("{:?}", move_state.acc_dir);
             if action_state.just_pressed(&PlayerAction::Jump)
                 && move_state.ground_state.contact_point.is_some()

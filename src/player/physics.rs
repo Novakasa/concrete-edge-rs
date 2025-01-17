@@ -172,7 +172,7 @@ pub struct PhysicsDebugInfo {
 pub struct PhysicsState {
     pub external_force: Vec3,
     pub forward_dir: Vec3,
-    pub input_dir: Vec2,
+    pub input_dir: Vec3,
     prev_substep_vel: Vec3,
     pub ground_state: PhysicsGroundState,
     pub air_state: PhysicsAirState,
@@ -387,9 +387,7 @@ pub fn update_forces(
             debug.cast_dir = cast_dir;
 
             let mut spring_force = spring_force(velocity, spring, normal, contact_point);
-            if (spring_force + physics_state.external_force).dot(normal) > 0.0
-                && !physics_state.ground_state.jumping
-            {
+            if (spring_force + physics_state.external_force).dot(normal) > 0.0 {
                 if velocity.dot(normal) > 0.0 {
                     let max_normal_force = 0.5 * physics_state.external_force.length();
                     let max_spring_force = (max_normal_force
@@ -582,8 +580,7 @@ fn get_target_force(
         Vec3::X.cross(normal).normalize_or_zero()
     };
     let tangent_x = -tangent_z.cross(normal);
-    let input_tangent =
-        physics_state.input_dir.x * tangent_x + physics_state.input_dir.y * tangent_z;
+    let input_tangent = physics_state.input_dir.reject_from(normal);
     // bias upwards on walls
     // input_tangent =
     //     (input_tangent - 0.5 * (1.0 - normal.dot(-ext_dir)) * tangent_slope).normalize();
@@ -597,33 +594,16 @@ fn get_target_force(
         -tangent_slope.dot(ext_dir) * normal_force.dot(ext_dir) * tangent_slope / denominator
     };
 
-    // let slope_force = external_forces - normal.dot(external_forces) * normal;
-
-    let mut target_force = 0.3 * (target_vel - tangent_vel);
-
     let friction_force_margin = normal_force.length() * GLOBAL_FRICTION * FRICTION_MARGIN;
 
-    if (target_force - slope_force).length() > friction_force_margin * FRICTION_MARGIN {
-        target_force = add_results_in_length(
-            target_force.normalize_or_zero(),
-            -slope_force,
-            friction_force_margin * FRICTION_MARGIN,
-        )
-        .unwrap_or(
-            (target_force - slope_force).clamp_length_max(friction_force_margin) + slope_force,
-        )
-    }
-    target_force -= slope_force;
-
-    // ok temporarily don't use the smart clamp, this fixes wallrun contact (because the smart clamp leads to forces inconsistent with normal force)
     let vel_delta = target_vel - tangent_vel;
     let vel_delta_length = vel_delta.length();
     let vel_delta_dir = vel_delta.try_normalize().unwrap_or(Vec3::ZERO);
-    target_force = (0.17 * vel_delta_length.powf(2.0) * vel_delta_dir
+    let tangential_target_force = (0.17 * vel_delta_length.powf(2.0) * vel_delta_dir
         + 0.1 * vel_delta_length.powf(0.5).min(1.0) * vel_delta_dir
         - slope_force)
         .clamp_length_max(friction_force_margin);
-    (target_vel, slope_force, target_force)
+    (target_vel, slope_force, tangential_target_force)
 }
 
 pub struct PlayerPhysicsPlugin;
