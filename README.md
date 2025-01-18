@@ -4,6 +4,8 @@ Experimental implementation for a physics-based 3D platforming character control
 
 Written in Rust, using Bevy Engine and Avian Physics.
 
+[Demo on YouTube (work in progress)](https://www.youtube.com/watch?v=_PKk0MWIlLU)
+
 # Building
 
 - Install the rust toolchain using `rustup`
