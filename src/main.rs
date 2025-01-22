@@ -2,10 +2,11 @@ use std::{env, fmt::Debug};
 
 use avian3d::prelude::*;
 use bevy::{
-    pbr::{ExtendedMaterial, MaterialExtension},
+    color::palettes::tailwind::SKY_300,
+    pbr::{ExtendedMaterial, MaterialExtension, NotShadowCaster},
     prelude::*,
     render::render_resource::{AsBindGroup, ShaderRef},
-    window::{CursorGrabMode, PresentMode, PrimaryWindow},
+    window::{CursorGrabMode, PresentMode, PrimaryWindow, WindowMode},
 };
 use bevy_framepace::Limiter;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
@@ -77,7 +78,7 @@ fn window_settings(
 ) {
     // window.present_mode = PresentMode::AutoNoVsync;
     println!("Window settings");
-    // framepace_settings.limiter = Limiter::from_framerate(30.0);
+    // framepace_settings.limiter = Limiter::from_framerate(60.0);
 }
 
 fn quit_on_menu(
@@ -106,6 +107,19 @@ fn toggle_gizmos(input: Res<ButtonInput<KeyCode>>, mut config_store: ResMut<Gizm
         for (_, config, _) in config_store.iter_mut() {
             config.depth_bias = -1.0 - config.depth_bias;
         }
+    }
+}
+
+fn toggle_fullscreen(
+    mut q_window: Query<&mut Window, With<PrimaryWindow>>,
+    input: Res<ButtonInput<KeyCode>>,
+) {
+    let mut primary_window = q_window.single_mut();
+    if input.just_pressed(KeyCode::F11) {
+        primary_window.mode = match primary_window.mode {
+            WindowMode::BorderlessFullscreen(_) => WindowMode::Windowed,
+            _ => WindowMode::BorderlessFullscreen(MonitorSelection::Current),
+        };
     }
 }
 
@@ -209,6 +223,24 @@ fn lock_cursor(mut q_window: Query<&mut Window, With<PrimaryWindow>>) {
     primary_window.cursor_options.visible = false;
 }
 
+fn skybox(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+) {
+    commands.spawn((
+        Mesh3d(meshes.add(Cuboid::new(2.0, 1.0, 1.0))),
+        MeshMaterial3d(materials.add(StandardMaterial {
+            base_color: Color::from(SKY_300),
+            unlit: true,
+            cull_mode: None,
+            ..default()
+        })),
+        Transform::from_scale(Vec3::splat(2000.0)),
+        NotShadowCaster,
+    ));
+}
+
 fn main() {
     env::set_var("RUST_BACKTRACE", "1");
     env::set_var("RUST_LOG", "pybricks_ble=info,brickrail=info");
@@ -230,7 +262,7 @@ fn main() {
         .add_plugins(MaterialPlugin::<
             ExtendedMaterial<StandardMaterial, DebugMaterial>,
         >::default())
-        .add_systems(Startup, (load_level, window_settings))
+        .add_systems(Startup, (load_level, window_settings, skybox))
         .add_systems(Update, (setup_platforms, setup_player))
         //.add_systems(Update, print_platforms)
         .add_systems(
@@ -239,6 +271,7 @@ fn main() {
                 quit_on_menu,
                 physics_speed_control,
                 toggle_gizmos,
+                toggle_fullscreen,
                 replace_platform_material,
             ),
         )

@@ -1,7 +1,10 @@
 use std::f32::consts::PI;
 
 use avian3d::prelude::*;
-use bevy::{core_pipeline::motion_blur::MotionBlur, prelude::*};
+use bevy::{
+    core_pipeline::{motion_blur::MotionBlur, tonemapping::Tonemapping},
+    prelude::*,
+};
 use leafwing_input_manager::prelude::*;
 
 use super::{animation::ProceduralRigState, rig::RigBone};
@@ -47,6 +50,15 @@ pub fn spawn_camera_3rd_person(mut commands: Commands) {
                         shutter_angle: 0.5,
                         ..Default::default()
                     },
+                    Tonemapping::BlenderFilmic,
+                    /*DistanceFog {
+                        color: Color::srgba(0.35, 0.48, 0.66, 1.0),
+                        directional_light_color: Color::srgba(1.0, 0.95, 0.85, 0.5),
+                        directional_light_exponent: 30.0,
+                        falloff: FogFalloff::from_visibility(
+                            1000.0, // distance in world units up to which objects retain visibility (>= 5% contrast)
+                        ),
+                    },*/
                 ))
                 .insert(Name::new("PlayerCamera"));
         });
