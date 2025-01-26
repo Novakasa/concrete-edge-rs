@@ -12,6 +12,7 @@ bevy-inspector-egui = "0.28"
 bevy_framepace = "0.18"
 blenvy = { git = "https://github.com/jwright159/Blenvy", branch = "main" }
 leafwing-input-manager = "0.16"
+serde = "1.0.217"
 
 [dev-dependencies]
 bevy = { version = "0.15", features = ["dynamic_linking"] }

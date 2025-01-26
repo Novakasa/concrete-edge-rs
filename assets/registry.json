@@ -579,6 +579,19 @@
       "type": "array",
       "typeInfo": "List"
     },
+    "alloc::vec::Vec<bevy_window::monitor::VideoMode>": {
+      "isComponent": false,
+      "isResource": false,
+      "items": {
+        "type": {
+          "$ref": "#/$defs/bevy_window::monitor::VideoMode"
+        }
+      },
+      "long_name": "alloc::vec::Vec<bevy_window::monitor::VideoMode>",
+      "short_name": "Vec<VideoMode>",
+      "type": "array",
+      "typeInfo": "List"
+    },
     "alloc::vec::Vec<blenvy::blueprints::animation::AnimationInfo>": {
       "isComponent": false,
       "isResource": false,
@@ -7270,11 +7283,6 @@
       "isResource": false,
       "long_name": "bevy_egui::EguiSettings",
       "properties": {
-        "default_open_url_target": {
-          "type": {
-            "$ref": "#/$defs/core::option::Option<alloc::string::String>"
-          }
-        },
         "run_manually": {
           "type": {
             "$ref": "#/$defs/bool"
@@ -13975,6 +13983,31 @@
       "type": "array",
       "typeInfo": "TupleStruct"
     },
+    "bevy_text::text::TextEntity": {
+      "additionalProperties": false,
+      "isComponent": false,
+      "isResource": false,
+      "long_name": "bevy_text::text::TextEntity",
+      "properties": {
+        "depth": {
+          "type": {
+            "$ref": "#/$defs/usize"
+          }
+        },
+        "entity": {
+          "type": {
+            "$ref": "#/$defs/bevy_ecs::entity::Entity"
+          }
+        }
+      },
+      "required": [
+        "entity",
+        "depth"
+      ],
+      "short_name": "TextEntity",
+      "type": "object",
+      "typeInfo": "Struct"
+    },
     "bevy_text::text::TextFont": {
       "additionalProperties": false,
       "isComponent": true,
@@ -18063,6 +18096,90 @@
       "type": "object",
       "typeInfo": "Struct"
     },
+    "bevy_window::monitor::Monitor": {
+      "additionalProperties": false,
+      "isComponent": true,
+      "isResource": false,
+      "long_name": "bevy_window::monitor::Monitor",
+      "properties": {
+        "name": {
+          "type": {
+            "$ref": "#/$defs/core::option::Option<alloc::string::String>"
+          }
+        },
+        "physical_height": {
+          "type": {
+            "$ref": "#/$defs/u32"
+          }
+        },
+        "physical_position": {
+          "type": {
+            "$ref": "#/$defs/glam::IVec2"
+          }
+        },
+        "physical_width": {
+          "type": {
+            "$ref": "#/$defs/u32"
+          }
+        },
+        "refresh_rate_millihertz": {
+          "type": {
+            "$ref": "#/$defs/core::option::Option<u32>"
+          }
+        },
+        "scale_factor": {
+          "type": {
+            "$ref": "#/$defs/f64"
+          }
+        },
+        "video_modes": {
+          "type": {
+            "$ref": "#/$defs/alloc::vec::Vec<bevy_window::monitor::VideoMode>"
+          }
+        }
+      },
+      "required": [
+        "physical_height",
+        "physical_width",
+        "physical_position",
+        "scale_factor",
+        "video_modes"
+      ],
+      "short_name": "Monitor",
+      "type": "object",
+      "typeInfo": "Struct"
+    },
+    "bevy_window::monitor::VideoMode": {
+      "additionalProperties": false,
+      "isComponent": false,
+      "isResource": false,
+      "long_name": "bevy_window::monitor::VideoMode",
+      "properties": {
+        "bit_depth": {
+          "type": {
+            "$ref": "#/$defs/u16"
+          }
+        },
+        "physical_size": {
+          "type": {
+            "$ref": "#/$defs/glam::UVec2"
+          }
+        },
+        "refresh_rate_millihertz": {
+          "type": {
+            "$ref": "#/$defs/u32"
+          }
+        }
+      },
+      "required": [
+        "physical_size",
+        "bit_depth",
+        "refresh_rate_millihertz"
+      ],
+      "short_name": "VideoMode",
+      "type": "object",
+      "typeInfo": "Struct"
+    },
     "bevy_window::system_cursor::SystemCursorIcon": {
       "isComponent": false,
       "isResource": false,
@@ -20548,6 +20665,33 @@
         }
       ],
       "short_name": "Option<u16>",
+      "type": "object",
+      "typeInfo": "Enum"
+    },
+    "core::option::Option<u32>": {
+      "isComponent": false,
+      "isResource": false,
+      "long_name": "core::option::Option<u32>",
+      "oneOf": [
+        {
+          "long_name": "None"
+        },
+        {
+          "items": false,
+          "long_name": "Some",
+          "prefixItems": [
+            {
+              "type": {
+                "$ref": "#/$defs/u32"
+              }
+            }
+          ],
+          "short_name": "Some",
+          "type": "array",
+          "typeInfo": "Tuple"
+        }
+      ],
+      "short_name": "Option<u32>",
       "type": "object",
       "typeInfo": "Enum"
     },

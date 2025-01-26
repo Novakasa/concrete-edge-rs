@@ -9,7 +9,11 @@ use bevy::{
     window::{CursorGrabMode, PresentMode, PrimaryWindow, WindowMode},
 };
 use bevy_framepace::Limiter;
-use bevy_inspector_egui::quick::WorldInspectorPlugin;
+use bevy_inspector_egui::{
+    bevy_egui::{EguiContext, EguiPlugin},
+    egui,
+    quick::WorldInspectorPlugin,
+};
 use blenvy::{
     blueprints::spawn_from_blueprints::{
         BlueprintInfo, GameWorldTag, HideUntilReady, SpawnBlueprint,
@@ -224,6 +228,12 @@ fn lock_cursor(mut q_window: Query<&mut Window, With<PrimaryWindow>>) {
     primary_window.cursor_options.visible = false;
 }
 
+fn unlock_cursor(mut q_window: Query<&mut Window, With<PrimaryWindow>>) {
+    let mut primary_window = q_window.single_mut();
+    primary_window.cursor_options.grab_mode = CursorGrabMode::None;
+    primary_window.cursor_options.visible = true;
+}
+
 fn skybox(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -242,12 +252,45 @@ fn skybox(
     ));
 }
 
+#[derive(States, Debug, Clone, PartialEq, Eq, Hash)]
+pub enum MouseInteraction {
+    Camera,
+    Inspector,
+}
+
+fn inspector_ui(world: &mut World) {
+    let Ok(egui_context) = world
+        .query_filtered::<&mut EguiContext, With<PrimaryWindow>>()
+        .get_single(world)
+    else {
+        return;
+    };
+    let mut egui_context = egui_context.clone();
+
+    egui::Window::new("UI").show(egui_context.get_mut(), |ui| {
+        egui::ScrollArea::vertical().show(ui, |ui| {
+            // equivalent to `WorldInspectorPlugin`
+            bevy_inspector_egui::bevy_inspector::ui_for_world(world, ui);
+
+            egui::CollapsingHeader::new("Materials").show(ui, |ui| {
+                bevy_inspector_egui::bevy_inspector::ui_for_assets::<StandardMaterial>(world, ui);
+            });
+
+            ui.heading("Entities");
+            bevy_inspector_egui::bevy_inspector::ui_for_world_entities(world, ui);
+        });
+    });
+}
+
 fn main() {
     env::set_var("RUST_BACKTRACE", "1");
     env::set_var("RUST_LOG", "pybricks_ble=info,brickrail=info");
     App::new()
         .register_type::<Platform>()
         .register_type::<TestPlayer>()
+        .add_plugins(DefaultPlugins)
+        .add_plugins(EguiPlugin)
+        .add_plugins(bevy_inspector_egui::DefaultInspectorConfigPlugin)
         .insert_resource(Gravity::default())
         .init_resource::<ActionState<GlobalAction>>()
         .insert_resource(GlobalAction::default_input_map())
@@ -255,22 +298,21 @@ fn main() {
             color: Color::WHITE,
             brightness: 50.0,
         })
+        .insert_state(MouseInteraction::Camera)
         // .add_plugins(LogDiagnosticsPlugin::default())
         // .add_plugins(FrameTimeDiagnosticsPlugin::default())
         .add_plugins(InputManagerPlugin::<GlobalAction>::default())
-        .add_plugins(DefaultPlugins)
         // .add_plugins(ScreenSpaceAmbientOcclusionPlugin)
         .add_plugins(PhysicsPlugins::default())
         .add_plugins(bevy_framepace::FramepacePlugin)
         .add_plugins(BlenvyPlugin::default())
         .add_plugins(player::PlayerPlugin)
-        .add_plugins(WorldInspectorPlugin::new())
+        // .add_plugins(WorldInspectorPlugin::new())
         .add_plugins(MaterialPlugin::<
             ExtendedMaterial<StandardMaterial, DebugMaterial>,
         >::default())
         .add_systems(Startup, (load_level, window_settings, skybox))
         .add_systems(Update, (setup_platforms, setup_player))
-        //.add_systems(Update, print_platforms)
         .add_systems(
             Update,
             (
@@ -279,8 +321,10 @@ fn main() {
                 toggle_gizmos,
                 toggle_fullscreen,
                 replace_platform_material,
+                inspector_ui,
             ),
         )
-        .add_systems(Startup, lock_cursor)
+        .add_systems(OnEnter(MouseInteraction::Camera), lock_cursor)
+        .add_systems(OnExit(MouseInteraction::Inspector), unlock_cursor)
         .run();
 }

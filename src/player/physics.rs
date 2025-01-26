@@ -3,6 +3,7 @@ use std::f32::consts::PI;
 use avian3d::prelude::*;
 use bevy::prelude::*;
 use dynamics::integrator::IntegrationSet;
+use serde::{Deserialize, Serialize};
 
 use super::{rewind::RewindState, rig::RigBone};
 
@@ -32,7 +33,12 @@ pub enum Layer {
     Platform,
 }
 
-#[derive(Component, Reflect, Debug, Default)]
+#[derive(Component, Reflect, Debug, Serialize, Deserialize)]
+pub struct PlayerParams {
+    pub spring_params: PlayerSpringParams,
+}
+
+#[derive(Component, Reflect, Debug, Default, Serialize, Deserialize)]
 pub struct PlayerSpringParams {
     pub ground_spring: PlayerGroundSpring,
     pub ground_spring_crouching: PlayerGroundSpring,
@@ -69,7 +75,7 @@ impl PlayerSpringParams {
     }
 }
 
-#[derive(Reflect, Debug, Clone, Default)]
+#[derive(Reflect, Debug, Clone, Default, Serialize, Deserialize)]
 pub struct PlayerGroundSpring {
     pub rest_length: f32,
     pub stiffness: f32,
@@ -116,7 +122,7 @@ impl PlayerGroundSpring {
     }
 }
 
-#[derive(Reflect, Debug, Clone, Default)]
+#[derive(Reflect, Debug, Clone, Default, Serialize, Deserialize)]
 pub struct PlayerAngularSpring {
     pub stiffness: f32,
     pub damping: f32,
