@@ -114,12 +114,13 @@ fn toggle_fullscreen(
     mut q_window: Query<&mut Window, With<PrimaryWindow>>,
     input: Res<ButtonInput<KeyCode>>,
 ) {
-    let mut primary_window = q_window.single_mut();
-    if input.just_pressed(KeyCode::F11) {
-        primary_window.mode = match primary_window.mode {
-            WindowMode::BorderlessFullscreen(_) => WindowMode::Windowed,
-            _ => WindowMode::BorderlessFullscreen(MonitorSelection::Current),
-        };
+    if let Ok(mut primary_window) = q_window.get_single_mut() {
+        if input.just_pressed(KeyCode::F11) {
+            primary_window.mode = match primary_window.mode {
+                WindowMode::BorderlessFullscreen(_) => WindowMode::Windowed,
+                _ => WindowMode::BorderlessFullscreen(MonitorSelection::Current),
+            };
+        }
     }
 }
 
@@ -250,10 +251,15 @@ fn main() {
         .insert_resource(Gravity::default())
         .init_resource::<ActionState<GlobalAction>>()
         .insert_resource(GlobalAction::default_input_map())
+        .insert_resource(AmbientLight {
+            color: Color::WHITE,
+            brightness: 50.0,
+        })
         // .add_plugins(LogDiagnosticsPlugin::default())
         // .add_plugins(FrameTimeDiagnosticsPlugin::default())
         .add_plugins(InputManagerPlugin::<GlobalAction>::default())
         .add_plugins(DefaultPlugins)
+        // .add_plugins(ScreenSpaceAmbientOcclusionPlugin)
         .add_plugins(PhysicsPlugins::default())
         .add_plugins(bevy_framepace::FramepacePlugin)
         .add_plugins(BlenvyPlugin::default())
