@@ -114,6 +114,21 @@ fn toggle_gizmos(input: Res<ButtonInput<KeyCode>>, mut config_store: ResMut<Gizm
     }
 }
 
+fn toggle_mouse_interaction(
+    state: Res<State<MouseInteraction>>,
+    mut next_state: ResMut<NextState<MouseInteraction>>,
+    input: Res<ButtonInput<KeyCode>>,
+) {
+    if input.just_pressed(KeyCode::Backquote) {
+        println!("Toggling mouse interaction");
+        next_state.set(if state.get() == &MouseInteraction::Camera {
+            MouseInteraction::Inspector
+        } else {
+            MouseInteraction::Camera
+        });
+    }
+}
+
 fn toggle_fullscreen(
     mut q_window: Query<&mut Window, With<PrimaryWindow>>,
     input: Res<ButtonInput<KeyCode>>,
@@ -223,12 +238,14 @@ fn setup_platforms(
 }
 
 fn lock_cursor(mut q_window: Query<&mut Window, With<PrimaryWindow>>) {
+    println!("Locking cursor");
     let mut primary_window = q_window.single_mut();
     primary_window.cursor_options.grab_mode = CursorGrabMode::Locked;
     primary_window.cursor_options.visible = false;
 }
 
 fn unlock_cursor(mut q_window: Query<&mut Window, With<PrimaryWindow>>) {
+    println!("Unlocking cursor");
     let mut primary_window = q_window.single_mut();
     primary_window.cursor_options.grab_mode = CursorGrabMode::None;
     primary_window.cursor_options.visible = true;
@@ -319,12 +336,13 @@ fn main() {
                 quit_on_menu,
                 physics_speed_control,
                 toggle_gizmos,
+                toggle_mouse_interaction,
                 toggle_fullscreen,
                 replace_platform_material,
                 inspector_ui,
             ),
         )
         .add_systems(OnEnter(MouseInteraction::Camera), lock_cursor)
-        .add_systems(OnExit(MouseInteraction::Inspector), unlock_cursor)
+        .add_systems(OnExit(MouseInteraction::Camera), unlock_cursor)
         .run();
 }
