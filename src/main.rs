@@ -6,13 +6,11 @@ use bevy::{
     pbr::{ExtendedMaterial, MaterialExtension, NotShadowCaster},
     prelude::*,
     render::render_resource::{AsBindGroup, ShaderRef},
-    window::{CursorGrabMode, PresentMode, PrimaryWindow, WindowMode},
+    window::{CursorGrabMode, PrimaryWindow, WindowMode},
 };
-use bevy_framepace::Limiter;
 use bevy_inspector_egui::{
     bevy_egui::{EguiContext, EguiPlugin},
     egui,
-    quick::WorldInspectorPlugin,
 };
 use blenvy::{
     blueprints::spawn_from_blueprints::{
@@ -21,7 +19,7 @@ use blenvy::{
     BlenvyPlugin,
 };
 use leafwing_input_manager::prelude::*;
-use player::{animation::RigGizmos, physics::PhysicsGizmos, DebugState, Player};
+use player::{animation::RigGizmos, physics::PhysicsGizmos};
 
 mod player;
 mod util;
@@ -76,9 +74,8 @@ struct TestPlayer {
     test: i32,
 }
 
-fn window_settings(
-    // mut window: Single<&mut Window>,
-    mut framepace_settings: ResMut<bevy_framepace::FramepaceSettings>,
+fn window_settings(// mut window: Single<&mut Window>,
+    // mut framepace_settings: ResMut<bevy_framepace::FramepaceSettings>,
 ) {
     // window.present_mode = PresentMode::AutoNoVsync;
     println!("Window settings");
