@@ -1,5 +1,6 @@
 use std::f32::consts::PI;
 
+use animation::ProceduralRigState;
 use avian3d::prelude::*;
 use bevy::{
     color::palettes::{
@@ -133,18 +134,36 @@ fn spawn_player(
 }
 
 fn respawn_player(
-    mut commands: Commands,
-    query: Query<Entity, (With<PlayerSpawn>, With<PlayerSpawned>)>,
-    player: Query<Entity, With<Player>>,
+    query: Query<&Transform, (With<PlayerSpawn>, Without<Player>)>,
+    mut player: Query<
+        (
+            &mut PhysicsState,
+            &mut ProceduralRigState,
+            &mut Transform,
+            &mut LinearVelocity,
+            &mut AngularVelocity,
+        ),
+        With<Player>,
+    >,
     input_query: Query<&ActionState<PlayerAction>>,
 ) {
-    for entity in query.iter() {
+    for spawn_transform in query.iter() {
         for action_state in input_query.iter() {
             if action_state.just_pressed(&PlayerAction::Respawn) {
-                if let Ok(player) = player.get_single() {
-                    commands.entity(player).despawn_recursive();
+                if let Ok((
+                    mut physics_state,
+                    mut rig_state,
+                    mut transform,
+                    mut velocity,
+                    mut angular_velocity,
+                )) = player.get_single_mut()
+                {
+                    *physics_state = PhysicsState::new();
+                    *rig_state = ProceduralRigState::default();
+                    *transform = *spawn_transform;
+                    *velocity = LinearVelocity::default();
+                    *angular_velocity = AngularVelocity::default();
                 }
-                commands.entity(entity).remove::<PlayerSpawned>();
             }
         }
     }
@@ -344,7 +363,6 @@ impl Plugin for PlayerPlugin {
             (
                 spawn_player,
                 player_controls,
-                respawn_player,
                 camera::toggle_active_view,
                 draw_debug_gizmos.after(animation::update_procedural_state),
                 (
@@ -356,6 +374,7 @@ impl Plugin for PlayerPlugin {
                     .after(PhysicsSet::Sync),
             ),
         );
+        app.add_systems(Update, respawn_player);
         app.add_systems(OnEnter(DebugState::None), set_visible::<true>);
         app.add_systems(OnExit(DebugState::None), set_visible::<false>);
         app.add_plugins(physics::PlayerPhysicsPlugin);
