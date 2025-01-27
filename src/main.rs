@@ -3,6 +3,7 @@ use std::{env, fmt::Debug};
 use avian3d::prelude::*;
 use bevy::{
     color::palettes::tailwind::SKY_300,
+    ecs::system::SystemState,
     pbr::{ExtendedMaterial, MaterialExtension, NotShadowCaster},
     prelude::*,
     render::render_resource::{AsBindGroup, ShaderRef},
@@ -11,6 +12,7 @@ use bevy::{
 use bevy_inspector_egui::{
     bevy_egui::{EguiContext, EguiPlugin},
     egui,
+    reflect_inspector::ui_for_value,
 };
 use blenvy::{
     blueprints::spawn_from_blueprints::{
@@ -19,7 +21,11 @@ use blenvy::{
     BlenvyPlugin,
 };
 use leafwing_input_manager::prelude::*;
-use player::{animation::RigGizmos, physics::PhysicsGizmos};
+use player::{
+    animation::RigGizmos,
+    physics::{PhysicsGizmos, PlayerSpringParams},
+    Player,
+};
 
 mod player;
 mod util;
@@ -283,15 +289,14 @@ fn inspector_ui(world: &mut World) {
 
     egui::Window::new("UI").show(egui_context.get_mut(), |ui| {
         egui::ScrollArea::vertical().show(ui, |ui| {
-            // equivalent to `WorldInspectorPlugin`
-            bevy_inspector_egui::bevy_inspector::ui_for_world(world, ui);
-
-            egui::CollapsingHeader::new("Materials").show(ui, |ui| {
-                bevy_inspector_egui::bevy_inspector::ui_for_assets::<StandardMaterial>(world, ui);
-            });
-
-            ui.heading("Entities");
-            bevy_inspector_egui::bevy_inspector::ui_for_world_entities(world, ui);
+            let mut state = SystemState::<(
+                Query<&mut PlayerSpringParams, With<Player>>,
+                Res<AppTypeRegistry>,
+            )>::new(world);
+            let (mut query, registry) = state.get_mut(world);
+            for mut spring_params in query.iter_mut() {
+                ui_for_value(&mut *spring_params, ui, &registry.read());
+            }
         });
     });
 }
