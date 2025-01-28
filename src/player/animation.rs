@@ -293,6 +293,7 @@ pub struct RigAirState;
 
 #[derive(Component, Debug, Default, Reflect, Clone)]
 pub struct ProceduralRigState {
+    pub cm: Vec3,
     pub cm_offset: SpringValue<Vec3>,
     pub velocity: Vec3,
     pub hip_pos: Vec3,
@@ -304,8 +305,12 @@ pub struct ProceduralRigState {
 }
 
 impl ProceduralRigState {
-    pub fn get_bone_transforms(&self) -> HashMap<RigBone, Transform> {
+    pub fn get_bone_transforms(
+        &self,
+        rig_gizmos: &mut Gizmos<RigGizmos>,
+    ) -> HashMap<RigBone, Transform> {
         let mut transforms = HashMap::default();
+        let mut center_of_mass_remainder = self.cm;
         let torso_forward = (self.hip_forward + 0.5 * Vec3::Y).normalize_or_zero();
         let (pos1, _pos2) = ik2_positions(
             RigBone::LowerBack.length(),
@@ -320,6 +325,8 @@ impl ProceduralRigState {
         let lower_transform = Transform::from_translation(0.5 * (spine_pos + self.hip_pos))
             .looking_to(lower_forward, lower_up);
         transforms.insert(RigBone::LowerBack, lower_transform);
+        center_of_mass_remainder -=
+            lower_transform.translation * RigBone::LowerBack.relative_mass();
 
         let head_pos = self.neck_pos
             + (self.neck_pos - self.hip_pos)
@@ -328,12 +335,15 @@ impl ProceduralRigState {
                 .normalize_or_zero()
                 * 0.13;
         transforms.insert(RigBone::Head, Transform::from_translation(head_pos));
+        center_of_mass_remainder -= head_pos * RigBone::Head.relative_mass();
 
         let upper_up = (self.neck_pos - spine_pos).normalize_or_zero();
         let upper_forward = Vec3::X.cross(upper_up).normalize_or_zero();
         let upper_transform = Transform::from_translation(0.5 * (self.neck_pos + spine_pos))
             .looking_to(upper_forward, upper_up);
         transforms.insert(RigBone::UpperBack, upper_transform);
+        center_of_mass_remainder -=
+            upper_transform.translation * RigBone::UpperBack.relative_mass();
 
         if self.grounded {
             for (i, state) in self.ground_state.foot_states.iter().enumerate() {
@@ -365,14 +375,29 @@ impl ProceduralRigState {
                 let upper_transform =
                     Transform::from_translation(0.5 * (knee_pos + self.hip_pos + offset))
                         .looking_to(upper_forward, upper_up);
+                center_of_mass_remainder -=
+                    upper_transform.translation * upper_bone.relative_mass();
+
                 transforms.insert(upper_bone, upper_transform);
 
                 let lower_up = (knee_pos - foot_pos).normalize_or_zero();
                 let lower_forward = Vec3::X.cross(lower_up).normalize_or_zero();
                 let lower_transform = Transform::from_translation(0.5 * (foot_pos + knee_pos))
                     .looking_to(lower_forward, lower_up);
+                center_of_mass_remainder -=
+                    lower_transform.translation * lower_bone.relative_mass();
                 transforms.insert(lower_bone, lower_transform);
             }
+
+            let arms_center_of_mass = center_of_mass_remainder
+                / (2.0
+                    * (RigBone::LeftUpperArm.relative_mass()
+                        + RigBone::RightUpperArm.relative_mass()));
+            rig_gizmos.sphere(
+                Isometry3d::from_translation(arms_center_of_mass),
+                0.5 * RigBone::legacy_capsule_radius(),
+                Color::from(RED),
+            );
         }
         transforms
     }
@@ -404,6 +429,7 @@ pub fn update_procedural_state(
         LinearVelocity(velocity),
     ) in query.iter_mut()
     {
+        rig_state.cm = *position;
         rig_state.grounded = move_state.ground_state.contact_point.is_some();
         let up_dir = *quat * Dir3::Y;
         let right_dir = *quat * Dir3::X;

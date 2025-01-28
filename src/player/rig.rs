@@ -1,6 +1,6 @@
 use bevy::{color::palettes::css::BLACK, prelude::*};
 
-use super::animation::ProceduralRigState;
+use super::animation::{ProceduralRigState, RigGizmos};
 
 const STICK_RADIUS: f32 = 0.1;
 
@@ -12,12 +12,16 @@ pub enum RigBone {
     LeftLowerLeg,
     RightUpperLeg,
     RightLowerLeg,
+    LeftUpperArm,
+    LeftLowerArm,
+    RightUpperArm,
+    RightLowerArm,
     Head,
 }
 
 impl RigBone {
     pub fn scale() -> f32 {
-        0.0080
+        0.008
     }
 
     pub fn length(&self) -> f32 {
@@ -26,9 +30,24 @@ impl RigBone {
             Self::UpperBack => 40.0,
             Self::LeftUpperLeg | Self::RightUpperLeg => 44.0,
             Self::LeftLowerLeg | Self::RightLowerLeg => 44.0,
+            Self::LeftUpperArm | Self::RightUpperArm => 50.0,
+            Self::LeftLowerArm | Self::RightLowerArm => 50.0,
             Self::Head => 50.0,
         };
         raw * Self::scale()
+    }
+
+    pub fn relative_mass(&self) -> f32 {
+        let raw = match self {
+            Self::LowerBack => 0.1,
+            Self::UpperBack => 0.1,
+            Self::LeftUpperLeg | Self::RightUpperLeg => 0.1,
+            Self::LeftLowerLeg | Self::RightLowerLeg => 0.1,
+            Self::LeftUpperArm | Self::RightUpperArm => 0.1,
+            Self::LeftLowerArm | Self::RightLowerArm => 0.1,
+            Self::Head => 0.2,
+        };
+        raw / 1.2
     }
 
     pub fn width(&self) -> f32 {
@@ -109,15 +128,16 @@ fn spawn_meshes(
 fn update_bones(
     mut bones: Query<(&RigBone, &mut Transform, &mut Visibility)>,
     rig: Query<&ProceduralRigState>,
+    mut rig_gizmos: Gizmos<RigGizmos>,
 ) {
     for steps in rig.iter() {
-        let transforms = steps.get_bone_transforms();
-        for (bone, mut transform, mut visivility) in bones.iter_mut() {
+        let transforms = steps.get_bone_transforms(&mut rig_gizmos);
+        for (bone, mut transform, mut visibility) in bones.iter_mut() {
             if let Some(new_transform) = transforms.get(bone) {
                 *transform = *new_transform;
-                *visivility = Visibility::Visible;
+                *visibility = Visibility::Visible;
             } else {
-                *visivility = Visibility::Hidden;
+                *visibility = Visibility::Hidden;
             }
         }
     }
