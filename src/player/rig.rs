@@ -31,6 +31,15 @@ impl RigBone {
         raw * Self::scale()
     }
 
+    pub fn width(&self) -> f32 {
+        let raw = match self {
+            Self::LowerBack => 1.1,
+            Self::UpperBack => 1.1,
+            _ => 1.0,
+        };
+        raw * STICK_RADIUS
+    }
+
     pub fn height() -> f32 {
         RigBone::LeftUpperLeg.length()
             + RigBone::LeftLowerLeg.length()
@@ -65,8 +74,10 @@ fn spawn_meshes(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    let mut material = StandardMaterial::from_color(Color::from(BLACK));
-    material.perceptual_roughness = 0.8;
+    let mut material = StandardMaterial::from_color(BLACK);
+    material.perceptual_roughness = 0.4;
+    material.clearcoat = 0.5;
+    material.unlit = true;
     let material = materials.add(material);
 
     for bone in [
@@ -80,7 +91,7 @@ fn spawn_meshes(
     .iter()
     {
         commands.spawn((
-            Mesh3d(meshes.add(Mesh::from(Capsule3d::new(STICK_RADIUS, bone.length())))),
+            Mesh3d(meshes.add(Mesh::from(Capsule3d::new(bone.width(), bone.length())))),
             bone.clone(),
             MeshMaterial3d(material.clone()),
         ));

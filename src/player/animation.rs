@@ -315,6 +315,7 @@ impl ProceduralRigState {
         );
         let spine_pos = self.hip_pos + pos1;
         let lower_up = (spine_pos - self.hip_pos).normalize_or_zero();
+        let hip_offset_dir = lower_up.cross(torso_forward).normalize_or_zero();
         let lower_forward = Vec3::X.cross(lower_up).normalize_or_zero();
         let lower_transform = Transform::from_translation(0.5 * (spine_pos + self.hip_pos))
             .looking_to(lower_forward, lower_up);
@@ -336,6 +337,8 @@ impl ProceduralRigState {
 
         if self.grounded {
             for (i, state) in self.ground_state.foot_states.iter().enumerate() {
+                let lr = if i == 0 { 1.0 } else { -1.0 };
+                let offset = hip_offset_dir * 0.3 * lr * RigBone::legacy_capsule_radius();
                 let pos = match state {
                     FootState::Locked(info) => info.pos,
                     FootState::Unlocked(info) => info.pos,
@@ -344,12 +347,12 @@ impl ProceduralRigState {
                 let (pos1, pos2) = ik2_positions(
                     RigBone::LeftUpperLeg.length(),
                     RigBone::LeftLowerLeg.length(),
-                    pos - self.hip_pos,
+                    pos - self.hip_pos - offset,
                     self.hip_forward,
                 );
 
-                let knee_pos = self.hip_pos + pos1;
-                let foot_pos = self.hip_pos + pos2;
+                let knee_pos = self.hip_pos + offset + pos1;
+                let foot_pos = self.hip_pos + offset + pos2;
 
                 let (upper_bone, lower_bone) = match i {
                     0 => (RigBone::LeftUpperLeg, RigBone::LeftLowerLeg),
@@ -357,10 +360,11 @@ impl ProceduralRigState {
                     _ => unreachable!(),
                 };
 
-                let upper_up = (self.hip_pos - knee_pos).normalize_or_zero();
+                let upper_up = (self.hip_pos + offset - knee_pos).normalize_or_zero();
                 let upper_forward = Vec3::X.cross(upper_up).normalize_or_zero();
-                let upper_transform = Transform::from_translation(0.5 * (knee_pos + self.hip_pos))
-                    .looking_to(upper_forward, upper_up);
+                let upper_transform =
+                    Transform::from_translation(0.5 * (knee_pos + self.hip_pos + offset))
+                        .looking_to(upper_forward, upper_up);
                 transforms.insert(upper_bone, upper_transform);
 
                 let lower_up = (knee_pos - foot_pos).normalize_or_zero();
