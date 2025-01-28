@@ -2,7 +2,7 @@ use bevy::{color::palettes::css::BLACK, prelude::*};
 
 use super::animation::ProceduralRigState;
 
-const STICK_RADIUS: f32 = 0.08;
+const STICK_RADIUS: f32 = 0.1;
 
 #[derive(Component, Reflect, Debug, Clone, Hash, PartialEq, Eq)]
 pub enum RigBone {
@@ -17,7 +17,7 @@ pub enum RigBone {
 
 impl RigBone {
     pub fn scale() -> f32 {
-        0.0065
+        0.0080
     }
 
     pub fn length(&self) -> f32 {
@@ -31,13 +31,21 @@ impl RigBone {
         raw * Self::scale()
     }
 
+    pub fn height() -> f32 {
+        RigBone::LeftUpperLeg.length()
+            + RigBone::LeftLowerLeg.length()
+            + RigBone::LowerBack.length()
+            + RigBone::UpperBack.length()
+            + RigBone::Head.length()
+    }
+
     pub fn leg_length() -> f32 {
         RigBone::LeftUpperLeg.length() + RigBone::LeftLowerLeg.length()
     }
 
     pub fn legacy_capsule_height() -> f32 {
         let back_length = RigBone::LowerBack.length() + RigBone::UpperBack.length();
-        let legacy_back_length = (40.0 + 40.0) * Self::scale();
+        let legacy_back_length = 65.0 * Self::scale();
         back_length / legacy_back_length * 0.8
     }
 
@@ -84,6 +92,7 @@ fn spawn_meshes(
         RigBone::Head,
         MeshMaterial3d(material.clone()),
     ));
+    println!("Height: {}", RigBone::height());
 }
 
 fn update_bones(
