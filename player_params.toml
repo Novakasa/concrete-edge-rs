@@ -1,7 +1,7 @@
-[physics_params]
+[physics]
 max_speed = 8.0
 
-[spring_params.ground_spring]
+[springs.ground_spring]
 rest_length = 0.8892307877540588
 stiffness = 15.0
 min_damping = 1.5
@@ -9,7 +9,7 @@ max_damping = 0.0
 max_force = 20.0
 min_force = 0.0
 
-[spring_params.ground_spring_crouching]
+[springs.ground_spring_crouching]
 rest_length = 0.5938462018966675
 stiffness = 25.0
 min_damping = 2.5
@@ -17,17 +17,17 @@ max_damping = 0.0
 max_force = 20.0
 min_force = 0.0
 
-[spring_params.angular_spring]
+[springs.angular_spring]
 stiffness = 0.5
 damping = 0.15000000596046448
 turn_stiffness = 0.30000001192092896
 
-[spring_params.angular_spring_jumping]
+[springs.angular_spring_jumping]
 stiffness = 0.30000001192092896
 damping = 0.15000000596046448
 turn_stiffness = 0.30000001192092896
 
-[spring_params.angular_spring_aerial]
+[springs.angular_spring_aerial]
 stiffness = 0.05000000074505806
 damping = 0.05000000074505806
 turn_stiffness = 0.05000000074505806

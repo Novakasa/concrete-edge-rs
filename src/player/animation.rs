@@ -342,6 +342,8 @@ impl ProceduralRigState {
             upper_transform.translation * RigBone::UpperBack.relative_mass();
 
         if self.grounded {
+            let mut feet_positions = Vec::new();
+            let mut feet_center_of_mass = Vec3::ZERO;
             for (i, state) in self.ground_state.foot_states.iter().enumerate() {
                 let lr = if i == 0 { 1.0 } else { -1.0 };
                 let offset = hip_offset_dir * 0.3 * lr * RigBone::legacy_capsule_radius();
@@ -349,6 +351,7 @@ impl ProceduralRigState {
                     FootState::Locked(info) => info.pos,
                     FootState::Unlocked(info) => info.pos,
                 };
+                feet_positions.push(pos);
 
                 let (pos1, pos2) = ik2_positions(
                     RigBone::LeftUpperLeg.length(),
@@ -373,6 +376,7 @@ impl ProceduralRigState {
                         .looking_to(upper_forward, upper_up);
                 center_of_mass_remainder -=
                     upper_transform.translation * upper_bone.relative_mass();
+                feet_center_of_mass += upper_transform.translation * upper_bone.relative_mass();
 
                 transforms.insert(upper_bone, upper_transform);
 
@@ -382,8 +386,17 @@ impl ProceduralRigState {
                     .looking_to(lower_forward, lower_up);
                 center_of_mass_remainder -=
                     lower_transform.translation * lower_bone.relative_mass();
+                feet_center_of_mass += lower_transform.translation * lower_bone.relative_mass();
                 transforms.insert(lower_bone, lower_transform);
             }
+
+            feet_center_of_mass /= 2.0
+                * (RigBone::LeftUpperLeg.relative_mass() + RigBone::RightUpperLeg.relative_mass());
+            rig_gizmos.sphere(
+                Isometry3d::from_translation(feet_center_of_mass),
+                0.5 * RigBone::legacy_capsule_radius(),
+                Color::from(GREEN),
+            );
 
             let arms_center_of_mass = center_of_mass_remainder
                 / (2.0
@@ -394,6 +407,41 @@ impl ProceduralRigState {
                 0.5 * RigBone::legacy_capsule_radius(),
                 Color::from(RED),
             );
+            for (i, opposite_foot_pos) in feet_positions.iter().rev().enumerate() {
+                let lr = if i == 0 { 1.0 } else { -1.0 };
+                let offset = hip_offset_dir * 1.0 * lr * RigBone::legacy_capsule_radius();
+                let (upper_bone, lower_bone) = match i {
+                    0 => (RigBone::LeftUpperArm, RigBone::LeftLowerArm),
+                    1 => (RigBone::RightUpperArm, RigBone::RightLowerArm),
+                    _ => unreachable!(),
+                };
+                let arm_pos = (*opposite_foot_pos - feet_center_of_mass) * 0.7
+                    + arms_center_of_mass
+                    + offset
+                    + self.hip_forward * 0.2;
+
+                let (pos1, pos2) = ik2_positions(
+                    RigBone::LeftUpperArm.length(),
+                    RigBone::LeftLowerArm.length(),
+                    arm_pos - self.neck_pos,
+                    -self.hip_forward,
+                );
+                let elbow_pos = self.neck_pos + pos1;
+                let hand_pos = self.neck_pos + pos2;
+
+                let upper_up = (self.neck_pos - elbow_pos).normalize_or_zero();
+                let upper_forward = Vec3::X.cross(upper_up).normalize_or_zero();
+                let upper_transform =
+                    Transform::from_translation(0.5 * (elbow_pos + self.neck_pos))
+                        .looking_to(upper_forward, upper_up);
+                transforms.insert(upper_bone, upper_transform);
+
+                let lower_up = (elbow_pos - hand_pos).normalize_or_zero();
+                let lower_forward = Vec3::X.cross(lower_up).normalize_or_zero();
+                let lower_transform = Transform::from_translation(0.5 * (hand_pos + elbow_pos))
+                    .looking_to(lower_forward, lower_up);
+                transforms.insert(lower_bone, lower_transform);
+            }
         }
         transforms
     }

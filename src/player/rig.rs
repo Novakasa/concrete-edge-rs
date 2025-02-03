@@ -106,6 +106,10 @@ fn spawn_meshes(
         RigBone::RightLowerLeg,
         RigBone::LowerBack,
         RigBone::UpperBack,
+        RigBone::LeftUpperArm,
+        RigBone::RightUpperArm,
+        RigBone::LeftLowerArm,
+        RigBone::RightLowerArm,
     ]
     .iter()
     {
