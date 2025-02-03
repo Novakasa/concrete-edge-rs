@@ -17,6 +17,8 @@ use physics::{
 };
 use rig::RigBone;
 
+use crate::MouseInteraction;
+
 pub mod animation;
 pub mod camera;
 pub mod physics;
@@ -36,7 +38,7 @@ pub enum PlayerAction {
     Crouch,
     Move,
     Grab,
-    View,
+    ViewMouse,
     Respawn,
     Rewind,
     Menu,
@@ -46,7 +48,7 @@ pub enum PlayerAction {
 impl Actionlike for PlayerAction {
     fn input_control_kind(&self) -> InputControlKind {
         match self {
-            Self::Move | Self::View => InputControlKind::DualAxis,
+            Self::Move | Self::ViewMouse => InputControlKind::DualAxis,
             _ => InputControlKind::Button,
         }
     }
@@ -60,7 +62,7 @@ impl PlayerAction {
         input_map.insert(Self::Crouch, MouseButton::Right);
         input_map.insert(Self::Respawn, KeyCode::F2);
         input_map.insert(Self::Rewind, MouseButton::Middle);
-        input_map.insert_dual_axis(Self::View, MouseMove::default());
+        input_map.insert_dual_axis(Self::ViewMouse, MouseMove::default());
         input_map.insert(Self::Menu, KeyCode::Escape);
         input_map.insert(Self::ViewMode, KeyCode::Tab);
         input_map.insert(Self::Grab, MouseButton::Left);
@@ -177,20 +179,25 @@ fn player_controls(
     rewind_state: Res<State<rewind::RewindState>>,
     mut rewind_info: ResMut<rewind::RewindInfo>,
     time: Res<Time>,
+    mouse_state: Res<State<MouseInteraction>>,
 ) {
     for (action_state, mut move_state) in query.iter_mut() {
         let move_input = action_state
             .clamped_axis_pair(&PlayerAction::Move)
             .normalize_or_zero();
         // println!("{:?}", move_input);
-        let cam_input = action_state.axis_pair(&PlayerAction::View);
+        let cam_input = action_state.axis_pair(&PlayerAction::ViewMouse);
         if let Ok(mut cam3) = q_cam3.get_single_mut() {
-            cam3.yaw += cam_input.x * -0.005;
-            cam3.pitch = (cam3.pitch + cam_input.y * -0.005).clamp(-0.5 * PI, 0.5 * PI);
+            if mouse_state.get() == &MouseInteraction::Camera {
+                cam3.yaw += cam_input.x * -0.005;
+                cam3.pitch = (cam3.pitch + cam_input.y * -0.005).clamp(-0.5 * PI, 0.5 * PI);
+            }
 
             if let Ok(mut cam1) = q_cam1.get_single_mut() {
-                cam1.yaw = cam3.yaw;
-                cam1.pitch = cam3.pitch;
+                if mouse_state.get() == &MouseInteraction::Camera {
+                    cam1.yaw = cam3.yaw;
+                    cam1.pitch = cam3.pitch;
+                }
             }
 
             move_state.input_dir = (Quat::from_euler(EulerRot::YXZ, cam3.yaw, 0.0, 0.0)

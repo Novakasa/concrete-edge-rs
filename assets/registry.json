@@ -19461,7 +19461,7 @@
         "Crouch",
         "Move",
         "Grab",
-        "View",
+        "ViewMouse",
         "Respawn",
         "Rewind",
         "Menu",
