@@ -12,10 +12,11 @@ use bevy::{
 use camera::{CameraAnchor1stPerson, CameraAnchor3rdPerson};
 use leafwing_input_manager::prelude::*;
 use physics::{
-    PhysicsDebugInfo, PhysicsGizmos, PhysicsState, PlayerAngularSpring, PlayerGroundSpring,
-    PlayerSpringParams, CAPSULE_HEIGHT, CAPSULE_RADIUS, CAST_RADIUS,
+    PhysicsDebugInfo, PhysicsGizmos, PhysicsParams, PhysicsState, PlayerAngularSpring,
+    PlayerGroundSpring, SpringParams, CAPSULE_HEIGHT, CAPSULE_RADIUS, CAST_RADIUS,
 };
 use rig::RigBone;
+use serde::{Deserialize, Serialize};
 
 use crate::MouseInteraction;
 
@@ -30,6 +31,32 @@ pub enum DebugState {
     None,
     Animation,
     Physics,
+}
+
+#[derive(Resource, Reflect, Debug, Serialize, Deserialize, Default)]
+pub struct PlayerParams {
+    #[serde(alias = "physics_params")]
+    pub physics: PhysicsParams,
+    #[serde(alias = "spring_params")]
+    pub springs: SpringParams,
+}
+
+impl PlayerParams {
+    pub fn new() -> Self {
+        let load_path = "player_params.toml";
+        if let Ok(toml) = std::fs::read_to_string(load_path) {
+            toml::from_str(&toml).unwrap()
+        } else {
+            warn!("No player params found, using default");
+            Self::default()
+        }
+    }
+
+    pub fn save(&self) {
+        let save_path = "player_params.toml";
+        let toml = toml::to_string_pretty(self).unwrap();
+        std::fs::write(save_path, toml).unwrap();
+    }
 }
 
 #[derive(PartialEq, Eq, Hash, Clone, Debug, Reflect)]
@@ -118,7 +145,6 @@ fn spawn_player(
                 visibility,
                 ExternalForce::default().with_persistence(false),
                 ExternalTorque::default().with_persistence(false),
-                PlayerSpringParams::new(),
                 InputManagerBundle::<PlayerAction>::with_map(PlayerAction::default_input_map()),
                 physics::PhysicsState::new(),
                 physics::PhysicsDebugInfo::default(),
@@ -358,6 +384,7 @@ impl Plugin for PlayerPlugin {
         app.register_type::<PlayerAngularSpring>();
         app.insert_state(DebugState::None);
         app.insert_resource(SubstepCount(4));
+        app.insert_resource(PlayerParams::new());
         app.add_systems(
             Startup,
             (

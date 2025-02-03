@@ -7,12 +7,7 @@ use bevy::{
 
 use crate::util::{ik2_positions, SpringValue};
 
-use super::{
-    physics::{PhysicsState, MAX_VELOCITY},
-    rewind::RewindState,
-    rig::RigBone,
-    Player,
-};
+use super::{physics::PhysicsState, rewind::RewindState, rig::RigBone, Player, PlayerParams};
 
 #[derive(Debug, Reflect, Default, GizmoConfigGroup)]
 pub struct RigGizmos;
@@ -186,6 +181,7 @@ impl RigGroundState {
         mass: &ComputedMass,
         dt: f32,
         up_dir: Dir3,
+        params: &PlayerParams,
     ) {
         self.cycle_state.increment(dt);
         let contact = contact_point + *position;
@@ -219,7 +215,7 @@ impl RigGroundState {
 
         let i_lock = self.get_lock_candidate(window_pos_ahead);
 
-        let offset_length = 0.5.lerp(0.2, (velocity.length() / MAX_VELOCITY).min(1.0))
+        let offset_length = 0.5.lerp(0.2, (velocity.length() / params.physics.max_speed).min(1.0))
             * RigBone::legacy_capsule_radius();
         let is_both_locked = self.is_both_locked();
         let is_any_locked = self.is_any_locked();
@@ -418,6 +414,7 @@ pub fn update_procedural_state(
     _spatial_query: SpatialQuery,
     dt_physics: Res<Time<Physics>>,
     dt_real: Res<Time>,
+    params: Res<PlayerParams>,
 ) {
     let dt = dt_real.delta_secs() * dt_physics.relative_speed();
     for (
@@ -449,6 +446,7 @@ pub fn update_procedural_state(
                 mass,
                 dt,
                 Dir3::new_unchecked(move_state.ground_state.contact_normal.unwrap()),
+                &params,
             );
         } else {
             rig_state.ground_state = RigGroundState::default();

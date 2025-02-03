@@ -5,14 +5,13 @@ use bevy::prelude::*;
 use dynamics::integrator::IntegrationSet;
 use serde::{Deserialize, Serialize};
 
-use super::{rewind::RewindState, rig::RigBone};
+use super::{rewind::RewindState, rig::RigBone, PlayerParams};
 
 pub const CAPSULE_RADIUS: f32 = 0.15;
 pub const CAPSULE_HEIGHT: f32 = 4.0 * CAPSULE_RADIUS;
 pub const CAST_RADIUS: f32 = 0.8 * CAPSULE_RADIUS;
 pub const FRICTION_MARGIN: f32 = 0.98 * 0.98;
 pub const GLOBAL_FRICTION: f32 = 1.0;
-pub const MAX_VELOCITY: f32 = 7.0;
 
 #[derive(Reflect, Debug, Default, GizmoConfigGroup)]
 pub struct PhysicsGizmos;
@@ -33,13 +32,14 @@ pub enum Layer {
     Platform,
 }
 
-#[derive(Component, Reflect, Debug, Serialize, Deserialize)]
-pub struct PlayerParams {
-    pub spring_params: PlayerSpringParams,
+#[derive(Reflect, Debug, Serialize, Deserialize, Default, Clone)]
+pub struct PhysicsParams {
+    #[serde(default)]
+    pub max_speed: f32,
 }
 
-#[derive(Component, Reflect, Debug, Default, Serialize, Deserialize)]
-pub struct PlayerSpringParams {
+#[derive(Reflect, Debug, Serialize, Deserialize, Clone)]
+pub struct SpringParams {
     pub ground_spring: PlayerGroundSpring,
     pub ground_spring_crouching: PlayerGroundSpring,
     pub angular_spring: PlayerAngularSpring,
@@ -47,7 +47,13 @@ pub struct PlayerSpringParams {
     pub angular_spring_aerial: PlayerAngularSpring,
 }
 
-impl PlayerSpringParams {
+impl Default for SpringParams {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl SpringParams {
     pub fn new() -> Self {
         Self {
             ground_spring: PlayerGroundSpring::running(),
@@ -297,8 +303,11 @@ pub fn predict_contact(
     }
 }
 
-pub fn update_landing_prediction(mut q_physics: Query<(&mut PhysicsState, &PlayerSpringParams)>) {
-    for (mut physics, spring_params) in q_physics.iter_mut() {
+pub fn update_landing_prediction(
+    mut q_physics: Query<&mut PhysicsState>,
+    params: Res<PlayerParams>,
+) {
+    for mut physics in q_physics.iter_mut() {
         if physics.ground_state.contact_point.is_some() {
             continue;
         }
@@ -309,7 +318,7 @@ pub fn update_landing_prediction(mut q_physics: Query<(&mut PhysicsState, &Playe
             // println!("{:?}", contact_point);
             let _spring_force = spring_force(
                 &contact.contact_velocity,
-                spring_params.get_ground_spring(false),
+                params.springs.get_ground_spring(false),
                 contact.contact_normal,
                 contact_point,
             );
@@ -317,7 +326,7 @@ pub fn update_landing_prediction(mut q_physics: Query<(&mut PhysicsState, &Playe
             // let normal_force = spring_force.project_onto(contact.contact_normal);
             let normal_force = contact.contact_normal * physics.external_force.length() * 0.5;
             let (_target_vel, _slope_force, target_force) =
-                get_target_force(&physics, &contact.contact_velocity, normal_force);
+                get_target_force(&physics, &contact.contact_velocity, normal_force, &params);
 
             physics.ground_state.neg_cast_vec =
                 (normal_force + target_force).try_normalize().unwrap();
@@ -342,12 +351,12 @@ pub fn update_forces(
         &Rotation,
         &LinearVelocity,
         &AngularVelocity,
-        &PlayerSpringParams,
         &mut PhysicsState,
         &mut PhysicsDebugInfo,
     )>,
     shape_cast: SpatialQuery,
     dt: Res<Time<Substeps>>,
+    params: Res<PlayerParams>,
 ) {
     for (
         mut force,
@@ -356,7 +365,6 @@ pub fn update_forces(
         Rotation(quat),
         LinearVelocity(velocity),
         AngularVelocity(angular_vel),
-        spring_params,
         mut physics_state,
         mut debug,
     ) in query.iter_mut()
@@ -365,8 +373,12 @@ pub fn update_forces(
         let cast_dir = -physics_state.ground_state.neg_cast_vec;
         let capsule_up = *quat * Vec3::Y;
         let capsule_right = *quat * Vec3::X;
-        let spring = spring_params.get_ground_spring(physics_state.ground_state.crouching);
-        let angular_spring = spring_params.get_angular_spring(physics_state.ground_state.jumping);
+        let spring = params
+            .springs
+            .get_ground_spring(physics_state.ground_state.crouching);
+        let angular_spring = params
+            .springs
+            .get_angular_spring(physics_state.ground_state.jumping);
         physics_state.forward_dir = *quat * Vec3::NEG_Z;
         if let Some(coll) = shape_cast.cast_shape(
             &Collider::sphere(CAST_RADIUS),
@@ -424,7 +436,7 @@ pub fn update_forces(
             debug.tangential_force = tangential_spring_force;
 
             let (target_vel, slope_force, target_force) =
-                get_target_force(&physics_state, velocity, normal_force);
+                get_target_force(&physics_state, velocity, normal_force, &params);
 
             physics_state.prev_substep_vel = velocity.clone();
             debug.target_force = target_force;
@@ -495,7 +507,7 @@ pub fn update_forces(
             physics_state.ground_state.contact_point = None;
             physics_state.ground_state.jumping = false;
 
-            let angular_spring = &spring_params.angular_spring_aerial;
+            let angular_spring = &params.springs.angular_spring_aerial;
 
             if let Some(contact) = physics_state.air_state.predicted_contact.clone() {
                 let target_up = physics_state.ground_state.neg_cast_vec;
@@ -577,6 +589,7 @@ fn get_target_force(
     physics_state: &PhysicsState,
     velocity: &Vec3,
     normal_force: Vec3,
+    params: &PlayerParams,
 ) -> (Vec3, Vec3, Vec3) {
     let normal = normal_force.normalize();
     let ext_dir = physics_state.external_force.normalize_or_zero();
@@ -595,7 +608,7 @@ fn get_target_force(
     //     (input_tangent - 0.5 * (1.0 - normal.dot(-ext_dir)) * tangent_slope).normalize();
     let tangent_vel = *velocity - velocity.dot(normal) * normal;
 
-    let target_vel = input_tangent * MAX_VELOCITY;
+    let target_vel = input_tangent * params.physics.max_speed;
     let denominator = 1.0 - tangent_slope.dot(ext_dir).powi(2);
     let slope_force = if denominator < 1.0e-4 {
         physics_state.external_force

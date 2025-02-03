@@ -21,11 +21,7 @@ use blenvy::{
     BlenvyPlugin,
 };
 use leafwing_input_manager::prelude::*;
-use player::{
-    animation::RigGizmos,
-    physics::{PhysicsGizmos, PlayerSpringParams},
-    Player,
-};
+use player::{animation::RigGizmos, physics::PhysicsGizmos, PlayerParams};
 
 mod player;
 mod util;
@@ -289,16 +285,18 @@ fn inspector_ui(world: &mut World) {
 
     egui::Window::new("UI").show(egui_context.get_mut(), |ui| {
         egui::ScrollArea::vertical().show(ui, |ui| {
+            let mut state = SystemState::<(ResMut<PlayerParams>, Res<AppTypeRegistry>)>::new(world);
+            let (mut params, registry) = state.get_mut(world);
+
             ui.collapsing("Spring", |ui| {
-                let mut state = SystemState::<(
-                    Query<&mut PlayerSpringParams, With<Player>>,
-                    Res<AppTypeRegistry>,
-                )>::new(world);
-                let (mut query, registry) = state.get_mut(world);
-                for mut spring_params in query.iter_mut() {
-                    ui_for_value(&mut *spring_params, ui, &registry.read());
-                }
+                ui_for_value(&mut params.springs, ui, &registry.read());
             });
+            ui.collapsing("Physics", |ui| {
+                ui_for_value(&mut params.physics, ui, &registry.read());
+            });
+            if ui.button("Save").clicked() {
+                params.save();
+            }
         });
     });
 }
