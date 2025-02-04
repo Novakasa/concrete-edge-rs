@@ -30,8 +30,8 @@ impl RigBone {
             Self::UpperBack => 40.0,
             Self::LeftUpperLeg | Self::RightUpperLeg => 44.0,
             Self::LeftLowerLeg | Self::RightLowerLeg => 44.0,
-            Self::LeftUpperArm | Self::RightUpperArm => 50.0,
-            Self::LeftLowerArm | Self::RightLowerArm => 50.0,
+            Self::LeftUpperArm | Self::RightUpperArm => 44.0,
+            Self::LeftLowerArm | Self::RightLowerArm => 44.0,
             Self::Head => 50.0,
         };
         raw * Self::scale()

@@ -232,6 +232,10 @@ impl PhysicsGroundState {
             ..Default::default()
         }
     }
+
+    pub fn spring_force(&self) -> Vec3 {
+        self.tangential_force + self.normal_force
+    }
 }
 
 impl PhysicsState {

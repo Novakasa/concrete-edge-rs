@@ -194,6 +194,13 @@ impl RigGroundState {
             + physics_state.ground_state.slope_force)
             * mass.inverse();
         let lock_duration = 0.06;
+        let travel_duration = lock_duration
+            * 4.0.lerp(
+                1.5,
+                (physics_state.ground_state.spring_force().length() * 0.5
+                    / physics_state.external_force.length())
+                .min(1.0),
+            );
         let travel_duration = lock_duration * 2.5;
         let min_lock = 0.03;
         let max_unlock = 0.2;
@@ -333,10 +340,10 @@ impl ProceduralRigState {
         transforms.insert(RigBone::Head, Transform::from_translation(head_pos));
         center_of_mass_remainder -= head_pos * RigBone::Head.relative_mass();
 
-        let upper_up = (self.neck_pos - spine_pos).normalize_or_zero();
-        let upper_forward = Vec3::X.cross(upper_up).normalize_or_zero();
+        let upper_back_up = (self.neck_pos - spine_pos).normalize_or_zero();
+        let upper_forward = Vec3::X.cross(upper_back_up).normalize_or_zero();
         let upper_transform = Transform::from_translation(0.5 * (self.neck_pos + spine_pos))
-            .looking_to(upper_forward, upper_up);
+            .looking_to(upper_forward, upper_back_up);
         transforms.insert(RigBone::UpperBack, upper_transform);
         center_of_mass_remainder -=
             upper_transform.translation * RigBone::UpperBack.relative_mass();
@@ -407,6 +414,7 @@ impl ProceduralRigState {
                 0.5 * RigBone::legacy_capsule_radius(),
                 Color::from(RED),
             );
+            let shoulder_pos = self.neck_pos - upper_back_up * 0.4 * RigBone::UpperBack.length();
             for (i, opposite_foot_pos) in feet_positions.iter().rev().enumerate() {
                 let lr = if i == 0 { 1.0 } else { -1.0 };
                 let offset = hip_offset_dir * 1.0 * lr * RigBone::legacy_capsule_radius();
@@ -423,17 +431,16 @@ impl ProceduralRigState {
                 let (pos1, pos2) = ik2_positions(
                     RigBone::LeftUpperArm.length(),
                     RigBone::LeftLowerArm.length(),
-                    arm_pos - self.neck_pos,
+                    arm_pos - shoulder_pos,
                     -self.hip_forward,
                 );
-                let elbow_pos = self.neck_pos + pos1;
-                let hand_pos = self.neck_pos + pos2;
+                let elbow_pos = shoulder_pos + pos1;
+                let hand_pos = shoulder_pos + pos2;
 
-                let upper_up = (self.neck_pos - elbow_pos).normalize_or_zero();
+                let upper_up = (shoulder_pos - elbow_pos).normalize_or_zero();
                 let upper_forward = Vec3::X.cross(upper_up).normalize_or_zero();
-                let upper_transform =
-                    Transform::from_translation(0.5 * (elbow_pos + self.neck_pos))
-                        .looking_to(upper_forward, upper_up);
+                let upper_transform = Transform::from_translation(0.5 * (elbow_pos + shoulder_pos))
+                    .looking_to(upper_forward, upper_up);
                 transforms.insert(upper_bone, upper_transform);
 
                 let lower_up = (elbow_pos - hand_pos).normalize_or_zero();
