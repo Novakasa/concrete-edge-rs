@@ -343,8 +343,7 @@ fn draw_debug_gizmos(
             // draw circle at end of cast
             physics_gizmos.sphere(
                 Isometry3d::from_translation(
-                    pos.clone()
-                        + (RigBone::max_contact_dist() - CAST_RADIUS) * ground_spring.cast_dir,
+                    pos + (RigBone::max_contact_dist() - CAST_RADIUS) * ground_spring.cast_dir,
                 ),
                 CAST_RADIUS,
                 Color::BLACK,

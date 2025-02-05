@@ -386,7 +386,6 @@ pub fn update_forces(
     ) in query.iter_mut()
     {
         let filter = SpatialQueryFilter::from_mask(Layer::Platform);
-        let cast_dir = ground_spring.cast_dir;
         let capsule_up = *quat * Vec3::Y;
         let capsule_right = *quat * Vec3::X;
         let spring = params.springs.get_ground_spring(ground_state.crouching);
@@ -396,7 +395,7 @@ pub fn update_forces(
             &Collider::sphere(CAST_RADIUS),
             position.clone(),
             Quat::IDENTITY,
-            Dir3::new_unchecked(cast_dir.try_normalize().unwrap()),
+            ground_spring.cast_dir,
             &ShapeCastConfig {
                 max_distance: RigBone::max_contact_dist() - CAST_RADIUS,
                 ..Default::default()
@@ -406,7 +405,7 @@ pub fn update_forces(
             air_prediction.predicted_contact = None;
             let normal = Dir3::new(coll.normal1).unwrap();
 
-            let contact_point = coll.point2 + cast_dir * coll.distance;
+            let contact_point = coll.point2 + ground_spring.cast_dir * coll.distance;
             ground_spring.contact = Some(GroundContact {
                 contact_normal: normal,
                 contact_point,
@@ -460,10 +459,10 @@ pub fn update_forces(
             let angle = capsule_up.angle_between(raw_neg_cast_vec);
             // println!("{:?}", (angle, capsule_up, raw_neg_cast_vec, quat));
             ground_spring.cast_dir = if angle < 0.0001 {
-                Dir3::new(-raw_neg_cast_vec).unwrap()
+                -Dir3::new(raw_neg_cast_vec).unwrap()
             } else {
-                Dir3::new(
-                    -Quat::IDENTITY.slerp(cast_quat, angle.min(0.3 * PI) / angle) * capsule_up,
+                -Dir3::new(
+                    Quat::IDENTITY.slerp(cast_quat, angle.min(0.3 * PI) / angle) * capsule_up,
                 )
                 .unwrap()
             };
