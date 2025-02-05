@@ -10,7 +10,12 @@ use crate::{
     RigGizmos,
 };
 
-use super::{physics::PhysicsState, rewind::RewindState, rig::RigBone, Player, PlayerParams};
+use super::{
+    physics::{ExtForce, GroundContact, GroundForce, GroundSpring, GroundState},
+    rewind::RewindState,
+    rig::RigBone,
+    Player, PlayerParams,
+};
 
 #[derive(Debug, Clone, Default, Reflect)]
 pub struct FootTravelInfo {
@@ -175,7 +180,10 @@ impl RigGroundState {
         &mut self,
         contact_point: Vec3,
         position: &Vec3,
-        physics_state: &PhysicsState,
+        ground_force: &GroundForce,
+        ground_spring: &GroundSpring,
+        ground_state: &GroundState,
+        external_force: &ExtForce,
         right_dir: Dir3,
         velocity: &Vec3,
         mass: &ComputedMass,
@@ -185,21 +193,23 @@ impl RigGroundState {
     ) {
         self.cycle_state.increment(dt);
         let contact = contact_point + *position;
-        let normal = physics_state.ground_state.contact_normal.unwrap();
+        let normal = ground_spring
+            .contact
+            .as_ref()
+            .unwrap()
+            .contact_normal
+            .as_vec3();
 
         let right_tangent =
             (right_dir.as_vec3() - right_dir.dot(normal) * normal).normalize_or_zero();
         let tangential_vel = *velocity - velocity.dot(normal) * normal;
-        let acceleration = (physics_state.ground_state.tangential_force
-            + physics_state.ground_state.slope_force)
-            * mass.inverse();
+        let acceleration =
+            (ground_force.tangential_force + ground_force.slope_force) * mass.inverse();
         let lock_duration = 0.06;
         let _travel_duration = lock_duration
             * 4.0.lerp(
                 1.5,
-                (physics_state.ground_state.spring_force().length() * 0.5
-                    / physics_state.external_force.length())
-                .min(1.0),
+                (ground_force.spring_force().length() * 0.5 / external_force.0.length()).min(1.0),
             );
         let travel_duration = lock_duration * 2.5;
         let min_lock = 0.03;
@@ -213,8 +223,8 @@ impl RigGroundState {
         let min_step_size = RigBone::legacy_capsule_radius() * 0.5;
         let window_travel_dist = (window_pos_ahead - window_pos_behind).length();
         let ahead_to_contact = (window_pos_ahead - contact).length();
-        let slip_vel = if physics_state.ground_state.slipping {
-            -0.5 * physics_state.ground_state.tangential_force * mass.inverse()
+        let slip_vel = if ground_state.slipping {
+            -0.5 * ground_force.tangential_force * mass.inverse()
         } else {
             Vec3::ZERO
         };
@@ -464,7 +474,10 @@ pub fn update_procedural_state(
             &Position,
             &Rotation,
             &mut ProceduralRigState,
-            &PhysicsState,
+            &GroundForce,
+            &GroundSpring,
+            &GroundState,
+            &ExtForce,
             &ComputedMass,
             &LinearVelocity,
         ),
@@ -480,18 +493,26 @@ pub fn update_procedural_state(
         Position(position),
         Rotation(quat),
         mut rig_state,
-        move_state,
+        ground_force,
+        ground_spring,
+        ground_state,
+        external_force,
         mass,
         LinearVelocity(velocity),
     ) in query.iter_mut()
     {
         rig_state.cm = *position;
-        rig_state.grounded = move_state.ground_state.contact_point.is_some();
+        rig_state.grounded = ground_spring.contact.is_some();
         let up_dir = *quat * Dir3::Y;
         let right_dir = *quat * Dir3::X;
         rig_state.hip_forward = up_dir.cross(right_dir.into());
 
-        if let Some(contact_point) = move_state.ground_state.contact_point {
+        if let Some(GroundContact {
+            contact_point,
+            contact_normal,
+            toi: _,
+        }) = ground_spring.contact
+        {
             rig_state.hip_pos = *position + contact_point * 0.2;
             rig_state.neck_pos = *position + up_dir * RigBone::legacy_capsule_height() * 0.3
                 - rig_state.hip_pos
@@ -499,12 +520,15 @@ pub fn update_procedural_state(
             rig_state.ground_state.update(
                 contact_point,
                 position,
-                move_state,
+                ground_force,
+                ground_spring,
+                ground_state,
+                external_force,
                 right_dir,
                 velocity,
                 mass,
                 dt,
-                Dir3::new_unchecked(move_state.ground_state.contact_normal.unwrap()),
+                contact_normal,
                 &params,
             );
         } else {
@@ -519,11 +543,11 @@ pub fn update_procedural_state(
 }
 
 fn draw_gizmos(
-    query: Query<(&PhysicsState, &ProceduralRigState), With<Player>>,
+    query: Query<(&GroundSpring, &ProceduralRigState), With<Player>>,
     mut rig_gizmos: Gizmos<RigGizmos>,
 ) {
-    for (physics_state, steps) in query.iter() {
-        if physics_state.ground_state.contact_point.is_none() {
+    for (ground_spring, steps) in query.iter() {
+        if ground_spring.contact.is_none() {
             continue;
         }
         for (i, state) in steps.ground_state.foot_states.iter().enumerate() {

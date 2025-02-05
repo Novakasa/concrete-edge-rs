@@ -160,88 +160,102 @@ impl PlayerAngularSpring {
     }
 }
 
-#[derive(Component, Reflect, Debug, Default, Clone)]
-pub struct PhysicsState {
-    pub external_force: Vec3,
-    pub forward_dir: Vec3,
+#[derive(Component, Debug, Default)]
+pub struct ExtForce(pub Vec3);
+
+#[derive(Component, Debug, Reflect, Default, Clone)]
+pub struct GrabState {
+    grab_position: Option<Vec3>,
+}
+
+#[derive(Debug, Clone)]
+pub struct GroundContact {
+    pub contact_point: Vec3,
+    pub contact_normal: Dir3,
+    pub toi: f32,
+}
+
+#[derive(Component, Debug)]
+pub struct GroundSpring {
+    pub cast_dir: Dir3,
+    pub contact: Option<GroundContact>,
+}
+
+impl Default for GroundSpring {
+    fn default() -> Self {
+        Self {
+            cast_dir: Dir3::NEG_Y,
+            contact: None,
+        }
+    }
+}
+
+#[derive(Component, Default)]
+pub struct GroundState {
     pub input_dir: Vec2,
-    pub ground_state: PhysicsGroundState,
-    pub air_state: PhysicsAirState,
-    pub grabbing: bool,
-    pub grab_state: Option<PhysicsGrabState>,
-}
-
-#[derive(Debug, Reflect, Default, Clone)]
-pub struct PhysicsGrabState {
-    grab_position: Vec3,
-}
-
-#[derive(Debug, Reflect, Default, Clone)]
-pub struct PhysicsGroundState {
-    pub neg_cast_vec: Vec3,
-    pub shape_toi: Option<f32>,
     pub slipping: bool,
     pub jumping: bool,
     pub crouching: bool,
-    pub contact_point: Option<Vec3>,
-    pub contact_normal: Option<Vec3>,
+    pub grabbing: bool,
+}
+
+#[derive(Component, Debug, Reflect, Default, Clone)]
+pub struct GroundForce {
     pub tangential_force: Vec3,
     pub angle_force: Vec3,
     pub normal_force: Vec3,
     pub slope_force: Vec3,
+    pub target_force: Vec3,
 }
 
-#[derive(Debug, Reflect, Default, Clone)]
+#[derive(Debug, Reflect, Clone)]
 pub struct PredictedContact {
     pub contact_point: Vec3,
-    pub contact_normal: Vec3,
+    pub contact_normal: Dir3,
     pub toi: f32,
     pub contact_position: Vec3,
     pub contact_velocity: Vec3,
 }
 
-#[derive(Debug, Reflect, Default, Clone)]
-pub struct PhysicsAirState {
+#[derive(Component, Debug, Reflect, Default, Clone)]
+pub struct AirPrediction {
     pub predicted_contact: Option<PredictedContact>,
-    pub arm_angular_momentum: Vec3,
 }
 
-impl PhysicsGroundState {
-    pub fn new() -> Self {
-        Self {
-            neg_cast_vec: Vec3::Y,
-            ..Default::default()
-        }
-    }
-
+impl GroundForce {
     pub fn spring_force(&self) -> Vec3 {
         self.tangential_force + self.normal_force
     }
 }
 
-impl PhysicsState {
-    pub fn new() -> Self {
-        Self {
-            forward_dir: Vec3::NEG_Z,
-            ground_state: PhysicsGroundState::new(),
-            ..Default::default()
-        }
-    }
-}
-
 pub fn predict_contact(
-    mut q_player: Query<(&mut PhysicsState, &Position, &LinearVelocity, &ComputedMass)>,
+    mut q_player: Query<(
+        &mut AirPrediction,
+        &GroundSpring,
+        &ExtForce,
+        &Position,
+        &LinearVelocity,
+        &ComputedMass,
+    )>,
     spatial_query: SpatialQuery,
     mut gizmos: Gizmos<PhysicsGizmos>,
 ) {
-    for (mut physics, Position(position), LinearVelocity(velocity), mass) in q_player.iter_mut() {
-        if physics.ground_state.contact_point.is_some() {
-            physics.air_state.predicted_contact = None;
+    for (
+        mut air_prediction,
+        ground_spring,
+        external_force,
+        Position(position),
+        LinearVelocity(velocity),
+        mass,
+    ) in q_player.iter_mut()
+    {
+        if ground_spring.contact.is_some() {
+            air_prediction.predicted_contact = None;
             continue;
         }
         let filter = SpatialQueryFilter::from_mask(Layer::Platform);
         let mut test_time = 0.0;
-        let ext_acc = physics.external_force * mass.inverse();
+        let ext_acc = external_force.0 * mass.inverse();
         'raycasts: while test_time < 2.0 {
             let origin =
                 position.clone() + *velocity * test_time + ext_acc * 0.5 * test_time.powi(2);
@@ -273,9 +287,9 @@ pub fn predict_contact(
                     RigBone::max_contact_dist(),
                     Color::WHITE.with_alpha(0.1),
                 );
-                physics.air_state.predicted_contact = Some(PredictedContact {
+                air_prediction.predicted_contact = Some(PredictedContact {
                     contact_point: coll.point2 + origin + cast_dir * coll.distance,
-                    contact_normal: coll.normal1,
+                    contact_normal: Dir3::new(coll.normal1).unwrap(),
                     toi: contact_toi,
                     contact_position: origin + cast_dir * coll.distance,
                     contact_velocity: contact_vel,
@@ -289,17 +303,21 @@ pub fn predict_contact(
 }
 
 pub fn update_landing_prediction(
-    mut q_physics: Query<&mut PhysicsState>,
+    mut q_physics: Query<(
+        &mut AirPrediction,
+        &mut GroundSpring,
+        &ExtForce,
+        &GroundState,
+    )>,
     params: Res<PlayerParams>,
 ) {
-    for mut physics in q_physics.iter_mut() {
-        if physics.ground_state.contact_point.is_some() {
+    for (air_prediction, mut ground_spring, external_force, input) in q_physics.iter_mut() {
+        if ground_spring.contact.is_some() {
             continue;
         }
-        if physics.air_state.predicted_contact.is_some() {
-            let contact = physics.air_state.predicted_contact.clone().unwrap();
-            let contact_point =
-                physics.ground_state.neg_cast_vec * (RigBone::max_contact_dist()) * 0.1;
+        if air_prediction.predicted_contact.is_some() {
+            let contact = air_prediction.predicted_contact.clone().unwrap();
+            let contact_point = ground_spring.cast_dir * (RigBone::max_contact_dist()) * 0.1;
             // println!("{:?}", contact_point);
             let _spring_force = spring_force(
                 &contact.contact_velocity,
@@ -309,22 +327,27 @@ pub fn update_landing_prediction(
             );
             // println!("{:?}", spring_force);
             // let normal_force = spring_force.project_onto(contact.contact_normal);
-            let normal_force = contact.contact_normal * physics.external_force.length() * 0.5;
-            let (_target_vel, _slope_force, target_force) =
-                get_target_force(&physics, &contact.contact_velocity, normal_force, &params);
+            let normal_force = contact.contact_normal * external_force.0.length() * 0.5;
+            let (_target_vel, _slope_force, target_force) = get_target_force(
+                &ground_spring,
+                &external_force,
+                &input,
+                &contact.contact_velocity,
+                normal_force,
+                &params,
+            );
 
-            physics.ground_state.neg_cast_vec =
-                (normal_force + target_force).try_normalize().unwrap();
+            ground_spring.cast_dir = Dir3::new(-(normal_force + target_force)).unwrap();
         }
     }
 }
 
 pub fn set_external_force(
-    mut q_physics: Query<(&mut PhysicsState, &ComputedMass, &ComputedAngularInertia)>,
+    mut q_physics: Query<(&mut ExtForce, &ComputedMass, &ComputedAngularInertia)>,
     gravity: Res<Gravity>,
 ) {
-    for (mut physics, mass, _inertia) in q_physics.iter_mut() {
-        physics.external_force = gravity.0 * mass.value();
+    for (mut external_force, mass, _inertia) in q_physics.iter_mut() {
+        external_force.0 = gravity.0 * mass.value();
     }
 }
 
@@ -336,7 +359,12 @@ pub fn update_forces(
         &Rotation,
         &LinearVelocity,
         &AngularVelocity,
-        &mut PhysicsState,
+        &mut GroundSpring,
+        &mut GroundState,
+        &mut GroundForce,
+        &mut AirPrediction,
+        &ExtForce,
+        &mut GrabState,
     )>,
     shape_cast: SpatialQuery,
     dt: Res<Time<Substeps>>,
@@ -349,20 +377,21 @@ pub fn update_forces(
         Rotation(quat),
         LinearVelocity(velocity),
         AngularVelocity(angular_vel),
-        mut physics_state,
+        mut ground_spring,
+        mut ground_state,
+        mut ground_force,
+        mut air_prediction,
+        external_force,
+        mut grab_state,
     ) in query.iter_mut()
     {
         let filter = SpatialQueryFilter::from_mask(Layer::Platform);
-        let cast_dir = -physics_state.ground_state.neg_cast_vec;
+        let cast_dir = ground_spring.cast_dir;
         let capsule_up = *quat * Vec3::Y;
         let capsule_right = *quat * Vec3::X;
-        let spring = params
-            .springs
-            .get_ground_spring(physics_state.ground_state.crouching);
-        let angular_spring = params
-            .springs
-            .get_angular_spring(physics_state.ground_state.jumping);
-        physics_state.forward_dir = *quat * Vec3::NEG_Z;
+        let spring = params.springs.get_ground_spring(ground_state.crouching);
+        let angular_spring = params.springs.get_angular_spring(ground_state.jumping);
+        let forward_dir = *quat * Vec3::NEG_Z;
         if let Some(coll) = shape_cast.cast_shape(
             &Collider::sphere(CAST_RADIUS),
             position.clone(),
@@ -374,30 +403,28 @@ pub fn update_forces(
             },
             &filter,
         ) {
-            physics_state.air_state.predicted_contact = None;
-            let normal = coll.normal1;
-            physics_state.ground_state.contact_normal = Some(normal);
-
-            physics_state.ground_state.shape_toi = Some(coll.distance);
+            air_prediction.predicted_contact = None;
+            let normal = Dir3::new(coll.normal1).unwrap();
 
             let contact_point = coll.point2 + cast_dir * coll.distance;
-            physics_state.ground_state.contact_point = Some(contact_point);
+            ground_spring.contact = Some(GroundContact {
+                contact_normal: normal,
+                contact_point,
+                toi: coll.distance,
+            });
             let spring_dir = -contact_point.normalize_or_zero();
             // let spring_dir = from_up;
 
             let mut spring_force = spring_force(velocity, spring, normal, contact_point);
-            if (spring_force + physics_state.external_force).dot(normal) > 0.0
-                && !physics_state.ground_state.jumping
-            {
-                if velocity.dot(normal) > 0.0 {
-                    let max_normal_force = 0.5 * physics_state.external_force.length();
-                    let max_spring_force = (max_normal_force
-                        - physics_state.external_force.dot(normal))
-                        / spring_dir.dot(normal);
+            if (spring_force + external_force.0).dot(normal.into()) > 0.0 && !ground_state.jumping {
+                if velocity.dot(normal.into()) > 0.0 {
+                    let max_normal_force = 0.5 * external_force.0.length();
+                    let max_spring_force = (max_normal_force - external_force.0.dot(normal.into()))
+                        / spring_dir.dot(normal.into());
                     spring_force = spring_force.clamp_length_max(max_spring_force);
                 }
             }
-            if physics_state.ground_state.jumping {
+            if ground_state.jumping {
                 spring_force = 3.5 * spring_dir;
             }
             let grounded = spring_force.length() > 0.0001;
@@ -407,18 +434,24 @@ pub fn update_forces(
                 continue;
             }
 
-            let normal_force = spring_force.dot(normal) * normal;
+            let normal_force = spring_force.dot(normal.into()) * normal;
             let friction_force = normal_force.length() * GLOBAL_FRICTION;
             let tangential_spring_force = spring_force - normal_force;
 
-            let (target_vel, slope_force, target_force) =
-                get_target_force(&physics_state, velocity, normal_force, &params);
+            let (target_vel, slope_force, target_force) = get_target_force(
+                &ground_spring,
+                &external_force,
+                &ground_state,
+                velocity,
+                normal_force,
+                &params,
+            );
 
             // println!("{:?}, {:?}", target_force, normal_force);
 
             let target_spring_dir = (target_force + normal_force).normalize_or_zero();
 
-            let raw_neg_cast_vec = (physics_state.ground_state.neg_cast_vec
+            let raw_neg_cast_vec = (-ground_spring.cast_dir.as_vec3()
                 + 12.0 * (target_spring_dir - spring_dir) * dt.delta_secs())
             .try_normalize()
             .unwrap();
@@ -426,26 +459,26 @@ pub fn update_forces(
             let cast_quat = Quat::from_rotation_arc(capsule_up, raw_neg_cast_vec);
             let angle = capsule_up.angle_between(raw_neg_cast_vec);
             // println!("{:?}", (angle, capsule_up, raw_neg_cast_vec, quat));
-            physics_state.ground_state.neg_cast_vec = if angle < 0.0001 {
-                raw_neg_cast_vec
+            ground_spring.cast_dir = if angle < 0.0001 {
+                Dir3::new(-raw_neg_cast_vec).unwrap()
             } else {
-                Quat::IDENTITY.slerp(cast_quat, angle.min(0.3 * PI) / angle) * capsule_up
+                Dir3::new(
+                    -Quat::IDENTITY.slerp(cast_quat, angle.min(0.3 * PI) / angle) * capsule_up,
+                )
+                .unwrap()
             };
 
-            let mut target_up = (-physics_state.external_force)
+            let mut target_up = (-external_force.0)
                 .normalize_or_zero()
                 .lerp(spring_dir, 0.8)
                 .normalize_or_zero();
-            if physics_state.ground_state.jumping {
+            if ground_state.jumping {
                 target_up = Vec3::Y;
             }
-            let target_right = target_vel.cross(target_up).try_normalize().unwrap_or(
-                physics_state
-                    .forward_dir
-                    .cross(target_up)
-                    .try_normalize()
-                    .unwrap(),
-            );
+            let target_right = target_vel
+                .cross(target_up)
+                .try_normalize()
+                .unwrap_or(forward_dir.cross(target_up).try_normalize().unwrap());
             let angular_spring_torque = angular_spring.stiffness
                 * Quat::from_rotation_arc(capsule_up, target_up).to_scaled_axis()
                 + (angular_spring.turn_stiffness
@@ -455,12 +488,12 @@ pub fn update_forces(
             let tangential_angle_force =
                 -normal.cross(angular_spring_torque) / (normal.dot(contact_point));
 
-            physics_state.ground_state.tangential_force =
+            ground_force.tangential_force =
                 (tangential_spring_force + tangential_angle_force).clamp_length_max(friction_force);
-            physics_state.ground_state.slope_force = slope_force;
-            physics_state.ground_state.slipping =
+            ground_force.slope_force = slope_force;
+            ground_state.slipping =
                 (tangential_spring_force + tangential_angle_force).length() > friction_force;
-            physics_state.ground_state.normal_force = normal_force;
+            ground_force.normal_force = normal_force;
 
             force.clear();
             force.apply_force_at_point(
@@ -474,28 +507,23 @@ pub fn update_forces(
             torque
                 .apply_torque(angular_spring_torque - contact_point.cross(tangential_angle_force));
         } else {
-            physics_state.ground_state.contact_point = None;
-            physics_state.ground_state.jumping = false;
+            ground_spring.contact = None;
+            ground_state.jumping = false;
 
             let angular_spring = &params.springs.angular_spring_aerial;
 
-            if let Some(contact) = physics_state.air_state.predicted_contact.clone() {
-                let target_up = physics_state.ground_state.neg_cast_vec;
-                let target_forward = contact.contact_velocity.reject_from(contact.contact_normal);
-                let target_right = target_forward.cross(target_up).try_normalize().unwrap_or(
-                    physics_state
-                        .forward_dir
-                        .cross(target_up)
-                        .try_normalize()
-                        .unwrap(),
-                );
-                let apply_turn = if physics_state.ground_state.slipping {
-                    0.0
-                } else {
-                    1.0
-                };
+            if let Some(contact) = air_prediction.predicted_contact.clone() {
+                let target_up = -ground_spring.cast_dir;
+                let target_forward = contact
+                    .contact_velocity
+                    .reject_from(contact.contact_normal.into());
+                let target_right = target_forward
+                    .cross(target_up.into())
+                    .try_normalize()
+                    .unwrap_or(forward_dir.cross(target_up.into()).try_normalize().unwrap());
+                let apply_turn = if ground_state.slipping { 0.0 } else { 1.0 };
                 let angular_spring_torque = angular_spring.stiffness
-                    * Quat::from_rotation_arc(capsule_up, target_up).to_scaled_axis()
+                    * Quat::from_rotation_arc(capsule_up, target_up.into()).to_scaled_axis()
                     + apply_turn
                         * (angular_spring.turn_stiffness
                             * Quat::from_rotation_arc(capsule_right, target_right)
@@ -508,8 +536,8 @@ pub fn update_forces(
         }
 
         let anchor = *position + capsule_up * RigBone::legacy_capsule_height() * 0.5;
-        if let Some(grab_state) = physics_state.grab_state.as_ref() {
-            let delta = grab_state.grab_position - anchor;
+        if let Some(grab_pos) = grab_state.grab_position.as_ref() {
+            let delta = grab_pos - anchor;
             let delta_dir = delta.try_normalize().unwrap_or(Vec3::ZERO);
             let anchor_vel = *velocity + angular_vel.cross(anchor - *position);
             let spring_vel = anchor_vel.dot(delta_dir) * delta_dir;
@@ -519,18 +547,13 @@ pub fn update_forces(
                     - 1.5 * spring_vel
                     - 0.6 * spring_vel_2;
             grab_force = grab_force.clamp_length_max(20.0);
-            force.apply_force_at_point(
-                grab_force,
-                grab_state.grab_position - *position,
-                Vec3::ZERO,
-            );
-        } else if physics_state.grabbing {
-            physics_state.grab_state = Some(PhysicsGrabState {
-                grab_position: anchor + capsule_up * RigBone::legacy_capsule_height() * 0.5,
-            });
+            force.apply_force_at_point(grab_force, grab_pos - *position, Vec3::ZERO);
+        } else if ground_state.grabbing {
+            grab_state.grab_position =
+                Some(anchor + capsule_up * RigBone::legacy_capsule_height() * 0.5);
         }
-        if physics_state.grab_state.is_some() && !physics_state.grabbing {
-            physics_state.grab_state = None;
+        if grab_state.grab_position.is_some() && !ground_state.grabbing {
+            grab_state.grab_position = None;
         }
     }
 }
@@ -538,11 +561,11 @@ pub fn update_forces(
 fn spring_force(
     velocity: &Vec3,
     spring: &PlayerGroundSpring,
-    normal: Vec3,
+    normal: Dir3,
     contact_point: Vec3,
 ) -> Vec3 {
     let spring_dir = -contact_point.try_normalize().unwrap();
-    let spring_vel = velocity.dot(normal) / (spring_dir.dot(normal));
+    let spring_vel = velocity.dot(normal.into()) / (spring_dir.dot(normal.into()));
     // println!("{:?}", spring_vel);
     // println!("Time {:?}", coll.time_of_impact);
     let length = contact_point.length();
@@ -556,13 +579,16 @@ fn spring_force(
 }
 
 fn get_target_force(
-    physics_state: &PhysicsState,
+    ground_spring: &GroundSpring,
+    external_force: &ExtForce,
+    input: &GroundState,
+
     velocity: &Vec3,
     normal_force: Vec3,
     params: &PlayerParams,
 ) -> (Vec3, Vec3, Vec3) {
     let normal = normal_force.normalize();
-    let ext_dir = physics_state.external_force.normalize_or_zero();
+    let ext_dir = external_force.0.normalize_or_zero();
     let tangent_plane = normal.cross(-ext_dir).normalize_or_zero();
     let tangent_slope = normal.cross(tangent_plane).normalize_or_zero();
     let tangent_z = if normal.dot(Vec3::X).abs() > 0.9999 {
@@ -571,8 +597,7 @@ fn get_target_force(
         Vec3::X.cross(normal).normalize_or_zero()
     };
     let tangent_x = -tangent_z.cross(normal);
-    let input_tangent =
-        physics_state.input_dir.x * tangent_x + physics_state.input_dir.y * tangent_z;
+    let input_tangent = input.input_dir.x * tangent_x + input.input_dir.y * tangent_z;
     // bias upwards on walls
     // input_tangent =
     //     (input_tangent - 0.5 * (1.0 - normal.dot(-ext_dir)) * tangent_slope).normalize();
@@ -581,7 +606,7 @@ fn get_target_force(
     let target_vel = input_tangent * params.physics.max_speed;
     let denominator = 1.0 - tangent_slope.dot(ext_dir).powi(2);
     let slope_force = if denominator < 1.0e-4 {
-        physics_state.external_force
+        external_force.0
     } else {
         -tangent_slope.dot(ext_dir) * normal_force.dot(ext_dir) * tangent_slope / denominator
     };

@@ -4,7 +4,7 @@ use animation::ProceduralRigState;
 use avian3d::prelude::*;
 use bevy::{
     color::palettes::{
-        css::{BLUE, GREEN, ORANGE, PINK, RED, YELLOW},
+        css::{BLUE, GREEN, ORANGE, PINK, RED},
         tailwind::CYAN_100,
     },
     prelude::*,
@@ -12,8 +12,8 @@ use bevy::{
 use camera::{CameraAnchor1stPerson, CameraAnchor3rdPerson};
 use leafwing_input_manager::prelude::*;
 use physics::{
-    PhysicsGizmos, PhysicsParams, PhysicsState, PlayerAngularSpring, PlayerGroundSpring,
-    SpringParams, CAPSULE_HEIGHT, CAPSULE_RADIUS, CAST_RADIUS,
+    AirPrediction, GroundContact, GroundForce, PhysicsGizmos, PhysicsParams, PlayerAngularSpring,
+    PlayerGroundSpring, SpringParams, CAPSULE_HEIGHT, CAPSULE_RADIUS, CAST_RADIUS,
 };
 use rig::RigBone;
 use serde::{Deserialize, Serialize};
@@ -147,7 +147,6 @@ fn spawn_player(
                 ExternalForce::default().with_persistence(false),
                 ExternalTorque::default().with_persistence(false),
                 InputManagerBundle::<PlayerAction>::with_map(PlayerAction::default_input_map()),
-                physics::PhysicsState::new(),
             ))
             .insert((Restitution::new(0.0), Friction::new(0.0)))
             .insert((
@@ -157,6 +156,13 @@ fn spawn_player(
                 Mass(0.125),
                 AngularInertia::new(0.006 * Vec3::new(1.0, 1.0, 1.0)),
             ))
+            .insert((
+                physics::GroundSpring::default(),
+                physics::GroundForce::default(),
+                physics::GroundState::default(),
+                physics::AirPrediction::default(),
+                physics::ExtForce::default(),
+            ))
             .id();
     }
 }
@@ -165,7 +171,6 @@ fn respawn_player(
     query: Query<&Transform, (With<PlayerSpawn>, Without<Player>)>,
     mut player: Query<
         (
-            &mut PhysicsState,
             &mut ProceduralRigState,
             &mut Transform,
             &mut LinearVelocity,
@@ -178,15 +183,9 @@ fn respawn_player(
     for spawn_transform in query.iter() {
         for action_state in input_query.iter() {
             if action_state.just_pressed(&PlayerAction::Respawn) {
-                if let Ok((
-                    mut physics_state,
-                    mut rig_state,
-                    mut transform,
-                    mut velocity,
-                    mut angular_velocity,
-                )) = player.get_single_mut()
+                if let Ok((mut rig_state, mut transform, mut velocity, mut angular_velocity)) =
+                    player.get_single_mut()
                 {
-                    *physics_state = PhysicsState::new();
                     *rig_state = ProceduralRigState::default();
                     *transform = *spawn_transform;
                     *velocity = LinearVelocity::default();
@@ -198,7 +197,14 @@ fn respawn_player(
 }
 
 fn player_controls(
-    mut query: Query<(&ActionState<PlayerAction>, &mut physics::PhysicsState), With<Player>>,
+    mut query: Query<
+        (
+            &ActionState<PlayerAction>,
+            &mut physics::GroundState,
+            &physics::GroundSpring,
+        ),
+        With<Player>,
+    >,
     mut q_cam3: Query<&mut CameraAnchor3rdPerson, Without<CameraAnchor1stPerson>>,
     mut q_cam1: Query<&mut CameraAnchor1stPerson, Without<CameraAnchor3rdPerson>>,
     mut next_rewind_state: ResMut<NextState<rewind::RewindState>>,
@@ -207,7 +213,7 @@ fn player_controls(
     time: Res<Time>,
     mouse_state: Res<State<MouseInteraction>>,
 ) {
-    for (action_state, mut move_state) in query.iter_mut() {
+    for (action_state, mut ground_state, ground_spring) in query.iter_mut() {
         let move_input = action_state
             .clamped_axis_pair(&PlayerAction::Move)
             .normalize_or_zero();
@@ -226,17 +232,15 @@ fn player_controls(
                 }
             }
 
-            move_state.input_dir = (Quat::from_euler(EulerRot::YXZ, cam3.yaw, 0.0, 0.0)
+            ground_state.input_dir = (Quat::from_euler(EulerRot::YXZ, cam3.yaw, 0.0, 0.0)
                 * Vec3::new(move_input.x, 0.0, -move_input.y))
             .xz();
             // println!("{:?}", move_state.acc_dir);
-            if action_state.just_pressed(&PlayerAction::Jump)
-                && move_state.ground_state.contact_point.is_some()
-            {
-                move_state.ground_state.jumping = true;
+            if action_state.just_pressed(&PlayerAction::Jump) && ground_spring.contact.is_some() {
+                ground_state.jumping = true;
             }
             if !action_state.pressed(&PlayerAction::Jump) {
-                move_state.ground_state.jumping = false;
+                ground_state.jumping = false;
             }
             if action_state.just_pressed(&PlayerAction::Rewind) {
                 next_rewind_state.set(rewind::RewindState::Rewinding);
@@ -249,8 +253,8 @@ fn player_controls(
                 rewind_info.rewind_time += move_input.x * time.delta_secs();
             }
 
-            move_state.grabbing = action_state.pressed(&PlayerAction::Grab);
-            move_state.ground_state.crouching = action_state.pressed(&PlayerAction::Crouch);
+            ground_state.grabbing = action_state.pressed(&PlayerAction::Grab);
+            ground_state.crouching = action_state.pressed(&PlayerAction::Crouch);
         }
     }
 }
@@ -266,53 +270,71 @@ fn set_visible<const VAL: bool>(mut query: Query<&mut Visibility, With<Player>>)
 }
 
 fn draw_debug_gizmos(
-    mut query: Query<(&Position, &Rotation, &LinearVelocity, &PhysicsState), With<Player>>,
+    mut query: Query<
+        (
+            &Position,
+            &Rotation,
+            &LinearVelocity,
+            &physics::GroundSpring,
+            &physics::GroundState,
+            &AirPrediction,
+            &GroundForce,
+        ),
+        With<Player>,
+    >,
     mut physics_gizmos: Gizmos<PhysicsGizmos>,
 ) {
-    for (Position(pos), Rotation(quat), LinearVelocity(vel), physics_state) in query.iter_mut() {
+    for (
+        Position(pos),
+        Rotation(quat),
+        LinearVelocity(vel),
+        ground_spring,
+        ground_state,
+        air_prediction,
+        ground_force,
+    ) in query.iter_mut()
+    {
         let pos = pos.clone();
-        if let Some(contact) = &physics_state.air_state.predicted_contact {
+        if let Some(contact) = &air_prediction.predicted_contact {
             physics_gizmos.sphere(
                 Isometry3d::from_translation(contact.contact_point),
                 0.1,
                 Color::from(RED),
             );
         }
-        if let Some(contact_point) = physics_state.ground_state.contact_point {
-            let contact = pos + contact_point;
-            let normal = physics_state.ground_state.contact_normal.unwrap();
-            let contact_color = if physics_state.ground_state.slipping {
+        if let Some(ground_contact) = ground_spring.contact.as_ref() {
+            let contact = pos + ground_contact.contact_point;
+            let normal = ground_contact.contact_normal;
+            let contact_color = if ground_state.slipping {
                 Color::from(RED)
             } else {
                 Color::from(GREEN)
             };
             physics_gizmos.sphere(
                 Isometry3d::from_translation(
-                    pos.clone()
-                        - physics_state.ground_state.shape_toi.unwrap()
-                            * physics_state.ground_state.neg_cast_vec,
+                    pos.clone() + ground_contact.toi * ground_spring.cast_dir,
                 ),
                 CAST_RADIUS,
                 contact_color,
             );
             physics_gizmos.arrow(
                 contact,
-                contact_point + physics_state.ground_state.spring_force(),
+                contact + ground_force.spring_force(),
                 Color::from(CYAN_100),
             );
             physics_gizmos.arrow(
                 contact,
-                contact + physics_state.ground_state.normal_force,
+                contact + ground_force.normal_force,
                 Color::from(BLUE),
             );
 
             physics_gizmos.arrow(
                 contact,
-                contact + physics_state.ground_state.tangential_force,
+                contact + ground_force.tangential_force,
                 Color::from(PINK),
             );
 
-            let tangent_vel = vel.reject_from(normal);
+            let tangent_vel = vel.reject_from(normal.into());
             physics_gizmos.arrow(contact, contact + tangent_vel, Color::from(ORANGE));
             // physics_gizmos.arrow(contact, contact + debug.target_vel, Color::from(GREEN));
             // physics_gizmos.arrow(contact, contact + debug.target_force, Color::from(RED));
@@ -321,8 +343,7 @@ fn draw_debug_gizmos(
             physics_gizmos.sphere(
                 Isometry3d::from_translation(
                     pos.clone()
-                        - (RigBone::max_contact_dist() - CAST_RADIUS)
-                            * physics_state.ground_state.neg_cast_vec,
+                        + (RigBone::max_contact_dist() - CAST_RADIUS) * ground_spring.cast_dir,
                 ),
                 CAST_RADIUS,
                 Color::BLACK,

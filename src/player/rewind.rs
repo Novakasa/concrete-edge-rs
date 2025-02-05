@@ -55,7 +55,6 @@ pub struct HistoryState {
     pub velocity: Vec3,
     pub rotation: Quat,
     pub angular_velocity: Vec3,
-    pub physics_state: PhysicsState,
     pub procedural_rig: ProceduralRigState,
 }
 
@@ -65,7 +64,6 @@ fn record_history(
         &LinearVelocity,
         &Rotation,
         &AngularVelocity,
-        &PhysicsState,
         &ProceduralRigState,
         &mut RewindHistory,
     )>,
@@ -77,7 +75,6 @@ fn record_history(
         LinearVelocity(velocity),
         Rotation(rotation),
         AngularVelocity(angular_velocity),
-        physics_state,
         rig_state,
         mut history,
     ) in q_physics.iter_mut()
@@ -88,7 +85,6 @@ fn record_history(
             velocity: *velocity,
             rotation: *rotation,
             angular_velocity: *angular_velocity,
-            physics_state: physics_state.clone(),
             procedural_rig: rig_state.clone(),
         });
         if history.0.len() > 3000 {
@@ -121,28 +117,19 @@ fn update_rewind(
         &mut Rotation,
         &mut LinearVelocity,
         &mut AngularVelocity,
-        &mut PhysicsState,
         &mut ProceduralRigState,
         &RewindHistory,
     )>,
     mut rewind_info: ResMut<RewindInfo>,
 ) {
-    for (
-        mut position,
-        mut rotation,
-        mut velocity,
-        mut angular_velocity,
-        mut physics_state,
-        mut rig_state,
-        history,
-    ) in q_physics.iter_mut()
+    for (mut position, mut rotation, mut velocity, mut angular_velocity, mut rig_state, history) in
+        q_physics.iter_mut()
     {
         let entry = history.get_state_at_time(&rewind_info.rewind_time);
         position.0 = entry.position;
         rotation.0 = entry.rotation;
         velocity.0 = entry.velocity;
         angular_velocity.0 = entry.angular_velocity;
-        *physics_state = entry.physics_state.clone();
         *rig_state = entry.procedural_rig.clone();
 
         rewind_info.rewind_time = rewind_info
