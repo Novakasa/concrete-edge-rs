@@ -214,7 +214,7 @@ fn player_controls(
     time: Res<Time>,
     mouse_state: Res<State<MouseInteraction>>,
 ) {
-    for (action_state, mut ground_state, ground_spring) in query.iter_mut() {
+    for (action_state, mut input, ground_spring) in query.iter_mut() {
         let move_input = action_state
             .clamped_axis_pair(&PlayerAction::Move)
             .normalize_or_zero();
@@ -233,15 +233,15 @@ fn player_controls(
                 }
             }
 
-            ground_state.input_dir = (Quat::from_euler(EulerRot::YXZ, cam3.yaw, 0.0, 0.0)
+            input.input_dir = (Quat::from_euler(EulerRot::YXZ, cam3.yaw, 0.0, 0.0)
                 * Vec3::new(move_input.x, 0.0, -move_input.y))
             .xz();
             // println!("{:?}", move_state.acc_dir);
             if action_state.just_pressed(&PlayerAction::Jump) && ground_spring.contact.is_some() {
-                ground_state.jumping = true;
+                input.jumping = true;
             }
             if !action_state.pressed(&PlayerAction::Jump) {
-                ground_state.jumping = false;
+                input.jumping = false;
             }
             if action_state.just_pressed(&PlayerAction::Rewind) {
                 next_rewind_state.set(rewind::RewindState::Rewinding);
@@ -254,8 +254,8 @@ fn player_controls(
                 rewind_info.rewind_time += move_input.x * time.delta_secs();
             }
 
-            ground_state.grabbing = action_state.pressed(&PlayerAction::Grab);
-            ground_state.crouching = action_state.pressed(&PlayerAction::Crouch);
+            input.grabbing = action_state.pressed(&PlayerAction::Grab);
+            input.crouching = action_state.pressed(&PlayerAction::Crouch);
         }
     }
 }
