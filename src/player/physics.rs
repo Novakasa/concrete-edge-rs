@@ -160,32 +160,11 @@ impl PlayerAngularSpring {
     }
 }
 
-#[derive(Component, Reflect, Debug, Default)]
-pub struct PhysicsDebugInfo {
-    pub grounded: bool,
-    pub spring_force: Vec3,
-    pub spring_torque: Vec3,
-    pub normal_force: Vec3,
-    pub tangential_force: Vec3,
-    pub shape_toi: f32,
-    pub cast_dir: Vec3,
-    pub spring_dir: Vec3,
-    pub contact_point: Vec3,
-    pub position: Vec3,
-    pub angle_force: Vec3,
-    pub ground_normal: Vec3,
-    pub tangent_vel: Vec3,
-    pub target_vel: Vec3,
-    pub target_force: Vec3,
-    pub delta_quat: Quat,
-}
-
 #[derive(Component, Reflect, Debug, Default, Clone)]
 pub struct PhysicsState {
     pub external_force: Vec3,
     pub forward_dir: Vec3,
     pub input_dir: Vec2,
-    prev_substep_vel: Vec3,
     pub ground_state: PhysicsGroundState,
     pub air_state: PhysicsAirState,
     pub grabbing: bool,
@@ -200,12 +179,14 @@ pub struct PhysicsGrabState {
 #[derive(Debug, Reflect, Default, Clone)]
 pub struct PhysicsGroundState {
     pub neg_cast_vec: Vec3,
+    pub shape_toi: Option<f32>,
     pub slipping: bool,
     pub jumping: bool,
     pub crouching: bool,
     pub contact_point: Option<Vec3>,
     pub contact_normal: Option<Vec3>,
     pub tangential_force: Vec3,
+    pub angle_force: Vec3,
     pub normal_force: Vec3,
     pub slope_force: Vec3,
 }
@@ -356,7 +337,6 @@ pub fn update_forces(
         &LinearVelocity,
         &AngularVelocity,
         &mut PhysicsState,
-        &mut PhysicsDebugInfo,
     )>,
     shape_cast: SpatialQuery,
     dt: Res<Time<Substeps>>,
@@ -370,7 +350,6 @@ pub fn update_forces(
         LinearVelocity(velocity),
         AngularVelocity(angular_vel),
         mut physics_state,
-        mut debug,
     ) in query.iter_mut()
     {
         let filter = SpatialQueryFilter::from_mask(Layer::Platform);
@@ -397,16 +376,14 @@ pub fn update_forces(
         ) {
             physics_state.air_state.predicted_contact = None;
             let normal = coll.normal1;
-            debug.ground_normal = normal;
             physics_state.ground_state.contact_normal = Some(normal);
+
+            physics_state.ground_state.shape_toi = Some(coll.distance);
 
             let contact_point = coll.point2 + cast_dir * coll.distance;
             physics_state.ground_state.contact_point = Some(contact_point);
             let spring_dir = -contact_point.normalize_or_zero();
             // let spring_dir = from_up;
-            debug.contact_point = contact_point;
-            debug.shape_toi = coll.distance;
-            debug.cast_dir = cast_dir;
 
             let mut spring_force = spring_force(velocity, spring, normal, contact_point);
             if (spring_force + physics_state.external_force).dot(normal) > 0.0
@@ -424,26 +401,19 @@ pub fn update_forces(
                 spring_force = 3.5 * spring_dir;
             }
             let grounded = spring_force.length() > 0.0001;
-            debug.grounded = grounded;
             if !grounded {
                 force.clear();
                 torque.clear();
                 continue;
             }
 
-            debug.spring_force = spring_force;
-
             let normal_force = spring_force.dot(normal) * normal;
-            debug.normal_force = normal_force;
             let friction_force = normal_force.length() * GLOBAL_FRICTION;
             let tangential_spring_force = spring_force - normal_force;
-            debug.tangential_force = tangential_spring_force;
 
             let (target_vel, slope_force, target_force) =
                 get_target_force(&physics_state, velocity, normal_force, &params);
 
-            physics_state.prev_substep_vel = velocity.clone();
-            debug.target_force = target_force;
             // println!("{:?}, {:?}", target_force, normal_force);
 
             let target_spring_dir = (target_force + normal_force).normalize_or_zero();
@@ -482,12 +452,9 @@ pub fn update_forces(
                     * Quat::from_rotation_arc(capsule_right, target_right).to_scaled_axis())
                 - angular_spring.damping * angular_vel.clone();
 
-            debug.spring_torque = angular_spring_torque;
-
             let tangential_angle_force =
                 -normal.cross(angular_spring_torque) / (normal.dot(contact_point));
 
-            debug.angle_force = tangential_angle_force;
             physics_state.ground_state.tangential_force =
                 (tangential_spring_force + tangential_angle_force).clamp_length_max(friction_force);
             physics_state.ground_state.slope_force = slope_force;
@@ -507,7 +474,6 @@ pub fn update_forces(
             torque
                 .apply_torque(angular_spring_torque - contact_point.cross(tangential_angle_force));
         } else {
-            debug.grounded = false;
             physics_state.ground_state.contact_point = None;
             physics_state.ground_state.jumping = false;
 

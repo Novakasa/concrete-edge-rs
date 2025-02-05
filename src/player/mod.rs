@@ -12,8 +12,8 @@ use bevy::{
 use camera::{CameraAnchor1stPerson, CameraAnchor3rdPerson};
 use leafwing_input_manager::prelude::*;
 use physics::{
-    PhysicsDebugInfo, PhysicsGizmos, PhysicsParams, PhysicsState, PlayerAngularSpring,
-    PlayerGroundSpring, SpringParams, CAPSULE_HEIGHT, CAPSULE_RADIUS, CAST_RADIUS,
+    PhysicsGizmos, PhysicsParams, PhysicsState, PlayerAngularSpring, PlayerGroundSpring,
+    SpringParams, CAPSULE_HEIGHT, CAPSULE_RADIUS, CAST_RADIUS,
 };
 use rig::RigBone;
 use serde::{Deserialize, Serialize};
@@ -22,6 +22,7 @@ use crate::MouseInteraction;
 
 pub mod animation;
 pub mod camera;
+pub mod ground_animation;
 pub mod physics;
 pub mod rewind;
 pub mod rig;
@@ -147,7 +148,6 @@ fn spawn_player(
                 ExternalTorque::default().with_persistence(false),
                 InputManagerBundle::<PlayerAction>::with_map(PlayerAction::default_input_map()),
                 physics::PhysicsState::new(),
-                physics::PhysicsDebugInfo::default(),
             ))
             .insert((Restitution::new(0.0), Friction::new(0.0)))
             .insert((
@@ -266,21 +266,11 @@ fn set_visible<const VAL: bool>(mut query: Query<&mut Visibility, With<Player>>)
 }
 
 fn draw_debug_gizmos(
-    mut query: Query<
-        (
-            &PhysicsDebugInfo,
-            &Position,
-            &Rotation,
-            &LinearVelocity,
-            &PhysicsState,
-        ),
-        With<Player>,
-    >,
+    mut query: Query<(&Position, &Rotation, &LinearVelocity, &PhysicsState), With<Player>>,
     mut physics_gizmos: Gizmos<PhysicsGizmos>,
 ) {
-    for (debug, Position(position), Rotation(quat), LinearVelocity(_vel), physics_state) in
-        query.iter_mut()
-    {
+    for (Position(pos), Rotation(quat), LinearVelocity(vel), physics_state) in query.iter_mut() {
+        let pos = pos.clone();
         if let Some(contact) = &physics_state.air_state.predicted_contact {
             physics_gizmos.sphere(
                 Isometry3d::from_translation(contact.contact_point),
@@ -288,64 +278,49 @@ fn draw_debug_gizmos(
                 Color::from(RED),
             );
         }
-        if physics_state.ground_state.contact_point.is_some() {
+        if let Some(contact_point) = physics_state.ground_state.contact_point {
+            let contact = pos + contact_point;
+            let normal = physics_state.ground_state.contact_normal.unwrap();
             let contact_color = if physics_state.ground_state.slipping {
                 Color::from(RED)
             } else {
                 Color::from(GREEN)
             };
             physics_gizmos.sphere(
-                Isometry3d::from_translation(position.clone() + debug.shape_toi * debug.cast_dir),
+                Isometry3d::from_translation(
+                    pos.clone()
+                        - physics_state.ground_state.shape_toi.unwrap()
+                            * physics_state.ground_state.neg_cast_vec,
+                ),
                 CAST_RADIUS,
                 contact_color,
             );
             physics_gizmos.arrow(
-                position.clone() + debug.contact_point,
-                position.clone() + debug.contact_point + debug.spring_force,
+                contact,
+                contact_point + physics_state.ground_state.spring_force(),
                 Color::from(CYAN_100),
             );
             physics_gizmos.arrow(
-                position.clone() + debug.contact_point,
-                position.clone() + debug.contact_point + debug.normal_force,
+                contact,
+                contact + physics_state.ground_state.normal_force,
                 Color::from(BLUE),
             );
 
             physics_gizmos.arrow(
-                position.clone() + debug.contact_point,
-                position.clone() + debug.contact_point + debug.tangential_force,
+                contact,
+                contact + physics_state.ground_state.tangential_force,
                 Color::from(PINK),
             );
 
-            physics_gizmos.arrow(
-                position.clone() + debug.contact_point,
-                position.clone() + debug.contact_point + debug.tangent_vel,
-                Color::from(ORANGE),
-            );
-            physics_gizmos.arrow(
-                position.clone() + debug.contact_point,
-                position.clone() + debug.contact_point + debug.target_vel,
-                Color::from(GREEN),
-            );
-            physics_gizmos.arrow(
-                position.clone() + debug.contact_point,
-                position.clone() + debug.contact_point + debug.target_force,
-                Color::from(RED),
-            );
-            physics_gizmos.arrow(
-                position.clone() + debug.contact_point + debug.tangential_force,
-                position.clone() + debug.contact_point + debug.tangential_force + debug.angle_force,
-                Color::from(YELLOW),
-            );
-            physics_gizmos.arrow(
-                position.clone(),
-                position.clone() + debug.spring_torque,
-                Color::from(YELLOW),
-            );
+            let tangent_vel = vel.reject_from(normal);
+            physics_gizmos.arrow(contact, contact + tangent_vel, Color::from(ORANGE));
+            // physics_gizmos.arrow(contact, contact + debug.target_vel, Color::from(GREEN));
+            // physics_gizmos.arrow(contact, contact + debug.target_force, Color::from(RED));
         } else {
             // draw circle at end of cast
             physics_gizmos.sphere(
                 Isometry3d::from_translation(
-                    position.clone()
+                    pos.clone()
                         - (RigBone::max_contact_dist() - CAST_RADIUS)
                             * physics_state.ground_state.neg_cast_vec,
                 ),
@@ -356,19 +331,17 @@ fn draw_debug_gizmos(
         physics_gizmos
             .primitive_3d(
                 &Capsule3d::new(CAPSULE_RADIUS, CAPSULE_HEIGHT - CAPSULE_RADIUS * 2.0),
-                Isometry3d::new(position.clone(), quat.clone()),
+                Isometry3d::new(pos.clone(), quat.clone()),
                 Color::WHITE,
             )
             .resolution(6);
-        physics_gizmos.arrow(
-            *position,
-            *position + 0.2 * physics_state.forward_dir,
-            Color::from(BLUE),
-        );
-        physics_gizmos.arrow(
-            *position,
-            *position - 0.2 * physics_state.forward_dir,
-            Color::from(RED),
+        physics_gizmos.cross(
+            Isometry3d {
+                rotation: quat.clone(),
+                translation: pos.into(),
+            },
+            0.1,
+            Color::WHITE,
         );
     }
 }
