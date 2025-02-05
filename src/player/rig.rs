@@ -54,6 +54,8 @@ impl RigBone {
         let raw = match self {
             Self::LowerBack => 1.1,
             Self::UpperBack => 1.1,
+            Self::LeftUpperArm | Self::RightUpperArm => 0.9,
+            Self::LeftLowerArm | Self::RightLowerArm => 0.85,
             _ => 1.0,
         };
         raw * STICK_RADIUS

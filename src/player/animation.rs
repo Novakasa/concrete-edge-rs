@@ -336,7 +336,7 @@ impl ProceduralRigState {
                 .normalize_or_zero()
                 .lerp(Vec3::Y, 0.8)
                 .normalize_or_zero()
-                * 0.13;
+                * 0.15;
         transforms.insert(RigBone::Head, Transform::from_translation(head_pos));
         center_of_mass_remainder -= head_pos * RigBone::Head.relative_mass();
 
@@ -414,10 +414,13 @@ impl ProceduralRigState {
                 0.5 * RigBone::legacy_capsule_radius(),
                 Color::from(RED),
             );
-            let shoulder_pos = self.neck_pos - upper_back_up * 0.4 * RigBone::UpperBack.length();
+            let shoulder_pos = self.neck_pos - upper_back_up * 0.5 * RigBone::UpperBack.length();
             for (i, opposite_foot_pos) in feet_positions.iter().rev().enumerate() {
                 let lr = if i == 0 { 1.0 } else { -1.0 };
-                let offset = hip_offset_dir * 1.0 * lr * RigBone::legacy_capsule_radius();
+                let shoulder_offset_dir = upper_back_up.cross(self.hip_forward).normalize_or_zero();
+                let shoulder_offset =
+                    shoulder_offset_dir * 0.3 * lr * RigBone::legacy_capsule_radius();
+                let arm_offset = shoulder_offset_dir * 1.0 * lr * RigBone::legacy_capsule_radius();
                 let (upper_bone, lower_bone) = match i {
                     0 => (RigBone::LeftUpperArm, RigBone::LeftLowerArm),
                     1 => (RigBone::RightUpperArm, RigBone::RightLowerArm),
@@ -425,22 +428,23 @@ impl ProceduralRigState {
                 };
                 let arm_pos = (*opposite_foot_pos - feet_center_of_mass) * 0.7
                     + arms_center_of_mass
-                    + offset
+                    + arm_offset
                     + self.hip_forward * 0.2;
 
                 let (pos1, pos2) = ik2_positions(
                     RigBone::LeftUpperArm.length(),
                     RigBone::LeftLowerArm.length(),
-                    arm_pos - shoulder_pos,
+                    arm_pos - shoulder_pos - shoulder_offset,
                     -self.hip_forward,
                 );
-                let elbow_pos = shoulder_pos + pos1;
-                let hand_pos = shoulder_pos + pos2;
+                let elbow_pos = shoulder_pos + pos1 + shoulder_offset;
+                let hand_pos = shoulder_pos + pos2 + shoulder_offset;
 
-                let upper_up = (shoulder_pos - elbow_pos).normalize_or_zero();
+                let upper_up = (shoulder_pos + shoulder_offset - elbow_pos).normalize_or_zero();
                 let upper_forward = Vec3::X.cross(upper_up).normalize_or_zero();
-                let upper_transform = Transform::from_translation(0.5 * (elbow_pos + shoulder_pos))
-                    .looking_to(upper_forward, upper_up);
+                let upper_transform =
+                    Transform::from_translation(0.5 * (elbow_pos + shoulder_pos + shoulder_offset))
+                        .looking_to(upper_forward, upper_up);
                 transforms.insert(upper_bone, upper_transform);
 
                 let lower_up = (elbow_pos - hand_pos).normalize_or_zero();
