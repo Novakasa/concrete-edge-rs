@@ -14,7 +14,7 @@ pub struct RewindInfo {
     pub latest_time: f32,
 }
 
-#[derive(Component, Reflect, Debug, Default)]
+#[derive(Component, Debug, Default)]
 pub struct RewindHistory(pub Vec<HistoryState>);
 
 impl RewindHistory {
@@ -48,7 +48,7 @@ impl RewindHistory {
     }
 }
 
-#[derive(Component, Reflect, Debug, Default, Clone)]
+#[derive(Component, Debug, Clone)]
 pub struct HistoryState {
     pub time: f32,
     pub position: Vec3,
@@ -56,6 +56,11 @@ pub struct HistoryState {
     pub rotation: Quat,
     pub angular_velocity: Vec3,
     pub procedural_rig: ProceduralRigState,
+    pub external_force: ExtForce,
+    pub input: PlayerInput,
+    pub air_prediction: AirPrediction,
+    pub grab_state: GrabState,
+    pub ground_spring: GroundSpring,
 }
 
 fn record_history(
@@ -66,6 +71,11 @@ fn record_history(
         &AngularVelocity,
         &ProceduralRigState,
         &mut RewindHistory,
+        &ExtForce,
+        &PlayerInput,
+        &AirPrediction,
+        &GrabState,
+        &GroundSpring,
     )>,
     mut rewind_info: ResMut<RewindInfo>,
     physics_time: Res<Time<Physics>>,
@@ -77,6 +87,11 @@ fn record_history(
         AngularVelocity(angular_velocity),
         rig_state,
         mut history,
+        external_force,
+        input,
+        air_prediction,
+        grab_state,
+        ground_spring,
     ) in q_physics.iter_mut()
     {
         history.0.push(HistoryState {
@@ -86,6 +101,11 @@ fn record_history(
             rotation: *rotation,
             angular_velocity: *angular_velocity,
             procedural_rig: rig_state.clone(),
+            external_force: external_force.clone(),
+            input: input.clone(),
+            air_prediction: air_prediction.clone(),
+            grab_state: grab_state.clone(),
+            ground_spring: ground_spring.clone(),
         });
         if history.0.len() > 3000 {
             history.0.remove(0);
@@ -119,11 +139,27 @@ fn update_rewind(
         &mut AngularVelocity,
         &mut ProceduralRigState,
         &RewindHistory,
+        &mut ExtForce,
+        &mut PlayerInput,
+        &mut AirPrediction,
+        &mut GrabState,
+        &mut GroundSpring,
     )>,
     mut rewind_info: ResMut<RewindInfo>,
 ) {
-    for (mut position, mut rotation, mut velocity, mut angular_velocity, mut rig_state, history) in
-        q_physics.iter_mut()
+    for (
+        mut position,
+        mut rotation,
+        mut velocity,
+        mut angular_velocity,
+        mut rig_state,
+        history,
+        mut external_force,
+        mut input,
+        mut air_prediction,
+        mut grab_state,
+        mut ground_spring,
+    ) in q_physics.iter_mut()
     {
         let entry = history.get_state_at_time(&rewind_info.rewind_time);
         position.0 = entry.position;
@@ -131,6 +167,11 @@ fn update_rewind(
         velocity.0 = entry.velocity;
         angular_velocity.0 = entry.angular_velocity;
         *rig_state = entry.procedural_rig.clone();
+        *external_force = entry.external_force.clone();
+        *input = entry.input.clone();
+        *air_prediction = entry.air_prediction.clone();
+        *grab_state = entry.grab_state.clone();
+        *ground_spring = entry.ground_spring.clone();
 
         rewind_info.rewind_time = rewind_info
             .rewind_time

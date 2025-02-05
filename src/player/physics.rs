@@ -160,7 +160,7 @@ impl PlayerAngularSpring {
     }
 }
 
-#[derive(Component, Debug, Default)]
+#[derive(Component, Debug, Default, Clone)]
 pub struct ExtForce(pub Vec3);
 
 #[derive(Component, Debug, Reflect, Default, Clone)]
@@ -175,7 +175,7 @@ pub struct GroundContact {
     pub toi: f32,
 }
 
-#[derive(Component, Debug)]
+#[derive(Component, Debug, Clone)]
 pub struct GroundSpring {
     pub cast_dir: Dir3,
     pub contact: Option<GroundContact>,
@@ -190,7 +190,7 @@ impl Default for GroundSpring {
     }
 }
 
-#[derive(Component, Default)]
+#[derive(Component, Default, Clone, Debug)]
 pub struct PlayerInput {
     pub input_dir: Vec2,
     pub jumping: bool,
