@@ -162,6 +162,7 @@ fn spawn_player(
                 physics::GroundState::default(),
                 physics::AirPrediction::default(),
                 physics::ExtForce::default(),
+                physics::GrabState::default(),
             ))
             .id();
     }
