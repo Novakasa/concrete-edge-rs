@@ -191,9 +191,8 @@ impl Default for GroundSpring {
 }
 
 #[derive(Component, Default)]
-pub struct GroundState {
+pub struct PlayerInput {
     pub input_dir: Vec2,
-    pub slipping: bool,
     pub jumping: bool,
     pub crouching: bool,
     pub grabbing: bool,
@@ -206,6 +205,7 @@ pub struct GroundForce {
     pub normal_force: Vec3,
     pub slope_force: Vec3,
     pub target_force: Vec3,
+    pub slipping: bool,
 }
 
 #[derive(Debug, Reflect, Clone)]
@@ -307,7 +307,7 @@ pub fn update_landing_prediction(
         &mut AirPrediction,
         &mut GroundSpring,
         &ExtForce,
-        &GroundState,
+        &PlayerInput,
     )>,
     params: Res<PlayerParams>,
 ) {
@@ -329,7 +329,6 @@ pub fn update_landing_prediction(
             // let normal_force = spring_force.project_onto(contact.contact_normal);
             let normal_force = contact.contact_normal * external_force.0.length() * 0.5;
             let (_target_vel, _slope_force, target_force) = get_target_force(
-                &ground_spring,
                 &external_force,
                 &input,
                 &contact.contact_velocity,
@@ -360,7 +359,7 @@ pub fn update_forces(
         &LinearVelocity,
         &AngularVelocity,
         &mut GroundSpring,
-        &mut GroundState,
+        &mut PlayerInput,
         &mut GroundForce,
         &mut AirPrediction,
         &ExtForce,
@@ -378,7 +377,7 @@ pub fn update_forces(
         LinearVelocity(velocity),
         AngularVelocity(angular_vel),
         mut ground_spring,
-        mut ground_state,
+        mut input,
         mut ground_force,
         mut air_prediction,
         external_force,
@@ -388,8 +387,8 @@ pub fn update_forces(
         let filter = SpatialQueryFilter::from_mask(Layer::Platform);
         let capsule_up = *quat * Vec3::Y;
         let capsule_right = *quat * Vec3::X;
-        let spring = params.springs.get_ground_spring(ground_state.crouching);
-        let angular_spring = params.springs.get_angular_spring(ground_state.jumping);
+        let spring = params.springs.get_ground_spring(input.crouching);
+        let angular_spring = params.springs.get_angular_spring(input.jumping);
         let forward_dir = *quat * Vec3::NEG_Z;
         if let Some(coll) = shape_cast.cast_shape(
             &Collider::sphere(CAST_RADIUS),
@@ -415,7 +414,7 @@ pub fn update_forces(
             // let spring_dir = from_up;
 
             let mut spring_force = spring_force(velocity, spring, normal, contact_point);
-            if (spring_force + external_force.0).dot(normal.into()) > 0.0 && !ground_state.jumping {
+            if (spring_force + external_force.0).dot(normal.into()) > 0.0 && !input.jumping {
                 if velocity.dot(normal.into()) > 0.0 {
                     let max_normal_force = 0.5 * external_force.0.length();
                     let max_spring_force = (max_normal_force - external_force.0.dot(normal.into()))
@@ -423,7 +422,7 @@ pub fn update_forces(
                     spring_force = spring_force.clamp_length_max(max_spring_force);
                 }
             }
-            if ground_state.jumping {
+            if input.jumping {
                 spring_force = 3.5 * spring_dir;
             }
             let grounded = spring_force.length() > 0.0001;
@@ -437,14 +436,8 @@ pub fn update_forces(
             let friction_force = normal_force.length() * GLOBAL_FRICTION;
             let tangential_spring_force = spring_force - normal_force;
 
-            let (target_vel, slope_force, target_force) = get_target_force(
-                &ground_spring,
-                &external_force,
-                &ground_state,
-                velocity,
-                normal_force,
-                &params,
-            );
+            let (target_vel, slope_force, target_force) =
+                get_target_force(&external_force, &input, velocity, normal_force, &params);
 
             // println!("{:?}, {:?}", target_force, normal_force);
 
@@ -471,7 +464,7 @@ pub fn update_forces(
                 .normalize_or_zero()
                 .lerp(spring_dir, 0.8)
                 .normalize_or_zero();
-            if ground_state.jumping {
+            if input.jumping {
                 target_up = Vec3::Y;
             }
             let target_right = target_vel
@@ -490,7 +483,7 @@ pub fn update_forces(
             ground_force.tangential_force =
                 (tangential_spring_force + tangential_angle_force).clamp_length_max(friction_force);
             ground_force.slope_force = slope_force;
-            ground_state.slipping =
+            ground_force.slipping =
                 (tangential_spring_force + tangential_angle_force).length() > friction_force;
             ground_force.normal_force = normal_force;
 
@@ -507,7 +500,7 @@ pub fn update_forces(
                 .apply_torque(angular_spring_torque - contact_point.cross(tangential_angle_force));
         } else {
             ground_spring.contact = None;
-            ground_state.jumping = false;
+            input.jumping = false;
 
             let angular_spring = &params.springs.angular_spring_aerial;
 
@@ -520,7 +513,7 @@ pub fn update_forces(
                     .cross(target_up.into())
                     .try_normalize()
                     .unwrap_or(forward_dir.cross(target_up.into()).try_normalize().unwrap());
-                let apply_turn = if ground_state.slipping { 0.0 } else { 1.0 };
+                let apply_turn = if ground_force.slipping { 0.0 } else { 1.0 };
                 let angular_spring_torque = angular_spring.stiffness
                     * Quat::from_rotation_arc(capsule_up, target_up.into()).to_scaled_axis()
                     + apply_turn
@@ -547,11 +540,11 @@ pub fn update_forces(
                     - 0.6 * spring_vel_2;
             grab_force = grab_force.clamp_length_max(20.0);
             force.apply_force_at_point(grab_force, grab_pos - *position, Vec3::ZERO);
-        } else if ground_state.grabbing {
+        } else if input.grabbing {
             grab_state.grab_position =
                 Some(anchor + capsule_up * RigBone::legacy_capsule_height() * 0.5);
         }
-        if grab_state.grab_position.is_some() && !ground_state.grabbing {
+        if grab_state.grab_position.is_some() && !input.grabbing {
             grab_state.grab_position = None;
         }
     }
@@ -578,10 +571,8 @@ fn spring_force(
 }
 
 fn get_target_force(
-    ground_spring: &GroundSpring,
     external_force: &ExtForce,
-    input: &GroundState,
-
+    input: &PlayerInput,
     velocity: &Vec3,
     normal_force: Vec3,
     params: &PlayerParams,

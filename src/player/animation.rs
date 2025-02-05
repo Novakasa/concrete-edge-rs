@@ -11,7 +11,7 @@ use crate::{
 };
 
 use super::{
-    physics::{ExtForce, GroundContact, GroundForce, GroundSpring, GroundState},
+    physics::{ExtForce, GroundContact, GroundForce, GroundSpring},
     rewind::RewindState,
     rig::RigBone,
     Player, PlayerParams,
@@ -182,7 +182,6 @@ impl RigGroundState {
         position: &Vec3,
         ground_force: &GroundForce,
         ground_spring: &GroundSpring,
-        ground_state: &GroundState,
         external_force: &ExtForce,
         right_dir: Dir3,
         velocity: &Vec3,
@@ -223,7 +222,7 @@ impl RigGroundState {
         let min_step_size = RigBone::legacy_capsule_radius() * 0.5;
         let window_travel_dist = (window_pos_ahead - window_pos_behind).length();
         let ahead_to_contact = (window_pos_ahead - contact).length();
-        let slip_vel = if ground_state.slipping {
+        let slip_vel = if ground_force.slipping {
             -0.5 * ground_force.tangential_force * mass.inverse()
         } else {
             Vec3::ZERO
@@ -476,7 +475,6 @@ pub fn update_procedural_state(
             &mut ProceduralRigState,
             &GroundForce,
             &GroundSpring,
-            &GroundState,
             &ExtForce,
             &ComputedMass,
             &LinearVelocity,
@@ -495,7 +493,6 @@ pub fn update_procedural_state(
         mut rig_state,
         ground_force,
         ground_spring,
-        ground_state,
         external_force,
         mass,
         LinearVelocity(velocity),
@@ -522,7 +519,6 @@ pub fn update_procedural_state(
                 position,
                 ground_force,
                 ground_spring,
-                ground_state,
                 external_force,
                 right_dir,
                 velocity,

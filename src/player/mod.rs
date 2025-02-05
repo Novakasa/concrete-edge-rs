@@ -12,8 +12,8 @@ use bevy::{
 use camera::{CameraAnchor1stPerson, CameraAnchor3rdPerson};
 use leafwing_input_manager::prelude::*;
 use physics::{
-    AirPrediction, GroundContact, GroundForce, PhysicsGizmos, PhysicsParams, PlayerAngularSpring,
-    PlayerGroundSpring, SpringParams, CAPSULE_HEIGHT, CAPSULE_RADIUS, CAST_RADIUS,
+    AirPrediction, GroundForce, PhysicsGizmos, PhysicsParams, PlayerAngularSpring,
+    PlayerGroundSpring, PlayerInput, SpringParams, CAPSULE_HEIGHT, CAPSULE_RADIUS, CAST_RADIUS,
 };
 use rig::RigBone;
 use serde::{Deserialize, Serialize};
@@ -159,7 +159,7 @@ fn spawn_player(
             .insert((
                 physics::GroundSpring::default(),
                 physics::GroundForce::default(),
-                physics::GroundState::default(),
+                PlayerInput::default(),
                 physics::AirPrediction::default(),
                 physics::ExtForce::default(),
                 physics::GrabState::default(),
@@ -201,7 +201,7 @@ fn player_controls(
     mut query: Query<
         (
             &ActionState<PlayerAction>,
-            &mut physics::GroundState,
+            &mut PlayerInput,
             &physics::GroundSpring,
         ),
         With<Player>,
@@ -277,7 +277,6 @@ fn draw_debug_gizmos(
             &Rotation,
             &LinearVelocity,
             &physics::GroundSpring,
-            &physics::GroundState,
             &AirPrediction,
             &GroundForce,
         ),
@@ -290,7 +289,6 @@ fn draw_debug_gizmos(
         Rotation(quat),
         LinearVelocity(vel),
         ground_spring,
-        ground_state,
         air_prediction,
         ground_force,
     ) in query.iter_mut()
@@ -306,7 +304,7 @@ fn draw_debug_gizmos(
         if let Some(ground_contact) = ground_spring.contact.as_ref() {
             let contact = pos + ground_contact.contact_point;
             let normal = ground_contact.contact_normal;
-            let contact_color = if ground_state.slipping {
+            let contact_color = if ground_force.slipping {
                 Color::from(RED)
             } else {
                 Color::from(GREEN)
