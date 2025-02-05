@@ -5,12 +5,12 @@ use bevy::{
     utils::HashMap,
 };
 
-use crate::util::{ik2_positions, SpringValue};
+use crate::{
+    util::{ik2_positions, SpringValue},
+    RigGizmos,
+};
 
 use super::{physics::PhysicsState, rewind::RewindState, rig::RigBone, Player, PlayerParams};
-
-#[derive(Debug, Reflect, Default, GizmoConfigGroup)]
-pub struct RigGizmos;
 
 #[derive(Debug, Clone, Default, Reflect)]
 pub struct FootTravelInfo {
@@ -194,7 +194,7 @@ impl RigGroundState {
             + physics_state.ground_state.slope_force)
             * mass.inverse();
         let lock_duration = 0.06;
-        let travel_duration = lock_duration
+        let _travel_duration = lock_duration
             * 4.0.lerp(
                 1.5,
                 (physics_state.ground_state.spring_force().length() * 0.5
@@ -563,13 +563,6 @@ fn smoothstart(t: f32) -> f32 {
 pub struct PlayerAnimationPlugin;
 impl Plugin for PlayerAnimationPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_gizmo_config(
-            RigGizmos::default(),
-            GizmoConfig {
-                enabled: false,
-                ..Default::default()
-            },
-        );
         app.add_systems(
             Update,
             (

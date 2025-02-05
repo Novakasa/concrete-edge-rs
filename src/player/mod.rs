@@ -373,6 +373,9 @@ fn draw_debug_gizmos(
     }
 }
 
+#[derive(Debug, Reflect, Default, GizmoConfigGroup)]
+pub struct RigGizmos;
+
 pub struct PlayerPlugin;
 
 impl Plugin for PlayerPlugin {
@@ -415,6 +418,13 @@ impl Plugin for PlayerPlugin {
         app.add_plugins(animation::PlayerAnimationPlugin);
         app.add_plugins(rewind::RewindPlugin);
         app.add_plugins(rig::RigPlugin);
+        app.insert_gizmo_config(
+            RigGizmos::default(),
+            GizmoConfig {
+                enabled: false,
+                ..Default::default()
+            },
+        );
         // app.add_plugins(PhysicsDebugPlugin::default());
     }
 }

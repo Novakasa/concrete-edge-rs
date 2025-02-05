@@ -21,7 +21,7 @@ use blenvy::{
     BlenvyPlugin,
 };
 use leafwing_input_manager::prelude::*;
-use player::{animation::RigGizmos, physics::PhysicsGizmos, PlayerParams};
+use player::{physics::PhysicsGizmos, PlayerParams, RigGizmos};
 
 mod player;
 mod util;

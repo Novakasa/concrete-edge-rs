@@ -1,6 +1,6 @@
 use bevy::{color::palettes::css::BLACK, prelude::*};
 
-use super::animation::{ProceduralRigState, RigGizmos};
+use super::{animation::ProceduralRigState, RigGizmos};
 
 const STICK_RADIUS: f32 = 0.1;
 
