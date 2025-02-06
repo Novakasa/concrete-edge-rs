@@ -60,7 +60,7 @@ pub struct HistoryState {
     pub input: PlayerInput,
     pub air_prediction: AirPrediction,
     pub grab_state: GrabState,
-    pub ground_spring: GroundSpring,
+    pub ground_spring: GroundCast,
 }
 
 fn record_history(
@@ -75,7 +75,7 @@ fn record_history(
         &PlayerInput,
         &AirPrediction,
         &GrabState,
-        &GroundSpring,
+        &GroundCast,
     )>,
     mut rewind_info: ResMut<RewindInfo>,
     physics_time: Res<Time<Physics>>,
@@ -143,7 +143,7 @@ fn update_rewind(
         &mut PlayerInput,
         &mut AirPrediction,
         &mut GrabState,
-        &mut GroundSpring,
+        &mut GroundCast,
     )>,
     mut rewind_info: ResMut<RewindInfo>,
 ) {

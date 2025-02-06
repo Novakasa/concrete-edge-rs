@@ -11,7 +11,7 @@ use crate::{
 };
 
 use super::{
-    physics::{ExtForce, GroundContact, GroundForce, GroundSpring},
+    physics::{ExtForce, GroundContact, GroundForce, GroundCast},
     rewind::RewindState,
     rig::RigBone,
     Player, PlayerParams,
@@ -181,7 +181,7 @@ impl RigGroundState {
         contact_point: Vec3,
         position: &Vec3,
         ground_force: &GroundForce,
-        ground_spring: &GroundSpring,
+        ground_spring: &GroundCast,
         external_force: &ExtForce,
         right_dir: Dir3,
         velocity: &Vec3,
@@ -196,7 +196,7 @@ impl RigGroundState {
             .contact
             .as_ref()
             .unwrap()
-            .contact_normal
+            .normal
             .as_vec3();
 
         let right_tangent =
@@ -474,7 +474,7 @@ pub fn update_procedural_state(
             &Rotation,
             &mut ProceduralRigState,
             &GroundForce,
-            &GroundSpring,
+            &GroundCast,
             &ExtForce,
             &ComputedMass,
             &LinearVelocity,
@@ -506,7 +506,7 @@ pub fn update_procedural_state(
 
         if let Some(GroundContact {
             contact_point,
-            contact_normal,
+            normal: contact_normal,
             toi: _,
         }) = ground_spring.contact
         {
@@ -539,7 +539,7 @@ pub fn update_procedural_state(
 }
 
 fn draw_gizmos(
-    query: Query<(&GroundSpring, &ProceduralRigState), With<Player>>,
+    query: Query<(&GroundCast, &ProceduralRigState), With<Player>>,
     mut rig_gizmos: Gizmos<RigGizmos>,
 ) {
     for (ground_spring, steps) in query.iter() {

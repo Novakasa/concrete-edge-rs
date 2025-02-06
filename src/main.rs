@@ -145,7 +145,7 @@ fn toggle_fullscreen(
 fn physics_speed_control(mut time: ResMut<Time<Physics>>, input: Res<ActionState<GlobalAction>>) {
     let relative_speed = time.relative_speed();
     if input.just_pressed(&GlobalAction::PhysicsSpeedSlower) {
-        time.set_relative_speed((relative_speed / 2.0).max(0.01));
+        time.set_relative_speed((relative_speed / 2.0).max(0.001));
         println!("Physics speed: {}", time.relative_speed());
     }
     if input.just_pressed(&GlobalAction::PhysicsSpeedFaster) {

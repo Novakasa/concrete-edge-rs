@@ -157,7 +157,7 @@ fn spawn_player(
                 AngularInertia::new(0.006 * Vec3::new(1.0, 1.0, 1.0)),
             ))
             .insert((
-                physics::GroundSpring::default(),
+                physics::GroundCast::default(),
                 physics::GroundForce::default(),
                 PlayerInput::default(),
                 physics::AirPrediction::default(),
@@ -202,7 +202,7 @@ fn player_controls(
         (
             &ActionState<PlayerAction>,
             &mut PlayerInput,
-            &physics::GroundSpring,
+            &physics::GroundCast,
         ),
         With<Player>,
     >,
@@ -276,7 +276,7 @@ fn draw_debug_gizmos(
             &Position,
             &Rotation,
             &LinearVelocity,
-            &physics::GroundSpring,
+            &physics::GroundCast,
             &AirPrediction,
             &GroundForce,
         ),
@@ -303,7 +303,7 @@ fn draw_debug_gizmos(
         }
         if let Some(ground_contact) = ground_spring.contact.as_ref() {
             let contact = pos + ground_contact.contact_point;
-            let normal = ground_contact.contact_normal;
+            let normal = ground_contact.normal;
             let contact_color = if ground_force.slipping {
                 Color::from(RED)
             } else {
