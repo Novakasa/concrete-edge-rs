@@ -363,6 +363,71 @@ pub fn set_external_force(
     }
 }
 
+pub fn evaluate_ground_cast(
+    mut query: Query<(&mut GroundCast, &Position)>,
+    spatial_query: SpatialQuery,
+) {
+    for (mut ground_cast, Position(pos)) in query.iter_mut() {
+        let filter = SpatialQueryFilter::from_mask(Layer::Platform);
+        if let Some(coll) = spatial_query.cast_shape(
+            &Collider::sphere(CAST_RADIUS),
+            pos.clone(),
+            Quat::IDENTITY,
+            ground_cast.cast_dir,
+            &ShapeCastConfig {
+                max_distance: RigBone::max_contact_dist() - CAST_RADIUS,
+                ..Default::default()
+            },
+            &filter,
+        ) {
+            let normal = Dir3::new(coll.normal1).unwrap();
+            let contact_point = coll.point2 + ground_cast.cast_dir * coll.distance;
+            ground_cast.contact = Some(GroundContact {
+                normal,
+                contact_point,
+                toi: coll.distance,
+            });
+        } else {
+            ground_cast.contact = None;
+        }
+    }
+}
+
+pub fn evaluate_ground_spring(
+    mut query: Query<(
+        &mut GroundForce,
+        &LinearVelocity,
+        &GroundCast,
+        &ExtForce,
+        &PlayerInput,
+    )>,
+    params: Res<PlayerParams>,
+) {
+    for (mut ground_force, velocity, ground_cast, external_force, input) in query.iter_mut() {
+        if let Some(contact) = ground_cast.contact.as_ref() {
+            let spring = params.springs.get_ground_spring(input.crouching);
+            let mut spring_force =
+                spring_force(velocity, spring, contact.normal, contact.contact_point);
+            if (spring_force + external_force.0).dot(contact.normal.into()) > 0.0 && !input.jumping
+            {
+                if velocity.dot(contact.normal.into()) > 0.0 {
+                    let max_normal_force = 0.5 * external_force.0.length();
+                    let max_spring_force = (max_normal_force
+                        - external_force.0.dot(contact.normal.into()))
+                        / ground_cast.cast_dir.dot(contact.normal.into());
+                    spring_force = spring_force.clamp_length_max(max_spring_force);
+                }
+            }
+            if input.jumping {
+                spring_force = 3.5 * ground_cast.cast_dir;
+            }
+
+            ground_force.normal_force = spring_force.dot(contact.normal.into()) * contact.normal;
+            ground_force.tangential_force = spring_force - ground_force.normal_force;
+        }
+    }
+}
+
 pub fn update_forces(
     mut query: Query<(
         &mut ExternalForce,
