@@ -525,13 +525,61 @@ pub fn update_angular_spring(
             .unwrap_or(Dir3::new((*quat * Vec3::NEG_Z).cross(target_up.into())).unwrap());
         let angular_spring = params.springs.get_angular_spring(false);
 
+        let apply_turn = if ground_force.slipping { 0.0 } else { 1.0 };
+
         let angular_spring_torque = angular_spring.stiffness
             * Quat::from_rotation_arc(*quat * Vec3::Y, target_up.into()).to_scaled_axis()
-            + angular_spring.turn_stiffness
+            + apply_turn
+                * angular_spring.turn_stiffness
                 * Quat::from_rotation_arc(*quat * Vec3::X, target_right.into()).to_scaled_axis()
             - angular_spring.damping * angular_velocity.clone();
 
         ground_force.angular_spring_torque = angular_spring_torque;
+    }
+}
+
+pub fn aerial_spring(
+    mut query: Query<(
+        &GroundCast,
+        &AirPrediction,
+        &Rotation,
+        &AngularVelocity,
+        &mut ExternalTorque,
+    )>,
+    params: Res<PlayerParams>,
+) {
+    for (ground_cast, air_prediction, Rotation(quat), AngularVelocity(angular_vel), mut torque) in
+        query.iter_mut()
+    {
+        if let Some(contact) = air_prediction.predicted_contact.as_ref() {
+            if ground_cast.contact.is_some() {
+                continue;
+            }
+            let capsule_forward = *quat * Vec3::NEG_Z;
+            let capsule_up = *quat * Vec3::Y;
+            let capsule_right = *quat * Vec3::X;
+            let target_up = -ground_cast.cast_dir;
+            let target_forward = contact
+                .contact_velocity
+                .reject_from(contact.contact_normal.into());
+            let target_right = target_forward
+                .cross(target_up.into())
+                .try_normalize()
+                .unwrap_or(
+                    capsule_forward
+                        .cross(target_up.into())
+                        .try_normalize()
+                        .unwrap(),
+                );
+            let angular_spring = &params.springs.angular_spring_aerial;
+            let angular_spring_torque = angular_spring.stiffness
+                * Quat::from_rotation_arc(capsule_up, target_up.into()).to_scaled_axis()
+                + (angular_spring.turn_stiffness
+                    * Quat::from_rotation_arc(capsule_right, target_right).to_scaled_axis())
+                - angular_spring.damping * angular_vel.clone();
+            torque.clear();
+            torque.apply_torque(angular_spring_torque);
+        }
     }
 }
 
@@ -973,6 +1021,7 @@ impl Plugin for PlayerPhysicsPlugin {
                 update_cast_dir,
                 update_angular_spring,
                 set_forces,
+                aerial_spring,
                 draw_debug_gizmos, // update_forces,
             )
                 .chain()
