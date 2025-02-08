@@ -2,7 +2,7 @@ use std::f32::consts::PI;
 
 use avian3d::prelude::*;
 use bevy::{
-    color::palettes::css::{RED, WHITE, YELLOW},
+    color::palettes::css::{ORANGE, RED, WHITE, YELLOW},
     prelude::*,
 };
 use dynamics::integrator::IntegrationSet;
@@ -332,6 +332,9 @@ pub fn update_landing_prediction(
             );
             // println!("{:?}", spring_force);
             let normal_force = spring_force.project_onto(contact.contact_normal.into());
+            if normal_force.dot(contact.contact_normal.into()) < 1.0e-4 {
+                continue;
+            }
             gizmos.arrow(
                 contact.contact_world,
                 contact.contact_world + spring_force,
@@ -423,7 +426,7 @@ pub fn evaluate_ground_spring(
                 }
             }
             if input.jumping {
-                spring_force = 3.5 * ground_cast.cast_dir;
+                spring_force = 3.5 * -ground_cast.cast_dir;
             }
 
             ground_force.normal_force = spring_force.dot(contact.normal.into()) * contact.normal;
@@ -448,6 +451,9 @@ pub fn update_cast_dir(
         let Some(contact) = ground_cast.contact.as_ref() else {
             continue;
         };
+        if ground_force.normal_force.dot(contact.normal.into()) < 1.0e-4 {
+            continue;
+        }
         let (target_vel, slope_force, target_force) = get_target_force(
             &ExtForce(Vec3::ZERO),
             &input,
@@ -460,6 +466,11 @@ pub fn update_cast_dir(
             contact.contact_world,
             contact.contact_world + target_vel,
             RED,
+        );
+        gizmos.arrow(
+            contact.contact_world,
+            contact.contact_world + target_force,
+            ORANGE,
         );
 
         ground_force.slope_force = slope_force;
