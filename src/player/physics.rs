@@ -801,6 +801,79 @@ pub fn update_forces(
     }
 }
 
+fn draw_debug_gizmos(
+    mut query: Query<(
+        &Position,
+        &Rotation,
+        &LinearVelocity,
+        &GroundCast,
+        &AirPrediction,
+        &GroundForce,
+    )>,
+    mut physics_gizmos: Gizmos<PhysicsGizmos>,
+) {
+    for (
+        Position(pos),
+        Rotation(quat),
+        LinearVelocity(vel),
+        ground_spring,
+        air_prediction,
+        ground_force,
+    ) in query.iter_mut()
+    {
+        let pos = pos.clone();
+        if let Some(contact) = &air_prediction.predicted_contact {
+            physics_gizmos.sphere(
+                Isometry3d::from_translation(contact.contact_world),
+                0.1,
+                Color::from(RED),
+            );
+        }
+        if let Some(ground_contact) = ground_spring.contact.as_ref() {
+            let contact = pos + ground_contact.contact_point;
+            let normal = ground_contact.normal;
+            let contact_color = if ground_force.slipping {
+                Color::from(RED)
+            } else {
+                Color::from(GREEN)
+            };
+            physics_gizmos.sphere(
+                Isometry3d::from_translation(
+                    pos.clone() + ground_contact.toi * ground_spring.cast_dir,
+                ),
+                CAST_RADIUS,
+                contact_color,
+            );
+            let tangent_vel = vel.reject_from(normal.into());
+            physics_gizmos.arrow(contact, contact + tangent_vel, Color::from(ORANGE));
+        } else {
+            // draw circle at end of cast
+            physics_gizmos.sphere(
+                Isometry3d::from_translation(
+                    pos + (RigBone::max_contact_dist() - CAST_RADIUS) * ground_spring.cast_dir,
+                ),
+                CAST_RADIUS,
+                Color::BLACK,
+            );
+        }
+        physics_gizmos
+            .primitive_3d(
+                &Capsule3d::new(CAPSULE_RADIUS, CAPSULE_HEIGHT - CAPSULE_RADIUS * 2.0),
+                Isometry3d::new(pos.clone(), quat.clone()),
+                Color::WHITE,
+            )
+            .resolution(6);
+        physics_gizmos.cross(
+            Isometry3d {
+                rotation: quat.clone(),
+                translation: pos.into(),
+            },
+            0.1,
+            Color::WHITE,
+        );
+    }
+}
+
 fn spring_force(
     velocity: &Vec3,
     spring: &PlayerGroundSpring,
@@ -899,7 +972,7 @@ impl Plugin for PlayerPhysicsPlugin {
                 update_cast_dir,
                 update_angular_spring,
                 set_forces,
-                // update_forces,
+                draw_debug_gizmos, // update_forces,
             )
                 .chain()
                 .before(IntegrationSet::Velocity)

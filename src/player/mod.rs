@@ -2,20 +2,10 @@ use std::f32::consts::PI;
 
 use animation::ProceduralRigState;
 use avian3d::prelude::*;
-use bevy::{
-    color::palettes::{
-        css::{BLUE, GREEN, ORANGE, PINK, RED},
-        tailwind::CYAN_100,
-    },
-    prelude::*,
-};
+use bevy::prelude::*;
 use camera::{CameraAnchor1stPerson, CameraAnchor3rdPerson};
 use leafwing_input_manager::prelude::*;
-use physics::{
-    AirPrediction, GroundForce, PhysicsGizmos, PhysicsParams, PlayerAngularSpring,
-    PlayerGroundSpring, PlayerInput, SpringParams, CAPSULE_HEIGHT, CAPSULE_RADIUS, CAST_RADIUS,
-};
-use rig::RigBone;
+use physics::{PhysicsParams, PlayerAngularSpring, PlayerGroundSpring, PlayerInput, SpringParams};
 use serde::{Deserialize, Serialize};
 
 use crate::MouseInteraction;
@@ -267,90 +257,6 @@ fn set_visible<const VAL: bool>(mut query: Query<&mut Visibility, With<Player>>)
         } else {
             *visibility = Visibility::Hidden;
         }
-    }
-}
-
-fn draw_debug_gizmos(
-    mut query: Query<
-        (
-            &Position,
-            &Rotation,
-            &LinearVelocity,
-            &physics::GroundCast,
-            &AirPrediction,
-            &GroundForce,
-        ),
-        With<Player>,
-    >,
-    mut physics_gizmos: Gizmos<PhysicsGizmos>,
-) {
-    for (
-        Position(pos),
-        Rotation(quat),
-        LinearVelocity(vel),
-        ground_spring,
-        air_prediction,
-        ground_force,
-    ) in query.iter_mut()
-    {
-        let pos = pos.clone();
-        if let Some(contact) = &air_prediction.predicted_contact {
-            physics_gizmos.sphere(
-                Isometry3d::from_translation(contact.contact_world),
-                0.1,
-                Color::from(RED),
-            );
-        }
-        if let Some(ground_contact) = ground_spring.contact.as_ref() {
-            let contact = pos + ground_contact.contact_point;
-            let normal = ground_contact.normal;
-            let contact_color = if ground_force.slipping {
-                Color::from(RED)
-            } else {
-                Color::from(GREEN)
-            };
-            physics_gizmos.sphere(
-                Isometry3d::from_translation(
-                    pos.clone() + ground_contact.toi * ground_spring.cast_dir,
-                ),
-                CAST_RADIUS,
-                contact_color,
-            );
-            physics_gizmos.arrow(
-                contact,
-                contact + ground_force.spring_force(),
-                Color::from(CYAN_100),
-            );
-
-            let tangent_vel = vel.reject_from(normal.into());
-            physics_gizmos.arrow(contact, contact + tangent_vel, Color::from(ORANGE));
-            // physics_gizmos.arrow(contact, contact + debug.target_vel, Color::from(GREEN));
-            // physics_gizmos.arrow(contact, contact + debug.target_force, Color::from(RED));
-        } else {
-            // draw circle at end of cast
-            physics_gizmos.sphere(
-                Isometry3d::from_translation(
-                    pos + (RigBone::max_contact_dist() - CAST_RADIUS) * ground_spring.cast_dir,
-                ),
-                CAST_RADIUS,
-                Color::BLACK,
-            );
-        }
-        physics_gizmos
-            .primitive_3d(
-                &Capsule3d::new(CAPSULE_RADIUS, CAPSULE_HEIGHT - CAPSULE_RADIUS * 2.0),
-                Isometry3d::new(pos.clone(), quat.clone()),
-                Color::WHITE,
-            )
-            .resolution(6);
-        physics_gizmos.cross(
-            Isometry3d {
-                rotation: quat.clone(),
-                translation: pos.into(),
-            },
-            0.1,
-            Color::WHITE,
-        );
     }
 }
 
