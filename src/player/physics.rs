@@ -2,7 +2,10 @@ use std::f32::consts::PI;
 
 use avian3d::prelude::*;
 use bevy::{
-    color::palettes::css::{BLUE, GREEN, ORANGE, RED, WHITE, YELLOW},
+    color::palettes::{
+        css::{BLUE, GREEN, ORANGE, RED, VIOLET, WHITE, YELLOW},
+        tailwind::CYAN_100,
+    },
     prelude::*,
 };
 use dynamics::integrator::IntegrationSet;
@@ -548,8 +551,7 @@ pub fn set_forces(
             ground_force.slipping = (ground_force.tangential_force + ground_force.angle_force)
                 .length()
                 > friction_force_limit;
-            ground_force.tangential_force = (ground_force.tangential_force
-                + 0.0 * ground_force.angle_force)
+            let total_tangential_force = (ground_force.tangential_force + ground_force.angle_force)
                 .clamp_length_max(friction_force_limit);
 
             torque.clear();
@@ -559,7 +561,7 @@ pub fn set_forces(
             );
             force.clear();
             force.apply_force_at_point(
-                ground_force.tangential_force + ground_force.normal_force,
+                total_tangential_force + ground_force.normal_force,
                 contact.contact_point,
                 Vec3::ZERO,
             );
@@ -575,14 +577,19 @@ pub fn set_forces(
                 BLUE,
             );
             gizmos.arrow(
-                contact.contact_world + ground_force.tangential_force,
-                contact.contact_world + ground_force.tangential_force + ground_force.angle_force,
-                RED,
+                contact.contact_world + total_tangential_force,
+                contact.contact_world + total_tangential_force + ground_force.angle_force,
+                VIOLET,
             );
             gizmos.arrow(
                 contact.contact_world,
-                contact.contact_world + ground_force.tangential_force + ground_force.normal_force,
+                contact.contact_world + total_tangential_force + ground_force.normal_force,
                 ORANGE,
+            );
+            gizmos.arrow(
+                contact.contact_world - contact.contact_point,
+                contact.contact_world + ground_force.slope_force - contact.contact_point,
+                CYAN_100,
             );
         }
     }
@@ -845,8 +852,6 @@ fn get_target_force(
     } else {
         -tangent_slope.dot(ext_dir) * normal_force.dot(ext_dir) * tangent_slope / denominator
     };
-
-    // let slope_force = external_forces - normal.dot(external_forces) * normal;
 
     let mut target_force = 0.3 * (target_vel - tangent_vel);
 

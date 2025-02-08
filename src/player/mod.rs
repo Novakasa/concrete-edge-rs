@@ -382,7 +382,6 @@ impl Plugin for PlayerPlugin {
                 spawn_player,
                 player_controls,
                 camera::toggle_active_view,
-                draw_debug_gizmos.after(animation::update_procedural_state),
                 (
                     camera::track_camera_3rd_person,
                     camera::track_camera_1st_person,
