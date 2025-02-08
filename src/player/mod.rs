@@ -296,7 +296,7 @@ fn draw_debug_gizmos(
         let pos = pos.clone();
         if let Some(contact) = &air_prediction.predicted_contact {
             physics_gizmos.sphere(
-                Isometry3d::from_translation(contact.contact_point),
+                Isometry3d::from_translation(contact.contact_world),
                 0.1,
                 Color::from(RED),
             );

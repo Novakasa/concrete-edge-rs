@@ -11,7 +11,7 @@ use crate::{
 };
 
 use super::{
-    physics::{ExtForce, GroundContact, GroundForce, GroundCast},
+    physics::{ExtForce, GroundCast, GroundContact, GroundForce},
     rewind::RewindState,
     rig::RigBone,
     Player, PlayerParams,
@@ -192,12 +192,7 @@ impl RigGroundState {
     ) {
         self.cycle_state.increment(dt);
         let contact = contact_point + *position;
-        let normal = ground_spring
-            .contact
-            .as_ref()
-            .unwrap()
-            .normal
-            .as_vec3();
+        let normal = ground_spring.contact.as_ref().unwrap().normal.as_vec3();
 
         let right_tangent =
             (right_dir.as_vec3() - right_dir.dot(normal) * normal).normalize_or_zero();
@@ -508,6 +503,7 @@ pub fn update_procedural_state(
             contact_point,
             normal: contact_normal,
             toi: _,
+            contact_world: _,
         }) = ground_spring.contact
         {
             rig_state.hip_pos = *position + contact_point * 0.2;
