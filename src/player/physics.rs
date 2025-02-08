@@ -441,12 +441,14 @@ pub fn update_cast_dir(
         &mut PlayerInput,
         &mut GroundForce,
         &LinearVelocity,
+        &ExtForce,
     )>,
     params: Res<PlayerParams>,
     mut gizmos: Gizmos<PhysicsGizmos>,
     dt: Res<Time<Substeps>>,
 ) {
-    for (mut ground_cast, mut input, mut ground_force, LinearVelocity(velocity)) in query.iter_mut()
+    for (mut ground_cast, mut input, mut ground_force, LinearVelocity(velocity), ext_force) in
+        query.iter_mut()
     {
         let Some(contact) = ground_cast.contact.as_ref() else {
             continue;
@@ -455,7 +457,7 @@ pub fn update_cast_dir(
             continue;
         }
         let (target_vel, slope_force, target_force) = get_target_force(
-            &ExtForce(Vec3::ZERO),
+            ext_force,
             &input,
             velocity,
             ground_force.normal_force,
