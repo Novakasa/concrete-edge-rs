@@ -428,6 +428,7 @@ pub fn evaluate_ground_spring(
             }
             if input.jumping {
                 spring_force = -3.5 * contact.contact_point.normalize_or_zero();
+                // spring_force = -3.5 * ground_cast.cast_dir.as_vec3();
             }
 
             ground_force.normal_force = spring_force.dot(contact.normal.into()) * contact.normal;
@@ -512,13 +513,16 @@ pub fn update_angular_spring(
         let Some(contact) = ground_cast.contact.as_ref() else {
             continue;
         };
-        let target_up = Dir3::new(
+        let mut target_up = Dir3::new(
             ext_force
                 .0
                 .normalize_or_zero()
                 .lerp((-contact.contact_point.normalize()).into(), 0.8),
         )
         .unwrap_or(Dir3::Y);
+        if input.jumping {
+            target_up = Dir3::Y;
+        }
         let target_right = Dir3::new(input.target_velocity.cross(target_up.into()))
             .unwrap_or(Dir3::new((*quat * Vec3::NEG_Z).cross(target_up.into())).unwrap());
         let angular_spring = params.springs.get_angular_spring(false);
