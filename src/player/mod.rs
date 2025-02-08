@@ -321,17 +321,6 @@ fn draw_debug_gizmos(
                 contact + ground_force.spring_force(),
                 Color::from(CYAN_100),
             );
-            physics_gizmos.arrow(
-                contact,
-                contact + ground_force.normal_force,
-                Color::from(BLUE),
-            );
-
-            physics_gizmos.arrow(
-                contact,
-                contact + ground_force.tangential_force,
-                Color::from(PINK),
-            );
 
             let tangent_vel = vel.reject_from(normal.into());
             physics_gizmos.arrow(contact, contact + tangent_vel, Color::from(ORANGE));

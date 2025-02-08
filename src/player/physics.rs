@@ -2,7 +2,7 @@ use std::f32::consts::PI;
 
 use avian3d::prelude::*;
 use bevy::{
-    color::palettes::css::{ORANGE, RED, WHITE, YELLOW},
+    color::palettes::css::{BLUE, GREEN, ORANGE, RED, WHITE, YELLOW},
     prelude::*,
 };
 use dynamics::integrator::IntegrationSet;
@@ -426,7 +426,7 @@ pub fn evaluate_ground_spring(
                 }
             }
             if input.jumping {
-                spring_force = 3.5 * -ground_cast.cast_dir;
+                spring_force = -3.5 * contact.contact_point.normalize_or_zero();
             }
 
             ground_force.normal_force = spring_force.dot(contact.normal.into()) * contact.normal;
@@ -475,11 +475,11 @@ pub fn update_cast_dir(
 
         ground_force.slope_force = slope_force;
 
-        let target_spring_dir = -Dir3::new(target_force + ground_force.normal_force).unwrap();
+        let target_force_dir = Dir3::new(target_force + ground_force.normal_force).unwrap();
         ground_cast.cast_dir = Dir3::new(
             ground_cast.cast_dir.as_vec3()
                 + 12.0
-                    * (target_spring_dir.as_vec3() - ground_cast.cast_dir.as_vec3())
+                    * (-target_force_dir.as_vec3() - contact.contact_point.normalize_or_zero())
                     * dt.delta_secs(),
         )
         .unwrap();
@@ -536,28 +536,51 @@ pub fn set_forces(
         &GroundCast,
         &mut GroundForce,
     )>,
+    mut gizmos: Gizmos<PhysicsGizmos>,
 ) {
     for (mut force, mut torque, ground_cast, mut ground_force) in query.iter_mut() {
         if let Some(contact) = ground_cast.contact.as_ref() {
             let friction_force_limit = ground_force.normal_force.length() * GLOBAL_FRICTION;
-            let tangential_angle_force = -contact.normal.cross(ground_force.angular_spring_torque)
+            ground_force.angle_force = -contact.normal.cross(ground_force.angular_spring_torque)
                 / (contact.normal.dot(contact.contact_point));
-            ground_force.tangential_force = (ground_force.tangential_force
-                + tangential_angle_force)
-                .clamp_length_max(friction_force_limit);
-            ground_force.slipping = (ground_force.tangential_force + tangential_angle_force)
+            ground_force.slipping = (ground_force.tangential_force + ground_force.angle_force)
                 .length()
                 > friction_force_limit;
+            ground_force.tangential_force = (ground_force.tangential_force
+                + 0.0 * ground_force.angle_force)
+                .clamp_length_max(friction_force_limit);
+
             torque.clear();
             torque.apply_torque(
                 ground_force.angular_spring_torque
-                    - contact.contact_point.cross(tangential_angle_force),
+                    - contact.contact_point.cross(ground_force.angle_force),
             );
             force.clear();
             force.apply_force_at_point(
                 ground_force.tangential_force + ground_force.normal_force,
                 contact.contact_point,
                 Vec3::ZERO,
+            );
+
+            gizmos.arrow(
+                contact.contact_world,
+                contact.contact_world + ground_force.tangential_force,
+                GREEN,
+            );
+            gizmos.arrow(
+                contact.contact_world,
+                contact.contact_world + ground_force.normal_force,
+                BLUE,
+            );
+            gizmos.arrow(
+                contact.contact_world + ground_force.tangential_force,
+                contact.contact_world + ground_force.tangential_force + ground_force.angle_force,
+                RED,
+            );
+            gizmos.arrow(
+                contact.contact_world,
+                contact.contact_world + ground_force.tangential_force + ground_force.normal_force,
+                ORANGE,
             );
         }
     }
@@ -581,6 +604,7 @@ pub fn update_forces(
     shape_cast: SpatialQuery,
     dt: Res<Time<Substeps>>,
     params: Res<PlayerParams>,
+    mut gizmos: Gizmos<PhysicsGizmos>,
 ) {
     for (
         mut force,
@@ -650,6 +674,11 @@ pub fn update_forces(
             // println!("{:?}, {:?}", target_force, normal_force);
 
             let target_spring_dir = (target_force + normal_force).normalize_or_zero();
+            gizmos.arrow(
+                contact_point + position,
+                contact_point + position + target_force,
+                RED,
+            );
 
             let raw_neg_cast_vec = (-ground_cast.cast_dir.as_vec3()
                 + 12.0 * (target_spring_dir - spring_dir) * dt.delta_secs())
@@ -790,7 +819,7 @@ fn get_target_force(
     normal_force: Vec3,
     params: &PlayerParams,
 ) -> (Vec3, Vec3, Vec3) {
-    assert!(normal_force.length() > 0.0);
+    // assert!(normal_force.length() > 0.0);
     let normal = normal_force.normalize();
     let ext_dir = external_force.0.normalize_or_zero();
     let tangent_plane = normal.cross(-ext_dir).normalize_or_zero();
@@ -821,11 +850,11 @@ fn get_target_force(
 
     let friction_force_margin = normal_force.length() * GLOBAL_FRICTION * FRICTION_MARGIN;
 
-    if (target_force - slope_force).length() > friction_force_margin * FRICTION_MARGIN {
+    if (target_force - slope_force).length() > friction_force_margin {
         target_force = add_results_in_length(
             target_force.normalize_or_zero(),
             -slope_force,
-            friction_force_margin * FRICTION_MARGIN,
+            friction_force_margin,
         )
         .unwrap_or(
             (target_force - slope_force).clamp_length_max(friction_force_margin) + slope_force,
@@ -863,6 +892,7 @@ impl Plugin for PlayerPhysicsPlugin {
                 update_cast_dir,
                 update_angular_spring,
                 set_forces,
+                // update_forces,
             )
                 .chain()
                 .before(IntegrationSet::Velocity)
