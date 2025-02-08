@@ -511,18 +511,18 @@ pub fn update_angular_spring(
         ext_force,
     ) in query.iter_mut()
     {
-        if ground_cast.contact.is_none() {
+        let Some(contact) = ground_cast.contact.as_ref() else {
             continue;
-        }
+        };
         let target_up = Dir3::new(
             ext_force
                 .0
                 .normalize_or_zero()
-                .lerp((-ground_cast.cast_dir).into(), 0.8),
+                .lerp((-contact.contact_point.normalize()).into(), 0.8),
         )
         .unwrap_or(Dir3::Y);
         let target_right = Dir3::new(input.target_velocity.cross(target_up.into()))
-            .unwrap_or(Dir3::new(Vec3::X.cross(target_up.into())).unwrap());
+            .unwrap_or(Dir3::new((*quat * Vec3::NEG_Z).cross(target_up.into())).unwrap());
         let angular_spring = params.springs.get_angular_spring(false);
 
         let angular_spring_torque = angular_spring.stiffness
@@ -530,6 +530,7 @@ pub fn update_angular_spring(
             + angular_spring.turn_stiffness
                 * Quat::from_rotation_arc(*quat * Vec3::X, target_right.into()).to_scaled_axis()
             - angular_spring.damping * angular_velocity.clone();
+
         ground_force.angular_spring_torque = angular_spring_torque;
     }
 }
