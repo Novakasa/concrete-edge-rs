@@ -294,6 +294,9 @@ fn inspector_ui(world: &mut World) {
             ui.collapsing("Physics", |ui| {
                 ui_for_value(&mut params.physics, ui, &registry.read());
             });
+            ui.collapsing("input", |ui| {
+                ui_for_value(&mut params.input, ui, &registry.read());
+            });
             if ui.button("Save").clicked() {
                 params.save();
             }

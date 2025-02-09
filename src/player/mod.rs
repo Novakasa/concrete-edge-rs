@@ -5,7 +5,9 @@ use avian3d::prelude::*;
 use bevy::prelude::*;
 use camera::{CameraAnchor1stPerson, CameraAnchor3rdPerson};
 use leafwing_input_manager::prelude::*;
-use physics::{PhysicsParams, PlayerAngularSpring, PlayerGroundSpring, PlayerInput, SpringParams};
+use physics::{
+    NaiveInput, PhysicsParams, PlayerAngularSpring, PlayerGroundSpring, PlayerInput, SpringParams,
+};
 use serde::{Deserialize, Serialize};
 
 use crate::MouseInteraction;
@@ -24,12 +26,19 @@ pub enum DebugState {
     Physics,
 }
 
+#[derive(Component, Reflect, Serialize, Deserialize, Debug, Default)]
+pub struct InputParams {
+    pub prejump_time: f32,
+}
+
 #[derive(Resource, Reflect, Debug, Serialize, Deserialize, Default)]
 pub struct PlayerParams {
     #[serde(alias = "physics_params")]
     pub physics: PhysicsParams,
     #[serde(alias = "spring_params")]
     pub springs: SpringParams,
+    #[serde(default)]
+    pub input: InputParams,
 }
 
 impl PlayerParams {
@@ -150,6 +159,7 @@ fn spawn_player(
                 physics::GroundCast::default(),
                 physics::GroundForce::default(),
                 PlayerInput::default(),
+                NaiveInput::default(),
                 physics::AirPrediction::default(),
                 physics::ExtForce::default(),
                 physics::GrabState::default(),
@@ -191,7 +201,7 @@ fn player_controls(
     mut query: Query<
         (
             &ActionState<PlayerAction>,
-            &mut PlayerInput,
+            &mut NaiveInput,
             &physics::GroundCast,
         ),
         With<Player>,
@@ -227,11 +237,14 @@ fn player_controls(
                 * Vec3::new(move_input.x, 0.0, -move_input.y))
             .xz();
             // println!("{:?}", move_state.acc_dir);
-            if action_state.just_pressed(&PlayerAction::Jump) && ground_spring.contact.is_some() {
-                input.jumping = true;
+            if action_state.pressed(&PlayerAction::Jump) {
+                input.jump_pressed = true;
+                input.jump_pressed_time += time.delta_secs();
+                // println!("jump_time: {}", input.jump_pressed_time);
             }
             if !action_state.pressed(&PlayerAction::Jump) {
-                input.jumping = false;
+                input.jump_pressed = false;
+                input.jump_pressed_time = 0.0;
             }
             if action_state.just_pressed(&PlayerAction::Rewind) {
                 next_rewind_state.set(rewind::RewindState::Rewinding);
@@ -244,8 +257,8 @@ fn player_controls(
                 rewind_info.rewind_time += move_input.x * time.delta_secs();
             }
 
-            input.grabbing = action_state.pressed(&PlayerAction::Grab);
-            input.crouching = action_state.pressed(&PlayerAction::Crouch);
+            input.grab_pressed = action_state.pressed(&PlayerAction::Grab);
+            input.crouch_pressed = action_state.pressed(&PlayerAction::Crouch);
         }
     }
 }

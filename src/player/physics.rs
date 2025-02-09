@@ -120,16 +120,6 @@ impl PlayerGroundSpring {
             ..Self::running()
         }
     }
-
-    fn force(&self, length: f32, vel: f32, normal: Vec3, _dt: f32) -> f32 {
-        let damping = self
-            .max_damping
-            .lerp(self.min_damping, normal.dot(Vec3::Y).abs());
-        let target = (-self.stiffness * (length - self.rest_length).min(0.0) - damping * vel)
-            .min(self.max_force)
-            .max(self.min_force);
-        target
-    }
 }
 
 #[derive(Reflect, Debug, Clone, Default, Serialize, Deserialize)]
@@ -195,6 +185,15 @@ impl Default for GroundCast {
     }
 }
 
+#[derive(Component, Debug, Default, Clone)]
+pub struct NaiveInput {
+    pub input_dir: Vec2,
+    pub jump_pressed: bool,
+    pub jump_pressed_time: f32,
+    pub crouch_pressed: bool,
+    pub grab_pressed: bool,
+}
+
 #[derive(Component, Default, Clone, Debug)]
 pub struct PlayerInput {
     pub input_dir: Vec2,
@@ -232,6 +231,29 @@ pub struct AirPrediction {
 impl GroundForce {
     pub fn spring_force(&self) -> Vec3 {
         self.tangential_force + self.normal_force
+    }
+}
+
+pub fn physics_input(
+    mut q_input: Query<(&mut PlayerInput, &mut NaiveInput, &GroundCast)>,
+    params: Res<PlayerParams>,
+) {
+    for (mut input, mut naive_input, ground_cast) in q_input.iter_mut() {
+        input.input_dir = naive_input.input_dir;
+        input.crouching = naive_input.crouch_pressed;
+        input.grabbing = naive_input.grab_pressed;
+        if let Some(_contact) = ground_cast.contact.as_ref() {
+            if naive_input.jump_pressed && naive_input.jump_pressed_time < params.input.prejump_time
+            {
+                input.jumping = true;
+            }
+        } else {
+            if input.jumping {
+                // make this jump input invalid, because we already jumped
+                naive_input.jump_pressed_time += params.input.prejump_time;
+            }
+            input.jumping = false;
+        }
     }
 }
 
@@ -813,6 +835,7 @@ impl Plugin for PlayerPhysicsPlugin {
             SubstepSchedule,
             (
                 evaluate_ground_cast,
+                physics_input,
                 evaluate_ground_spring,
                 update_cast_dir,
                 update_angular_spring,
