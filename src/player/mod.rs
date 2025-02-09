@@ -198,14 +198,7 @@ fn respawn_player(
 }
 
 fn player_controls(
-    mut query: Query<
-        (
-            &ActionState<PlayerAction>,
-            &mut NaiveInput,
-            &physics::GroundCast,
-        ),
-        With<Player>,
-    >,
+    mut query: Query<(&ActionState<PlayerAction>, &mut NaiveInput), With<Player>>,
     mut q_cam3: Query<&mut CameraAnchor3rdPerson, Without<CameraAnchor1stPerson>>,
     mut q_cam1: Query<&mut CameraAnchor1stPerson, Without<CameraAnchor3rdPerson>>,
     mut next_rewind_state: ResMut<NextState<rewind::RewindState>>,
@@ -214,7 +207,7 @@ fn player_controls(
     time: Res<Time>,
     mouse_state: Res<State<MouseInteraction>>,
 ) {
-    for (action_state, mut input, ground_spring) in query.iter_mut() {
+    for (action_state, mut input) in query.iter_mut() {
         let move_input = action_state
             .clamped_axis_pair(&PlayerAction::Move)
             .normalize_or_zero();

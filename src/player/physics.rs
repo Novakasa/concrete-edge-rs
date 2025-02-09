@@ -250,6 +250,7 @@ pub fn physics_input(
         } else {
             if input.jumping {
                 // make this jump input invalid, because we already jumped
+                // this could be more robust since the contact that ate the jump could have been very short and thus uneffective
                 naive_input.jump_pressed_time += params.input.prejump_time;
             }
             input.jumping = false;
@@ -536,10 +537,10 @@ pub fn update_angular_spring(
             continue;
         };
         let mut target_up = Dir3::new(
-            ext_force
+            -ext_force
                 .0
                 .normalize_or_zero()
-                .lerp((-contact.contact_point.normalize()).into(), 0.8),
+                .lerp((contact.contact_point.normalize()).into(), 0.8),
         )
         .unwrap_or(Dir3::Y);
         if input.jumping {
